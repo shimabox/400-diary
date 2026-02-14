@@ -1,3 +1,5 @@
-import { createClient } from 'honox/client'
+import { hydrateIslands } from './lib/hydrate'
+import { initSpaNavigation } from './spa-navigation'
 
-createClient()
+hydrateIslands(document)
+initSpaNavigation()
