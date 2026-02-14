@@ -1,4 +1,5 @@
 import { createRoute } from '~/factory'
+import ImageUploader from '../../islands/image-uploader'
 import VerticalEditor from '../../islands/vertical-editor'
 import { getDiary } from '../../lib/db'
 
@@ -46,6 +47,7 @@ export default createRoute(async (c) => {
         initialImageLayout={diary.image_layout}
         diaryId={diary.id}
       />
+      <ImageUploader diaryId={diary.id} initialImageKey={diary.image_key} />
       <div style={{ padding: '0 1rem 2rem', textAlign: 'right' }}>
         <button
           type="button"
