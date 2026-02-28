@@ -52,6 +52,37 @@ export default createRoute(async (c) => {
     >
       <div
         style={{
+          maxWidth: '960px',
+          width: '100%',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '0 0.5rem 1rem',
+          }}
+        >
+          <h1 style={{ fontSize: '1.3rem' }}>
+            <a href="/">256日記</a>
+          </h1>
+          <a
+            href={`/edit/${diary.id}`}
+            style={{
+              padding: '0.3rem 0.8rem',
+              border: '1px solid #333',
+              borderRadius: '4px',
+              fontSize: '0.85rem',
+            }}
+          >
+            編集する
+          </a>
+        </div>
+      </div>
+
+      <div
+        style={{
           background: diary.background_color,
           backgroundImage: 'url(/images/background.png)',
           backgroundRepeat: 'repeat',
@@ -128,32 +159,6 @@ export default createRoute(async (c) => {
           </div>
         </div>
       </div>
-
-      <nav
-        style={{
-          maxWidth: '960px',
-          width: '100%',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginTop: '1.5rem',
-        }}
-      >
-        <a href="/" style={{ fontSize: '0.9rem' }}>
-          ← 一覧に戻る
-        </a>
-        <a
-          href={`/edit/${diary.id}`}
-          style={{
-            padding: '0.3rem 0.8rem',
-            border: '1px solid #333',
-            borderRadius: '4px',
-            fontSize: '0.85rem',
-          }}
-        >
-          編集する
-        </a>
-      </nav>
     </div>,
     {
       title: `${dateLabel}の日記 — 256日記`,
