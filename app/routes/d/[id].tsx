@@ -53,6 +53,9 @@ export default createRoute(async (c) => {
       <div
         style={{
           background: diary.background_color,
+          backgroundImage: 'url(/images/background.png)',
+          backgroundRepeat: 'repeat',
+          backgroundBlendMode: 'luminosity',
           borderRadius: '12px',
           padding: '2rem',
           maxWidth: '960px',
