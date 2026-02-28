@@ -5,5 +5,5 @@ export function formatDiaryDate(dateStr: string): string {
   const [year, month, day] = dateStr.split('-').map(Number)
   const date = new Date(year, month - 1, day)
   const weekday = WEEKDAYS[date.getDay()]
-  return `${year}/${month}/${day}（${weekday}）`
+  return `${year}/${month}/${day} (${weekday})`
 }
