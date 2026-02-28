@@ -3,6 +3,7 @@ import pages from '@hono/vite-cloudflare-pages'
 import adapter from '@hono/vite-dev-server/cloudflare'
 import honox from 'honox/vite'
 import { defineConfig } from 'vite'
+import fullReload from 'vite-plugin-full-reload'
 
 export default defineConfig(({ mode }) => {
   const common = {
@@ -38,6 +39,7 @@ export default defineConfig(({ mode }) => {
         },
       }),
       pages(),
+      fullReload(['app/**/*.tsx', 'app/**/*.ts', 'app/**/*.css']),
     ],
   }
 })
