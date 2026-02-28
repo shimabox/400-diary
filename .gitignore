@@ -1,4 +1,5 @@
 .claude/plans/
+.claude/tasks/
 node_modules/
 dist/
 .wrangler/
