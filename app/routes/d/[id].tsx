@@ -70,6 +70,7 @@ export default createRoute(async (c) => {
               diary.image_layout === 'right' ? 'row-reverse' : 'row',
             gap: '2rem',
             alignItems: 'flex-start',
+            height: '100%',
           }}
         >
           {diary.image_key && (
@@ -89,7 +90,15 @@ export default createRoute(async (c) => {
             />
           )}
 
-          <div style={{ flex: 1, minWidth: 0 }}>
+          <div
+            style={{
+              flex: 1,
+              minWidth: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              height: '100%',
+            }}
+          >
             <time
               style={{
                 display: 'block',
@@ -107,9 +116,8 @@ export default createRoute(async (c) => {
               style={{
                 writingMode: 'vertical-rl',
                 whiteSpace: 'pre-wrap',
-                width: '100%',
-                maxHeight: '60vh',
-                overflowX: 'auto',
+                flex: 1,
+                minHeight: 0,
                 fontSize: '1.1rem',
                 lineHeight: '2',
                 fontWeight: 600,
