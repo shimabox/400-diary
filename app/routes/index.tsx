@@ -9,128 +9,117 @@ export default createRoute(async (c) => {
   return c.render(
     <div
       style={{
-        minHeight: '100dvh',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
+        maxWidth: '960px',
+        margin: '0 auto',
         padding: '2rem 1rem',
       }}
     >
       <div
         style={{
-          maxWidth: '960px',
-          width: '100%',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '0 0.5rem 1rem',
         }}
       >
+        <h1 style={{ fontSize: '1.3rem' }}>256日記</h1>
+        <a
+          href="/new"
+          style={{
+            padding: '0.4rem 1rem',
+            border: '1px solid #333',
+            borderRadius: '4px',
+            fontSize: '0.9rem',
+          }}
+        >
+          日記を書く
+        </a>
+      </div>
+
+      {diaries.length === 0 ? (
+        <div
+          style={{
+            textAlign: 'center',
+            padding: '3rem 1rem',
+            color: '#999',
+          }}
+        >
+          <p style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>
+            まだ日記がありません
+          </p>
+          <p style={{ fontSize: '0.9rem' }}>
+            「日記を書く」から最初の一枚を書いてみましょう
+          </p>
+        </div>
+      ) : (
         <div
           style={{
             display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            padding: '0 0.5rem 1rem',
-            flexShrink: 0,
+            flexDirection: 'column',
+            gap: '0.5rem',
+            padding: '0 0.5rem',
           }}
         >
-          <h1 style={{ fontSize: '1.3rem' }}>256日記</h1>
-          <a
-            href="/new"
-            style={{
-              padding: '0.4rem 1rem',
-              border: '1px solid #333',
-              borderRadius: '4px',
-              fontSize: '0.9rem',
-            }}
-          >
-            日記を書く
-          </a>
-        </div>
-
-        {diaries.length === 0 ? (
-          <div
-            style={{
-              textAlign: 'center',
-              padding: '3rem 1rem',
-              color: '#999',
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center',
-            }}
-          >
-            <p style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>
-              まだ日記がありません
-            </p>
-            <p style={{ fontSize: '0.9rem' }}>
-              「日記を書く」から最初の一枚を書いてみましょう
-            </p>
-          </div>
-        ) : (
-          <div
-            class="hide-scrollbar"
-            style={{
-              height: '480px',
-              overflowX: 'auto',
-              overflowY: 'hidden',
-              direction: 'rtl',
-              display: 'flex',
-              alignItems: 'stretch',
-              gap: '1rem',
-              padding: '0 0.5rem',
-            }}
-          >
-            {diaries.map((diary) => (
-              <a
-                key={diary.id}
-                href={`/d/${diary.id}`}
+          {diaries.map((diary) => (
+            <a
+              key={diary.id}
+              href={`/d/${diary.id}`}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                height: '80px',
+                background: diary.background_color,
+                borderRadius: '6px',
+                padding: '0.8rem',
+                transition: 'transform 0.15s',
+                overflow: 'hidden',
+              }}
+              class="diary-card"
+            >
+              <time
                 style={{
-                  direction: 'ltr',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  flexShrink: 0,
-                  width: '160px',
-                  background: diary.background_color,
-                  borderRadius: '8px',
-                  padding: '1rem 0.8rem',
-                  transition: 'transform 0.15s',
-                  overflow: 'hidden',
+                  fontSize: '1rem',
+                  color: '#666',
+                  lineHeight: 1.5,
+                  marginBottom: '0.3rem',
                 }}
-                class="diary-card"
+              >
+                {formatDiaryDate(diary.diary_date)}
+              </time>
+              <div
+                style={{
+                  flex: 1,
+                  overflow: 'hidden',
+                  position: 'relative',
+                }}
               >
                 <div
                   style={{
-                    flex: 1,
                     writingMode: 'vertical-rl',
-                    fontSize: '0.9rem',
-                    lineHeight: '1.8',
-                    overflow: 'hidden',
+                    textOrientation: 'upright',
+                    whiteSpace: 'nowrap',
+                    fontSize: '1.25rem',
                     fontWeight: 600,
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    transform: 'rotate(-90deg) translateX(-100%)',
+                    transformOrigin: 'top left',
                   }}
                 >
                   {diary.body}
                 </div>
-                <time
-                  style={{
-                    display: 'block',
-                    fontSize: '0.75rem',
-                    color: '#666',
-                    textAlign: 'center',
-                    marginTop: '0.5rem',
-                    flexShrink: 0,
-                  }}
-                >
-                  {formatDiaryDate(diary.diary_date)}
-                </time>
-              </a>
-            ))}
-          </div>
-        )}
+              </div>
+            </a>
+          ))}
+        </div>
+      )}
 
-        <style>{`
-          .diary-card:hover {
-            transform: translateY(-4px);
-          }
-        `}</style>
-      </div>
+      <style>{`
+        .diary-card:hover {
+          transform: translateY(-2px);
+        }
+      `}</style>
     </div>,
     { title: '256日記' },
   )
