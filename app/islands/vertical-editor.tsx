@@ -8,6 +8,14 @@ const COLS = Math.sqrt(MAX_LENGTH)
 const ROWS = COLS
 const CELL = 2.0 // em – 1マスのサイズ（正方形）
 
+const IMAGE_MAX_SIZE = 5 * 1024 * 1024
+const IMAGE_ALLOWED_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+]
+
 /** テキストが使う列数を計算する（改行で列が進む） */
 function countColumns(text: string): number {
   if (text.length === 0) return 0
@@ -35,6 +43,7 @@ type Props = {
   initialColor?: string
   initialImageLayout?: 'left' | 'right'
   initialMood?: string | null
+  initialImageKey?: string | null
   diaryId?: string
 }
 
@@ -45,6 +54,7 @@ export default function VerticalEditor({
   initialColor = '#FFE4E1',
   initialImageLayout = 'left',
   initialMood = null,
+  initialImageKey = null,
   diaryId,
 }: Props) {
   const [body, setBody] = useState(initialBody)
@@ -64,6 +74,15 @@ export default function VerticalEditor({
     start: startSpeech,
     stop: stopSpeech,
   } = useSpeech()
+
+  // 画像関連
+  const [imageKey, setImageKey] = useState(initialImageKey)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const [imageError, setImageError] = useState('')
+  const imageInputRef = useRef<HTMLInputElement>(null)
+
+  const imageSrc = imagePreview ?? (imageKey ? `/api/images/${imageKey}` : null)
 
   const handleSpeechResult = useCallback((text: string) => {
     setBody((prev) => trimToGrid(prev + text))
@@ -146,6 +165,81 @@ export default function VerticalEditor({
     }
   }, [body, date, initialColor, imageLayout, mood, diaryId])
 
+  const handleImageChange = useCallback(
+    async (e: Event) => {
+      const currentDiaryId = diaryId || savedId
+      if (!currentDiaryId) {
+        setImageError('先に日記を保存してください')
+        return
+      }
+
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (!file) return
+
+      setImageError('')
+
+      if (!IMAGE_ALLOWED_TYPES.includes(file.type)) {
+        setImageError('JPEG, PNG, WebP, GIF のみアップロードできます')
+        return
+      }
+      if (file.size > IMAGE_MAX_SIZE) {
+        setImageError('画像は5MB以内にしてください')
+        return
+      }
+
+      const reader = new FileReader()
+      reader.onload = () => setImagePreview(reader.result as string)
+      reader.readAsDataURL(file)
+
+      setUploading(true)
+      try {
+        const formData = new FormData()
+        formData.append('file', file)
+        const res = await fetch(`/api/diaries/${currentDiaryId}/image`, {
+          method: 'POST',
+          body: formData,
+        })
+        if (!res.ok) {
+          const data = (await res.json()) as { error?: string }
+          setImageError(data.error || 'アップロードに失敗しました')
+          setImagePreview(null)
+          return
+        }
+        const data = (await res.json()) as { image_key: string }
+        setImageKey(data.image_key)
+        setImagePreview(null)
+      } catch {
+        setImageError('アップロードに失敗しました')
+        setImagePreview(null)
+      } finally {
+        setUploading(false)
+        if (imageInputRef.current) imageInputRef.current.value = ''
+      }
+    },
+    [diaryId, savedId],
+  )
+
+  const handleImageDelete = useCallback(async () => {
+    const currentDiaryId = diaryId || savedId
+    if (!currentDiaryId) return
+    if (!confirm('画像を削除しますか？')) return
+
+    setImageError('')
+    try {
+      const res = await fetch(`/api/diaries/${currentDiaryId}/image`, {
+        method: 'DELETE',
+      })
+      if (!res.ok) {
+        setImageError('削除に失敗しました')
+        return
+      }
+      setImageKey(null)
+      setImagePreview(null)
+    } catch {
+      setImageError('削除に失敗しました')
+    }
+  }, [diaryId, savedId])
+
   return (
     <div style={{ padding: '1rem', maxWidth: '100%' }}>
       {error && (
@@ -189,7 +283,7 @@ export default function VerticalEditor({
           position: 'relative',
           background: initialColor,
           borderRadius: '8px',
-          padding: '1.5rem 1.5rem 0',
+          padding: '1.5rem',
           overflow: 'hidden',
           fontSize: '1.1rem',
           width: 'fit-content',
@@ -198,41 +292,85 @@ export default function VerticalEditor({
       >
         <div
           style={{
-            position: 'absolute',
-            top: '1.5rem',
-            right: '1.5rem',
-            width: `calc(${COLS * CELL}em - 1px)`,
-            height: `${ROWS * CELL}em`,
-            pointerEvents: 'none',
-            backgroundImage: `repeating-linear-gradient(to left, transparent, transparent calc(${CELL}em - 1px), rgba(0,0,0,0.08) calc(${CELL}em - 1px), rgba(0,0,0,0.08) ${CELL}em), repeating-linear-gradient(to bottom, transparent, transparent calc(${CELL}em - 1px), rgba(0,0,0,0.08) calc(${CELL}em - 1px), rgba(0,0,0,0.08) ${CELL}em)`,
+            display: 'flex',
+            flexDirection: imageLayout === 'right' ? 'row-reverse' : 'row',
+            gap: '1rem',
+            alignItems: 'flex-start',
           }}
-        />
-        <textarea
-          value={body}
-          onInput={handleInput}
-          onCompositionStart={handleCompositionStart}
-          onCompositionEnd={handleCompositionEnd}
-          placeholder="今日のできごとを書く..."
-          style={{
-            writingMode: 'vertical-rl',
-            width: `${COLS * CELL}em`,
-            height: `${ROWS * CELL + 1}em`,
-            fontFamily: 'inherit',
-            fontSize: 'inherit',
-            lineHeight: String(CELL),
-            letterSpacing: `${CELL - 1}em`,
-            boxSizing: 'content-box',
-            padding: '0.5em 0 0 0',
-            overflow: 'hidden',
-            background: 'transparent',
-            border: 'none',
-            outline: 'none',
-            resize: 'none',
-            color: '#333',
-            fontWeight: 600,
-            position: 'relative',
-          }}
-        />
+        >
+          {imageSrc && (
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              <img
+                src={imageSrc}
+                alt="添付画像"
+                style={{
+                  width: '200px',
+                  maxHeight: `${ROWS * CELL}em`,
+                  objectFit: 'cover',
+                  borderRadius: '8px',
+                  display: 'block',
+                }}
+              />
+              {uploading && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    background: 'rgba(255,255,255,0.7)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '8px',
+                    fontSize: '0.9rem',
+                    color: '#333',
+                  }}
+                >
+                  アップロード中...
+                </div>
+              )}
+            </div>
+          )}
+
+          <div style={{ position: 'relative', paddingTop: 0 }}>
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                right: 0,
+                width: `calc(${COLS * CELL}em - 1px)`,
+                height: `${ROWS * CELL}em`,
+                pointerEvents: 'none',
+                backgroundImage: `repeating-linear-gradient(to left, transparent, transparent calc(${CELL}em - 1px), rgba(0,0,0,0.08) calc(${CELL}em - 1px), rgba(0,0,0,0.08) ${CELL}em), repeating-linear-gradient(to bottom, transparent, transparent calc(${CELL}em - 1px), rgba(0,0,0,0.08) calc(${CELL}em - 1px), rgba(0,0,0,0.08) ${CELL}em)`,
+              }}
+            />
+            <textarea
+              value={body}
+              onInput={handleInput}
+              onCompositionStart={handleCompositionStart}
+              onCompositionEnd={handleCompositionEnd}
+              placeholder="今日のできごとを書く..."
+              style={{
+                writingMode: 'vertical-rl',
+                width: `${COLS * CELL}em`,
+                height: `${ROWS * CELL + 1}em`,
+                fontFamily: 'inherit',
+                fontSize: 'inherit',
+                lineHeight: String(CELL),
+                letterSpacing: `${CELL - 1}em`,
+                boxSizing: 'content-box',
+                padding: '0.5em 0 0 0',
+                overflow: 'hidden',
+                background: 'transparent',
+                border: 'none',
+                outline: 'none',
+                resize: 'none',
+                color: '#333',
+                fontWeight: 600,
+                position: 'relative',
+              }}
+            />
+          </div>
+        </div>
       </div>
 
       <div
@@ -346,6 +484,47 @@ export default function VerticalEditor({
               画像右
             </button>
           </div>
+
+          {/* 画像アップロード */}
+          <div
+            style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}
+          >
+            <label
+              style={{
+                padding: '0.2rem 0.5rem',
+                border: '1px solid #999',
+                borderRadius: '4px',
+                fontSize: '0.85rem',
+                cursor: 'pointer',
+              }}
+            >
+              {imageKey ? '画像を変更' : '画像を追加'}
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                onChange={handleImageChange}
+                style={{ display: 'none' }}
+              />
+            </label>
+            {imageKey && (
+              <button
+                type="button"
+                onClick={handleImageDelete}
+                style={{
+                  padding: '0.2rem 0.5rem',
+                  background: 'transparent',
+                  color: '#c0392b',
+                  border: '1px solid #c0392b',
+                  borderRadius: '4px',
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                }}
+              >
+                画像を削除
+              </button>
+            )}
+          </div>
         </div>
 
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
@@ -392,6 +571,18 @@ export default function VerticalEditor({
           </button>
         </div>
       </div>
+
+      {imageError && (
+        <p
+          style={{
+            color: '#c0392b',
+            fontSize: '0.85rem',
+            marginTop: '0.5rem',
+          }}
+        >
+          {imageError}
+        </p>
+      )}
     </div>
   )
 }
