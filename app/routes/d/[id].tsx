@@ -70,19 +70,69 @@ export default createRoute(async (c) => {
           <h1 style={{ fontSize: '1.3rem' }}>
             <a href="/">256日記</a>
           </h1>
-          {isAuthenticated && (
-            <a
-              href={`/edit/${diary.id}`}
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button
+              type="button"
+              id="export-md-btn"
               style={{
                 padding: '0.3rem 0.8rem',
                 border: '1px solid #333',
                 borderRadius: '4px',
                 fontSize: '0.85rem',
+                background: 'transparent',
+                cursor: 'pointer',
               }}
             >
-              編集する
-            </a>
-          )}
+              MDエクスポート
+            </button>
+            <script
+              dangerouslySetInnerHTML={{
+                __html: `
+                  document.getElementById('export-md-btn').addEventListener('click', function() {
+                    var diaryDate = ${JSON.stringify(diary.diary_date)};
+                    var diaryBody = ${JSON.stringify(diary.body)};
+                    var diaryMood = ${JSON.stringify(diary.mood)};
+                    var diaryBgColor = ${JSON.stringify(diary.background_color)};
+                    var diaryImageKey = ${JSON.stringify(diary.image_key)};
+
+                    var lines = ['---'];
+                    lines.push('date: ' + diaryDate);
+                    if (diaryMood) lines.push('mood: ' + diaryMood);
+                    lines.push('background_color: "' + diaryBgColor + '"');
+                    lines.push('---');
+
+                    var md = lines.join('\\n') + '\\n\\n';
+                    md += diaryBody;
+
+                    if (diaryImageKey) {
+                      md += '\\n\\n![日記の写真](/api/images/' + diaryImageKey + ')';
+                    }
+
+                    var blob = new Blob([md], { type: 'text/markdown' });
+                    var url = URL.createObjectURL(blob);
+                    var a = document.createElement('a');
+                    a.href = url;
+                    a.download = diaryDate + '.md';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  });
+                `,
+              }}
+            />
+            {isAuthenticated && (
+              <a
+                href={`/edit/${diary.id}`}
+                style={{
+                  padding: '0.3rem 0.8rem',
+                  border: '1px solid #333',
+                  borderRadius: '4px',
+                  fontSize: '0.85rem',
+                }}
+              >
+                編集する
+              </a>
+            )}
+          </div>
         </div>
       </div>
 
