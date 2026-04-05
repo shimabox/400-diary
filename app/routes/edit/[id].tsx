@@ -49,6 +49,7 @@ export default createRoute(async (c) => {
         initialDate={diary.diary_date}
         initialColor={diary.background_color}
         initialImageLayout={diary.image_layout}
+        initialMood={diary.mood}
         diaryId={diary.id}
       />
       <ImageUploader diaryId={diary.id} initialImageKey={diary.image_key} />

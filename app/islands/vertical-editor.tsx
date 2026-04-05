@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'hono/jsx'
+import { MOODS, type MoodKey } from '../lib/mood'
 
 const MAX_LENGTH = 256
 const COLS = 16
@@ -31,6 +32,7 @@ type Props = {
   initialDate?: string
   initialColor?: string
   initialImageLayout?: 'left' | 'right'
+  initialMood?: string | null
   diaryId?: string
 }
 
@@ -40,11 +42,15 @@ export default function VerticalEditor({
   initialDate = '',
   initialColor = '#FFE4E1',
   initialImageLayout = 'left',
+  initialMood = null,
   diaryId,
 }: Props) {
   const [body, setBody] = useState(initialBody)
   const [date, setDate] = useState(initialDate)
   const [imageLayout, setImageLayout] = useState(initialImageLayout)
+  const [mood, setMood] = useState<MoodKey | null>(
+    (initialMood as MoodKey) ?? null,
+  )
   const [saving, setSaving] = useState(false)
   const [savedId, setSavedId] = useState(diaryId ?? '')
   const [error, setError] = useState('')
@@ -107,6 +113,7 @@ export default function VerticalEditor({
           diary_date: date,
           background_color: initialColor,
           image_layout: imageLayout,
+          mood,
         }),
       })
 
@@ -124,7 +131,7 @@ export default function VerticalEditor({
       setError('保存に失敗しました')
       setSaving(false)
     }
-  }, [body, date, initialColor, imageLayout, diaryId])
+  }, [body, date, initialColor, imageLayout, mood, diaryId])
 
   return (
     <div style={{ padding: '1rem', maxWidth: '100%' }}>
@@ -218,9 +225,41 @@ export default function VerticalEditor({
       <div
         style={{
           display: 'flex',
+          flexWrap: 'wrap',
+          gap: '0.5rem',
+          marginTop: '0.75rem',
+          alignItems: 'center',
+        }}
+      >
+        <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
+          {MOODS.map((m) => (
+            <button
+              key={m.key}
+              type="button"
+              onClick={() => setMood(mood === m.key ? null : m.key)}
+              title={m.label}
+              style={{
+                padding: '0.2rem 0.4rem',
+                border: `2px solid ${mood === m.key ? m.color : 'transparent'}`,
+                borderRadius: '6px',
+                background: mood === m.key ? `${m.color}22` : 'transparent',
+                cursor: 'pointer',
+                fontSize: '1.1rem',
+                lineHeight: 1,
+              }}
+            >
+              {m.emoji}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div
+        style={{
+          display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginTop: '0.75rem',
+          marginTop: '0.5rem',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>

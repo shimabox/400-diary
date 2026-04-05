@@ -27,6 +27,7 @@ export const PUT = createRoute(async (c) => {
     diary_date?: string
     background_color?: string
     image_layout?: 'left' | 'right'
+    mood?: string | null
     published_at?: string | null
   }>()
 

@@ -1,6 +1,7 @@
 import { createRoute } from '~/factory'
 import { getDiary } from '../../lib/db'
 import { formatDiaryDate } from '../../lib/format'
+import { getMoodByKey } from '../../lib/mood'
 
 export default createRoute(async (c) => {
   const id = c.req.param('id')!
@@ -37,6 +38,7 @@ export default createRoute(async (c) => {
   }
 
   const isAuthenticated = c.get('isAuthenticated')
+  const mood = getMoodByKey(diary.mood)
   const description = diary.body.slice(0, 80)
   const dateLabel = formatDiaryDate(diary.diary_date)
 
@@ -133,18 +135,24 @@ export default createRoute(async (c) => {
               height: '100%',
             }}
           >
-            <time
+            <div
               style={{
-                display: 'block',
-                fontSize: '2rem',
-                color: '#555',
                 marginTop: '1rem',
                 marginBottom: '3rem',
                 textAlign: diary.image_layout === 'right' ? 'left' : 'right',
               }}
             >
-              {dateLabel}
-            </time>
+              <time
+                style={{ display: 'block', fontSize: '2rem', color: '#555' }}
+              >
+                {dateLabel}
+              </time>
+              {mood && (
+                <span style={{ fontSize: '1rem', color: '#777' }}>
+                  {mood.emoji} {mood.label}
+                </span>
+              )}
+            </div>
 
             <div
               style={{
