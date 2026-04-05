@@ -36,6 +36,7 @@ export default createRoute(async (c) => {
     )
   }
 
+  const isAuthenticated = c.get('isAuthenticated')
   const description = diary.body.slice(0, 80)
   const dateLabel = formatDiaryDate(diary.diary_date)
 
@@ -67,17 +68,19 @@ export default createRoute(async (c) => {
           <h1 style={{ fontSize: '1.3rem' }}>
             <a href="/">256日記</a>
           </h1>
-          <a
-            href={`/edit/${diary.id}`}
-            style={{
-              padding: '0.3rem 0.8rem',
-              border: '1px solid #333',
-              borderRadius: '4px',
-              fontSize: '0.85rem',
-            }}
-          >
-            編集する
-          </a>
+          {isAuthenticated && (
+            <a
+              href={`/edit/${diary.id}`}
+              style={{
+                padding: '0.3rem 0.8rem',
+                border: '1px solid #333',
+                borderRadius: '4px',
+                fontSize: '0.85rem',
+              }}
+            >
+              編集する
+            </a>
+          )}
         </div>
       </div>
 

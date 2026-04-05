@@ -5,6 +5,10 @@ import { createDiary } from '../../lib/db'
 const MAX_BODY_LENGTH = 256
 
 export const POST = createRoute(async (c) => {
+  if (!c.get('isAuthenticated')) {
+    return c.json({ error: '認証が必要です' }, 401)
+  }
+
   const json = await c.req.json<{
     body?: string
     diary_date?: string

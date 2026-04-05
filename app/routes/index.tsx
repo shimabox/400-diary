@@ -5,6 +5,7 @@ import { formatDiaryDate } from '../lib/format'
 export default createRoute(async (c) => {
   const db = c.env.DB
   const diaries = await listDiaries(db)
+  const isAuthenticated = c.get('isAuthenticated')
 
   return c.render(
     <div
@@ -31,17 +32,19 @@ export default createRoute(async (c) => {
           }}
         >
           <h1 style={{ fontSize: '1.3rem' }}>256日記</h1>
-          <a
-            href="/new"
-            style={{
-              padding: '0.4rem 1rem',
-              border: '1px solid #333',
-              borderRadius: '4px',
-              fontSize: '0.9rem',
-            }}
-          >
-            日記を書く
-          </a>
+          {isAuthenticated && (
+            <a
+              href="/new"
+              style={{
+                padding: '0.4rem 1rem',
+                border: '1px solid #333',
+                borderRadius: '4px',
+                fontSize: '0.9rem',
+              }}
+            >
+              日記を書く
+            </a>
+          )}
         </div>
 
         {diaries.length === 0 ? (

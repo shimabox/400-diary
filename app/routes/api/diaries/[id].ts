@@ -17,6 +17,10 @@ export const GET = createRoute(async (c) => {
 })
 
 export const PUT = createRoute(async (c) => {
+  if (!c.get('isAuthenticated')) {
+    return c.json({ error: '認証が必要です' }, 401)
+  }
+
   const id = c.req.param('id')!
   const json = await c.req.json<{
     body?: string
@@ -49,6 +53,10 @@ export const PUT = createRoute(async (c) => {
 })
 
 export const DELETE = createRoute(async (c) => {
+  if (!c.get('isAuthenticated')) {
+    return c.json({ error: '認証が必要です' }, 401)
+  }
+
   const id = c.req.param('id')!
   const db = c.env.DB
 

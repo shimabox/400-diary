@@ -11,3 +11,7 @@ database_id = "TODO"
 [[r2_buckets]]
 binding = "BUCKET"
 bucket_name = "256-diary-images"
+
+[vars]
+CF_ACCESS_TEAM_DOMAIN = "YOUR_TEAM.cloudflareaccess.com"
+CF_ACCESS_AUD = "YOUR_APPLICATION_AUD_TAG"

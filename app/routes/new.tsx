@@ -3,6 +3,10 @@ import VerticalEditor from '../islands/vertical-editor'
 import { randomPastelColor } from '../lib/colors'
 
 export default createRoute((c) => {
+  if (!c.get('isAuthenticated')) {
+    return c.redirect('/')
+  }
+
   const today = new Date().toISOString().split('T')[0]
   const color = randomPastelColor()
 
