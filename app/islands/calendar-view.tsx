@@ -96,6 +96,9 @@ function HeatmapView({
   const startDate = new Date(year, 0, 1)
   const endDate = new Date(year, 11, 31)
   const startDow = startDate.getDay()
+  const totalDays =
+    Math.round((endDate.getTime() - startDate.getTime()) / 86400000) + 1
+  const totalWeeks = Math.ceil((startDow + totalDays) / 7)
 
   // Build cells for the whole year
   const cells: { date: string; entry: Entry | undefined }[] = []
@@ -164,15 +167,17 @@ function HeatmapView({
         class="hide-scrollbar"
         style={{ overflowX: 'auto', padding: '0 0.5rem' }}
       >
-        {/* Month labels */}
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: '30px repeat(53, 1fr)',
+            width: 'fit-content',
+            margin: '0 auto',
+            gridTemplateRows: 'auto repeat(7, 12px)',
+            gridTemplateColumns: `30px repeat(${totalWeeks}, 12px)`,
             gap: '2px',
-            marginBottom: '4px',
           }}
         >
+          {/* Row 1: empty corner + month labels */}
           <div />
           {monthPositions.map((mp) => (
             <button
@@ -183,103 +188,84 @@ function HeatmapView({
                 onMonthClick(monthIndex)
               }}
               style={{
-                gridColumnStart: mp.col + 2,
+                gridRow: 1,
+                gridColumn: mp.col + 2,
                 fontSize: '10px',
                 color: '#666',
                 background: 'none',
                 border: 'none',
-                padding: 0,
+                padding: '0 0 4px',
                 textAlign: 'left',
+                whiteSpace: 'nowrap',
                 cursor: 'pointer',
               }}
             >
               {mp.label}
             </button>
           ))}
-        </div>
 
-        {/* Day labels + grid */}
-        <div style={{ display: 'flex', gap: '2px' }}>
-          {/* Day of week labels */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateRows: 'repeat(7, 12px)',
-              gap: '2px',
-              width: '30px',
-              flexShrink: 0,
-            }}
-          >
-            {DAY_LABELS.map((label) => (
-              <div
-                key={label}
-                style={{
-                  fontSize: '9px',
-                  color: '#999',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'flex-end',
-                  paddingRight: '4px',
-                }}
-              >
-                {label}
-              </div>
-            ))}
-          </div>
+          {/* Column 1, rows 2-8: day labels */}
+          {DAY_LABELS.map((label, i) => (
+            <div
+              key={label}
+              style={{
+                gridRow: i + 2,
+                gridColumn: 1,
+                fontSize: '9px',
+                color: '#999',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                paddingRight: '4px',
+              }}
+            >
+              {label}
+            </div>
+          ))}
 
-          {/* Heatmap grid */}
-          <div
-            style={{
-              flex: 1,
-              display: 'grid',
-              gridTemplateRows: 'repeat(7, 12px)',
-              gridAutoFlow: 'column',
-              gridAutoColumns: '1fr',
-              gap: '2px',
-            }}
-          >
-            {/* Empty cells for offset */}
-            {Array.from({ length: startDow }).map((_, i) => (
-              <div key={`empty-${i}`} style={{ height: '12px' }} />
-            ))}
-
-            {/* Day cells */}
-            {cells.map((cell) => {
-              const color = getCellColor(cell.entry)
-              if (cell.entry) {
-                const entryId = cell.entry.id
-                return (
-                  <button
-                    type="button"
-                    key={cell.date}
-                    onClick={() => {
-                      window.location.href = `/d/${entryId}`
-                    }}
-                    title={cell.date}
-                    style={{
-                      height: '12px',
-                      background: color,
-                      borderRadius: '2px',
-                      cursor: 'pointer',
-                      border: 'none',
-                      padding: 0,
-                    }}
-                  />
-                )
-              }
+          {/* Heatmap cells: explicitly placed */}
+          {cells.map((cell, index) => {
+            const pos = startDow + index
+            const col = Math.floor(pos / 7) + 2
+            const row = (pos % 7) + 2
+            const color = getCellColor(cell.entry)
+            if (cell.entry) {
+              const entryId = cell.entry.id
               return (
-                <div
+                <button
+                  type="button"
                   key={cell.date}
+                  onClick={() => {
+                    window.location.href = `/d/${entryId}`
+                  }}
                   title={cell.date}
                   style={{
+                    gridRow: row,
+                    gridColumn: col,
                     height: '12px',
                     background: color,
                     borderRadius: '2px',
+                    cursor: 'pointer',
+                    border: 'none',
+                    padding: 0,
                   }}
                 />
               )
-            })}
-          </div>
+            }
+            return (
+              <div
+                key={cell.date}
+                title={cell.date}
+                style={{
+                  gridRow: row,
+                  gridColumn: col,
+                  height: '12px',
+                  background: color,
+                  borderRadius: '2px',
+                }}
+              />
+            )
+          })}
         </div>
       </div>
     </div>
