@@ -7,6 +7,7 @@ export type Diary = {
   image_key: string | null
   image_layout: 'left' | 'right'
   background_color: string
+  mood: string | null
   published_at: string | null
   diary_date: string
   created_at: string
@@ -20,23 +21,31 @@ export async function createDiary(
     diary_date: string
     background_color: string
     image_layout?: 'left' | 'right'
+    mood?: string | null
     published_at?: string | null
   },
 ): Promise<Diary> {
   const id = nanoid(12)
-  const { body, diary_date, background_color, image_layout, published_at } =
-    params
+  const {
+    body,
+    diary_date,
+    background_color,
+    image_layout,
+    mood,
+    published_at,
+  } = params
 
   await db
     .prepare(
-      `INSERT INTO diaries (id, body, background_color, image_layout, published_at, diary_date)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO diaries (id, body, background_color, image_layout, mood, published_at, diary_date)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
     )
     .bind(
       id,
       body,
       background_color,
       image_layout ?? 'left',
+      mood ?? null,
       published_at ?? null,
       diary_date,
     )
@@ -70,6 +79,7 @@ export async function updateDiary(
     diary_date?: string
     background_color?: string
     image_layout?: 'left' | 'right'
+    mood?: string | null
     published_at?: string | null
     image_key?: string | null
   },
@@ -95,6 +105,10 @@ export async function updateDiary(
   if (params.image_layout !== undefined) {
     setClauses.push('image_layout = ?')
     values.push(params.image_layout)
+  }
+  if ('mood' in params) {
+    setClauses.push('mood = ?')
+    values.push(params.mood ?? null)
   }
   if ('published_at' in params) {
     setClauses.push('published_at = ?')
