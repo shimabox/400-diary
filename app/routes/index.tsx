@@ -31,7 +31,21 @@ export default createRoute(async (c) => {
             padding: '0 0.5rem 1rem',
           }}
         >
-          <h1 style={{ fontSize: '1.3rem' }}>256日記</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <h1 style={{ fontSize: '1.3rem' }}>256日記</h1>
+            <a
+              href="/calendar"
+              style={{
+                fontSize: '0.9rem',
+                color: '#666',
+                border: '1px solid #ccc',
+                borderRadius: '4px',
+                padding: '0.2rem 0.6rem',
+              }}
+            >
+              カレンダー
+            </a>
+          </div>
           {isAuthenticated && (
             <a
               href="/new"

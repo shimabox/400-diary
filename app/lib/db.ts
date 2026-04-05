@@ -129,6 +129,19 @@ export async function updateDiary(
   return await getDiary(db, id)
 }
 
+export async function listDiaryCalendarEntries(
+  db: D1Database,
+  year: number,
+): Promise<{ id: string; diary_date: string; mood: string | null }[]> {
+  const { results } = await db
+    .prepare(
+      'SELECT id, diary_date, mood FROM diaries WHERE diary_date >= ? AND diary_date < ? ORDER BY diary_date',
+    )
+    .bind(`${year}-01-01`, `${year + 1}-01-01`)
+    .all<{ id: string; diary_date: string; mood: string | null }>()
+  return results
+}
+
 export async function deleteDiary(
   db: D1Database,
   id: string,
