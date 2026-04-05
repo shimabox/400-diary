@@ -1,8 +1,7 @@
 import { createRoute } from '~/factory'
+import { MAX_BODY_LENGTH } from '../../../lib/constants'
 import { deleteDiary, getDiary, updateDiary } from '../../../lib/db'
 import { deleteImage } from '../../../lib/storage'
-
-const MAX_BODY_LENGTH = 256
 
 export const GET = createRoute(async (c) => {
   const id = c.req.param('id')!

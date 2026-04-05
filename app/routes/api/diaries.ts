@@ -1,8 +1,7 @@
 import { createRoute } from '~/factory'
 import { randomPastelColor } from '../../lib/colors'
+import { MAX_BODY_LENGTH } from '../../lib/constants'
 import { createDiary } from '../../lib/db'
-
-const MAX_BODY_LENGTH = 256
 
 export const POST = createRoute(async (c) => {
   if (!c.get('isAuthenticated')) {

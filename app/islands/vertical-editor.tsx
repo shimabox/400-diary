@@ -1,10 +1,11 @@
 import { useCallback, useRef, useState } from 'hono/jsx'
+import { MAX_BODY_LENGTH } from '../lib/constants'
 import { MOODS, type MoodKey } from '../lib/mood'
 import { useSpeech } from '../lib/use-speech'
 
-const MAX_LENGTH = 256
-const COLS = 16
-const ROWS = 16
+const MAX_LENGTH = MAX_BODY_LENGTH
+const COLS = Math.sqrt(MAX_LENGTH)
+const ROWS = COLS
 const CELL = 2.0 // em – 1マスのサイズ（正方形）
 
 /** テキストが使う列数を計算する（改行で列が進む） */
