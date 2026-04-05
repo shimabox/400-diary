@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'hono/jsx'
 import { MAX_BODY_LENGTH } from '../lib/constants'
 import { MOODS, type MoodKey } from '../lib/mood'
 import { useSpeech } from '../lib/use-speech'
+import FlowText from './flow-text'
 
 const MAX_LENGTH = MAX_BODY_LENGTH
 const COLS = Math.sqrt(MAX_LENGTH)
@@ -64,6 +65,7 @@ export default function VerticalEditor({
     (initialMood as MoodKey) ?? null,
   )
   const [saving, setSaving] = useState(false)
+  const [showPreview, setShowPreview] = useState(false)
   const [savedId, setSavedId] = useState(diaryId ?? '')
   const [error, setError] = useState('')
   const composingRef = useRef(false)
@@ -78,7 +80,7 @@ export default function VerticalEditor({
   // 画像関連
   const [imageKey, setImageKey] = useState(initialImageKey)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
-  const [uploading, setUploading] = useState(false)
+  const [_uploading, setUploading] = useState(false)
   const [imageError, setImageError] = useState('')
   const imageInputRef = useRef<HTMLInputElement>(null)
 
@@ -278,60 +280,63 @@ export default function VerticalEditor({
         />
       </div>
 
-      <div
-        style={{
-          position: 'relative',
-          background: initialColor,
-          borderRadius: '8px',
-          padding: '1.5rem',
-          overflow: 'hidden',
-          fontSize: '1.1rem',
-          width: 'fit-content',
-          margin: '0 auto',
-        }}
-      >
+      {showPreview ? (
         <div
           style={{
-            display: 'flex',
-            flexDirection: imageLayout === 'right' ? 'row-reverse' : 'row',
-            gap: '1rem',
-            alignItems: 'flex-start',
+            position: 'relative',
+            background: initialColor,
+            backgroundImage: 'url(/images/background.png)',
+            backgroundRepeat: 'repeat',
+            backgroundBlendMode: 'luminosity',
+            borderRadius: '12px',
+            padding: '2rem',
+            height: '480px',
+            overflow: 'hidden',
           }}
         >
-          {imageSrc && (
-            <div style={{ position: 'relative', flexShrink: 0 }}>
-              <img
-                src={imageSrc}
-                alt="添付画像"
-                style={{
-                  width: '200px',
-                  maxHeight: `${ROWS * CELL}em`,
-                  objectFit: 'cover',
-                  borderRadius: '8px',
-                  display: 'block',
-                }}
-              />
-              {uploading && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    inset: 0,
-                    background: 'rgba(255,255,255,0.7)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: '8px',
-                    fontSize: '0.9rem',
-                    color: '#333',
-                  }}
-                >
-                  アップロード中...
-                </div>
-              )}
-            </div>
-          )}
-
-          <div style={{ position: 'relative', paddingTop: 0 }}>
+          <div
+            style={{
+              position: 'relative',
+              zIndex: 1,
+              marginTop: '1rem',
+              marginBottom: '1rem',
+              textAlign: imageLayout === 'right' ? 'left' : 'right',
+            }}
+          >
+            <time style={{ display: 'block', fontSize: '2rem', color: '#555' }}>
+              {date || '----/--/--'}
+            </time>
+            {mood && (
+              <span style={{ fontSize: '1rem', color: '#777' }}>
+                {MOODS.find((m) => m.key === mood)?.emoji}{' '}
+                {MOODS.find((m) => m.key === mood)?.label}
+              </span>
+            )}
+          </div>
+          <FlowText
+            text={body}
+            fontSize={17.6}
+            lineHeight={2}
+            imageLayout={imageLayout}
+            imageSrc={imageSrc}
+            containerHeight={350}
+            imageTop={-80}
+          />
+        </div>
+      ) : (
+        <div
+          style={{
+            position: 'relative',
+            background: initialColor,
+            borderRadius: '8px',
+            padding: '1.5rem',
+            overflow: 'hidden',
+            fontSize: '1.1rem',
+            width: 'fit-content',
+            margin: '0 auto',
+          }}
+        >
+          <div style={{ position: 'relative' }}>
             <div
               style={{
                 position: 'absolute',
@@ -371,7 +376,7 @@ export default function VerticalEditor({
             />
           </div>
         </div>
-      </div>
+      )}
 
       <div
         style={{
@@ -445,6 +450,21 @@ export default function VerticalEditor({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <button
+            type="button"
+            onClick={() => setShowPreview(!showPreview)}
+            style={{
+              padding: '0.2rem 0.5rem',
+              border: '1px solid #ccc',
+              borderRadius: '4px',
+              background: showPreview ? '#333' : '#fff',
+              color: showPreview ? '#fff' : '#666',
+              cursor: 'pointer',
+              fontSize: '0.85rem',
+            }}
+          >
+            {showPreview ? '編集に戻る' : 'プレビュー'}
+          </button>
           <span
             style={{
               fontSize: '0.85rem',
