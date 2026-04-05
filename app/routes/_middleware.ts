@@ -2,7 +2,7 @@ import { createMiddleware } from 'hono/factory'
 import type { AppEnv } from '~/factory'
 import { verifyAccess } from '../lib/auth'
 
-export default createMiddleware<AppEnv>(async (c, next) => {
+const authMiddleware = createMiddleware<AppEnv>(async (c, next) => {
   // ローカル開発用バイパス
   if (c.env.DEV_AUTH_BYPASS === 'true') {
     c.set('isAuthenticated', true)
@@ -22,3 +22,5 @@ export default createMiddleware<AppEnv>(async (c, next) => {
   c.set('isAuthenticated', isAuthenticated)
   return next()
 })
+
+export default [authMiddleware]
