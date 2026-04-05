@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'hono/jsx'
 import { MOODS, type MoodKey } from '../lib/mood'
+import { useSpeech } from '../lib/use-speech'
 
 const MAX_LENGTH = 256
 const COLS = 16
@@ -55,6 +56,17 @@ export default function VerticalEditor({
   const [savedId, setSavedId] = useState(diaryId ?? '')
   const [error, setError] = useState('')
   const composingRef = useRef(false)
+  const {
+    isSupported: speechSupported,
+    isListening,
+    transcript,
+    start: startSpeech,
+    stop: stopSpeech,
+  } = useSpeech()
+
+  const handleSpeechResult = useCallback((text: string) => {
+    setBody((prev) => trimToGrid(prev + text))
+  }, [])
 
   const charCount = body.length
   const isOver = charCount > MAX_LENGTH
@@ -252,6 +264,37 @@ export default function VerticalEditor({
             </button>
           ))}
         </div>
+        {speechSupported && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <button
+              type="button"
+              onClick={() => {
+                if (isListening) {
+                  stopSpeech()
+                } else {
+                  startSpeech(handleSpeechResult)
+                }
+              }}
+              style={{
+                padding: '0.3rem 0.6rem',
+                border: `1px solid ${isListening ? '#c0392b' : '#ccc'}`,
+                borderRadius: '6px',
+                background: isListening ? '#c0392b' : 'transparent',
+                color: isListening ? '#fff' : '#666',
+                cursor: 'pointer',
+                fontSize: '0.85rem',
+                animation: isListening ? 'pulse 1.5s infinite' : 'none',
+              }}
+            >
+              {isListening ? '録音中...' : '音声入力'}
+            </button>
+            {transcript && (
+              <span style={{ fontSize: '0.8rem', color: '#999' }}>
+                {transcript}
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       <div
