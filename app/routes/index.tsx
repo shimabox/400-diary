@@ -1,10 +1,15 @@
 import { createRoute } from '~/factory'
-import { listDiaries } from '../lib/db'
+import CalendarView from '../islands/calendar-view'
+import { listDiaries, listDiaryCalendarEntries } from '../lib/db'
 import { formatDiaryDate } from '../lib/format'
 
 export default createRoute(async (c) => {
   const db = c.env.DB
-  const diaries = await listDiaries(db)
+  const year = new Date().getFullYear()
+  const [diaries, calendarEntries] = await Promise.all([
+    listDiaries(db),
+    listDiaryCalendarEntries(db, year),
+  ])
   const isAuthenticated = c.get('isAuthenticated')
 
   return c.render(
@@ -13,7 +18,6 @@ export default createRoute(async (c) => {
         minHeight: '100dvh',
         display: 'flex',
         justifyContent: 'center',
-        alignItems: 'center',
         padding: '2rem 1rem',
       }}
     >
@@ -31,21 +35,7 @@ export default createRoute(async (c) => {
             padding: '0 0.5rem 1rem',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <h1 style={{ fontSize: '1.3rem' }}>256日記</h1>
-            <a
-              href="/calendar"
-              style={{
-                fontSize: '0.9rem',
-                color: '#666',
-                border: '1px solid #ccc',
-                borderRadius: '4px',
-                padding: '0.2rem 0.6rem',
-              }}
-            >
-              カレンダー
-            </a>
-          </div>
+          <h1 style={{ fontSize: '1.3rem' }}>256日記</h1>
           {isAuthenticated && (
             <a
               href="/new"
@@ -59,6 +49,10 @@ export default createRoute(async (c) => {
               日記を書く
             </a>
           )}
+        </div>
+
+        <div style={{ padding: '0 0.5rem 1.5rem' }}>
+          <CalendarView year={year} entries={calendarEntries} />
         </div>
 
         {diaries.length === 0 ? (

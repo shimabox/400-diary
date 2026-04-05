@@ -168,7 +168,7 @@ function HeatmapView({
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: '30px repeat(53, 12px)',
+            gridTemplateColumns: '30px repeat(53, 1fr)',
             gap: '2px',
             marginBottom: '4px',
           }}
@@ -230,19 +230,17 @@ function HeatmapView({
           {/* Heatmap grid */}
           <div
             style={{
+              flex: 1,
               display: 'grid',
               gridTemplateRows: 'repeat(7, 12px)',
               gridAutoFlow: 'column',
-              gridAutoColumns: '12px',
+              gridAutoColumns: '1fr',
               gap: '2px',
             }}
           >
             {/* Empty cells for offset */}
             {Array.from({ length: startDow }).map((_, i) => (
-              <div
-                key={`empty-${i}`}
-                style={{ width: '12px', height: '12px' }}
-              />
+              <div key={`empty-${i}`} style={{ height: '12px' }} />
             ))}
 
             {/* Day cells */}
@@ -259,7 +257,6 @@ function HeatmapView({
                     }}
                     title={cell.date}
                     style={{
-                      width: '12px',
                       height: '12px',
                       background: color,
                       borderRadius: '2px',
@@ -275,7 +272,6 @@ function HeatmapView({
                   key={cell.date}
                   title={cell.date}
                   style={{
-                    width: '12px',
                     height: '12px',
                     background: color,
                     borderRadius: '2px',
@@ -285,39 +281,6 @@ function HeatmapView({
             })}
           </div>
         </div>
-      </div>
-
-      {/* Legend */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'flex-end',
-          alignItems: 'center',
-          gap: '4px',
-          marginTop: '0.75rem',
-          padding: '0 0.5rem',
-          fontSize: '10px',
-          color: '#999',
-        }}
-      >
-        <span>なし</span>
-        <div
-          style={{
-            width: '12px',
-            height: '12px',
-            background: '#ebedf0',
-            borderRadius: '2px',
-          }}
-        />
-        <div
-          style={{
-            width: '12px',
-            height: '12px',
-            background: '#c6e48b',
-            borderRadius: '2px',
-          }}
-        />
-        <span>あり</span>
       </div>
     </div>
   )
