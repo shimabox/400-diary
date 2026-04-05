@@ -1,4 +1,5 @@
 import { createRoute } from '~/factory'
+import FlowText from '../../islands/flow-text'
 import { getDiary } from '../../lib/db'
 import { formatDiaryDate } from '../../lib/format'
 import { getMoodByKey } from '../../lib/mood'
@@ -138,6 +139,7 @@ export default createRoute(async (c) => {
 
       <div
         style={{
+          position: 'relative',
           background: diary.background_color,
           backgroundImage: 'url(/images/background.png)',
           backgroundRepeat: 'repeat',
@@ -147,78 +149,37 @@ export default createRoute(async (c) => {
           maxWidth: '960px',
           width: '100%',
           height: '480px',
+          overflow: 'hidden',
         }}
       >
         <div
           style={{
-            display: 'flex',
-            flexDirection:
-              diary.image_layout === 'right' ? 'row-reverse' : 'row',
-            gap: '2rem',
-            alignItems: 'flex-start',
-            height: '100%',
+            position: 'relative',
+            zIndex: 1,
+            marginTop: '1rem',
+            marginBottom: '1rem',
+            textAlign: diary.image_layout === 'right' ? 'left' : 'right',
           }}
         >
-          {diary.image_key && (
-            <img
-              src={`/api/images/${diary.image_key}`}
-              alt="日記の写真"
-              style={{
-                width: '30%',
-                borderRadius: '12px',
-                objectFit: 'cover',
-                flexShrink: 0,
-                margin:
-                  diary.image_layout === 'right'
-                    ? '1rem 1rem 0 0'
-                    : '1rem 0 0 1rem',
-              }}
-            />
+          <time style={{ display: 'block', fontSize: '2rem', color: '#555' }}>
+            {dateLabel}
+          </time>
+          {mood && (
+            <span style={{ fontSize: '1rem', color: '#777' }}>
+              {mood.emoji} {mood.label}
+            </span>
           )}
-
-          <div
-            style={{
-              flex: 1,
-              minWidth: 0,
-              display: 'flex',
-              flexDirection: 'column',
-              height: '100%',
-            }}
-          >
-            <div
-              style={{
-                marginTop: '1rem',
-                marginBottom: '3rem',
-                textAlign: diary.image_layout === 'right' ? 'left' : 'right',
-              }}
-            >
-              <time
-                style={{ display: 'block', fontSize: '2rem', color: '#555' }}
-              >
-                {dateLabel}
-              </time>
-              {mood && (
-                <span style={{ fontSize: '1rem', color: '#777' }}>
-                  {mood.emoji} {mood.label}
-                </span>
-              )}
-            </div>
-
-            <div
-              style={{
-                writingMode: 'vertical-rl',
-                whiteSpace: 'pre-wrap',
-                flex: 1,
-                minHeight: 0,
-                fontSize: '1.1rem',
-                lineHeight: '2',
-                fontWeight: 600,
-              }}
-            >
-              {diary.body}
-            </div>
-          </div>
         </div>
+
+        <FlowText
+          text={diary.body}
+          fontSize={17.6}
+          lineHeight={2}
+          imageLayout={diary.image_layout}
+          imageSrc={diary.image_key ? `/api/images/${diary.image_key}` : null}
+          containerHeight={350}
+          imageTop={-80}
+        />
       </div>
     </div>,
     {
