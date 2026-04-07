@@ -53,7 +53,7 @@ export default createRoute(async (c) => {
             padding: '0 0.5rem 1rem',
           }}
         >
-          <h1 style={{ fontSize: '1.3rem' }}>256日記</h1>
+          <h1 style={{ fontSize: '1.3rem' }}>しまぶ日記</h1>
           {isAuthenticated && (
             <a
               href="/new"
@@ -197,6 +197,6 @@ export default createRoute(async (c) => {
       `}</style>
       </div>
     </div>,
-    { title: '256日記' },
+    { title: 'しまぶ日記' },
   )
 })

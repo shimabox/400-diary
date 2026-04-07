@@ -33,7 +33,7 @@ export default createRoute(async (c) => {
           一覧に戻る
         </a>
       </div>,
-      { title: 'Not Found — 256日記' },
+      { title: 'Not Found — しまぶ日記' },
     )
   }
 
@@ -74,7 +74,7 @@ export default createRoute(async (c) => {
           }}
         >
           <h1 style={{ fontSize: '1.3rem' }}>
-            <a href="/">256日記</a>
+            <a href="/">しまぶ日記</a>
           </h1>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <button
@@ -185,7 +185,7 @@ export default createRoute(async (c) => {
       </div>
     </div>,
     {
-      title: `${dateLabel}の日記 — 256日記`,
+      title: `${dateLabel}の日記 — しまぶ日記`,
       description,
     },
   )

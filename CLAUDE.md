@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## プロジェクト概要
 
-**256日記** — 256（16×16）文字の世界で綴る日記
+**400日記** — 400（20×20）文字の世界で綴る日記
 
 新規プロジェクトのため、コードベースの発展に伴いビルド・テストコマンドやアーキテクチャ情報をここに追記していく。
 

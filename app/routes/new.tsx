@@ -18,6 +18,6 @@ export default createRoute((c) => {
         initialColor={color}
       />
     </div>,
-    { title: '日記を書く — 256日記' },
+    { title: '日記を書く — しまぶ日記' },
   )
 })

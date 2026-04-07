@@ -1,16 +1,16 @@
-name = "256-diary"
+name = "400-diary"
 compatibility_date = "2025-01-01"
 compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = "./dist"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "256-diary-db"
+database_name = "400-diary-db"
 database_id = "TODO"
 
 [[r2_buckets]]
 binding = "BUCKET"
-bucket_name = "256-diary-images"
+bucket_name = "400-diary-images"
 
 [vars]
 CF_ACCESS_TEAM_DOMAIN = "YOUR_TEAM.cloudflareaccess.com"

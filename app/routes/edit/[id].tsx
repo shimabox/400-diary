@@ -36,7 +36,7 @@ export default createRoute(async (c) => {
           一覧に戻る
         </a>
       </div>,
-      { title: 'Not Found — 256日記' },
+      { title: 'Not Found — しまぶ日記' },
     )
   }
 
@@ -92,6 +92,6 @@ export default createRoute(async (c) => {
         </div>
       </div>
     </div>,
-    { title: '日記を編集 — 256日記' },
+    { title: '日記を編集 — しまぶ日記' },
   )
 })

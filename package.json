@@ -1,5 +1,5 @@
 {
-  "name": "256-diary",
+  "name": "400-diary",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,8 +9,8 @@
     "lint": "biome check .",
     "lint:fix": "biome check --fix .",
     "format": "biome format --write .",
-    "db:migrate:local": "wrangler d1 execute 256-diary-db --local --file=db/schema.sql",
-    "db:migrate:remote": "wrangler d1 execute 256-diary-db --remote --file=db/schema.sql"
+    "db:migrate:local": "wrangler d1 execute 400-diary-db --local --file=db/schema.sql",
+    "db:migrate:remote": "wrangler d1 execute 400-diary-db --remote --file=db/schema.sql"
   },
   "dependencies": {
     "@chenglou/pretext": "^0.0.4",
