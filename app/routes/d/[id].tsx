@@ -2,7 +2,6 @@ import { createRoute } from '~/factory'
 import FlowText from '../../islands/flow-text'
 import { getDiary } from '../../lib/db'
 import { formatDiaryDate } from '../../lib/format'
-import { getMoodByKey } from '../../lib/mood'
 
 export default createRoute(async (c) => {
   const id = c.req.param('id')!
@@ -39,7 +38,6 @@ export default createRoute(async (c) => {
   }
 
   const isAuthenticated = c.get('isAuthenticated')
-  const mood = getMoodByKey(diary.mood)
   const description = diary.body.slice(0, 80)
   const dateLabel = formatDiaryDate(diary.diary_date)
 
@@ -164,11 +162,6 @@ export default createRoute(async (c) => {
           <time style={{ display: 'block', fontSize: '2rem', color: '#555' }}>
             {dateLabel}
           </time>
-          {mood && (
-            <span style={{ fontSize: '1rem', color: '#777' }}>
-              {mood.emoji} {mood.label}
-            </span>
-          )}
         </div>
 
         <FlowText
