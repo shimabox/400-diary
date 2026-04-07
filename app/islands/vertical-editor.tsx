@@ -306,12 +306,6 @@ export default function VerticalEditor({
             <time style={{ display: 'block', fontSize: '2rem', color: '#555' }}>
               {date || '----/--/--'}
             </time>
-            {mood && (
-              <span style={{ fontSize: '1rem', color: '#777' }}>
-                {MOODS.find((m) => m.key === mood)?.emoji}{' '}
-                {MOODS.find((m) => m.key === mood)?.label}
-              </span>
-            )}
           </div>
           <FlowText
             text={body}
