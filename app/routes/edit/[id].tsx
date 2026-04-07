@@ -41,36 +41,45 @@ export default createRoute(async (c) => {
   }
 
   return c.render(
-    <div style={{ maxWidth: '960px', margin: '0 auto', padding: '0 1rem' }}>
-      <VerticalEditor
-        title="日記を編集"
-        initialBody={diary.body}
-        initialDate={diary.diary_date}
-        initialColor={diary.background_color}
-        initialImageLayout={diary.image_layout}
-        initialMood={diary.mood}
-        initialImageKey={diary.image_key}
-        diaryId={diary.id}
-        publishedAt={diary.published_at}
-      />
-      <div style={{ padding: '0 1rem 2rem', textAlign: 'right' }}>
-        <button
-          type="button"
-          id="delete-btn"
-          style={{
-            padding: '0.4rem 1rem',
-            background: 'transparent',
-            color: '#c0392b',
-            border: '1px solid #c0392b',
-            borderRadius: '4px',
-            fontSize: '0.85rem',
-          }}
-        >
-          この日記を削除
-        </button>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
+    <div
+      style={{
+        minHeight: '100dvh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        padding: '2rem 1rem',
+      }}
+    >
+      <div style={{ maxWidth: '960px', width: '100%' }}>
+        <VerticalEditor
+          title="日記を編集"
+          initialBody={diary.body}
+          initialDate={diary.diary_date}
+          initialColor={diary.background_color}
+          initialImageLayout={diary.image_layout}
+          initialMood={diary.mood}
+          initialImageKey={diary.image_key}
+          diaryId={diary.id}
+          publishedAt={diary.published_at}
+        />
+        <div style={{ padding: '0 1rem 2rem', textAlign: 'right' }}>
+          <button
+            type="button"
+            id="delete-btn"
+            style={{
+              padding: '0.4rem 1rem',
+              background: 'transparent',
+              color: '#c0392b',
+              border: '1px solid #c0392b',
+              borderRadius: '4px',
+              fontSize: '0.85rem',
+            }}
+          >
+            この日記を削除
+          </button>
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
               document.getElementById('delete-btn').addEventListener('click', async function() {
                 if (!confirm('この日記を削除しますか？')) return;
                 const res = await fetch('/api/diaries/${diary.id}', { method: 'DELETE' });
@@ -78,8 +87,9 @@ export default createRoute(async (c) => {
                 else alert('削除に失敗しました');
               });
             `,
-          }}
-        />
+            }}
+          />
+        </div>
       </div>
     </div>,
     { title: '日記を編集 — 256日記' },
