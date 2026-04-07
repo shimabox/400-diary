@@ -290,7 +290,7 @@ export default function VerticalEditor({
             backgroundRepeat: 'repeat',
             backgroundBlendMode: 'luminosity',
             borderRadius: '12px',
-            padding: '2rem',
+            padding: '2rem 2.6rem',
             height: '480px',
             overflow: 'hidden',
           }}
@@ -299,8 +299,7 @@ export default function VerticalEditor({
             style={{
               position: 'relative',
               zIndex: 1,
-              marginTop: '1rem',
-              marginBottom: '1rem',
+              marginBottom: '2rem',
               textAlign: imageLayout === 'right' ? 'left' : 'right',
             }}
           >
@@ -315,7 +314,7 @@ export default function VerticalEditor({
             imageLayout={imageLayout}
             imageSrc={imageSrc}
             containerHeight={350}
-            imageTop={-80}
+            imageTop={-70}
           />
         </div>
       ) : (

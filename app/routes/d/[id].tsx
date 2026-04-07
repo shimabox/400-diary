@@ -143,7 +143,7 @@ export default createRoute(async (c) => {
           backgroundRepeat: 'repeat',
           backgroundBlendMode: 'luminosity',
           borderRadius: '12px',
-          padding: '2rem',
+          padding: '2rem 2.6rem',
           maxWidth: '960px',
           width: '100%',
           height: '480px',
@@ -154,8 +154,7 @@ export default createRoute(async (c) => {
           style={{
             position: 'relative',
             zIndex: 1,
-            marginTop: '1rem',
-            marginBottom: '1rem',
+            marginBottom: '2rem',
             textAlign: diary.image_layout === 'right' ? 'left' : 'right',
           }}
         >
@@ -171,7 +170,7 @@ export default createRoute(async (c) => {
           imageLayout={diary.image_layout}
           imageSrc={diary.image_key ? `/api/images/${diary.image_key}` : null}
           containerHeight={350}
-          imageTop={-80}
+          imageTop={-70}
         />
       </div>
     </div>,
