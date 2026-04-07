@@ -1,4 +1,4 @@
-import { useState } from 'hono/jsx'
+import { useEffect, useRef, useState } from 'hono/jsx'
 import { getMoodByKey } from '../lib/mood'
 
 type Entry = {
@@ -112,6 +112,12 @@ function HeatmapView({
   maxYear?: number
   onMonthClick: (month: number) => void
 }) {
+  const scrollRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = scrollRef.current
+    if (el) el.scrollLeft = el.scrollWidth
+  }, [year])
+
   const startDate = new Date(year, 0, 1)
   const endDate = new Date(year, 11, 31)
   const startDow = startDate.getDay()
@@ -191,6 +197,7 @@ function HeatmapView({
 
       {/* Heatmap */}
       <div
+        ref={scrollRef}
         class="hide-scrollbar"
         style={{ overflowX: 'auto', padding: '0 0.5rem' }}
       >
@@ -200,12 +207,11 @@ function HeatmapView({
             width: 'fit-content',
             margin: '0 auto',
             gridTemplateRows: 'auto repeat(7, 12px)',
-            gridTemplateColumns: `30px repeat(${totalWeeks}, 12px)`,
+            gridTemplateColumns: `repeat(${totalWeeks}, 12px) 30px`,
             gap: '2px',
           }}
         >
-          {/* Row 1: empty corner + month labels */}
-          <div />
+          {/* Row 1: month labels */}
           {monthPositions.map((mp) => (
             <button
               type="button"
@@ -216,7 +222,7 @@ function HeatmapView({
               }}
               style={{
                 gridRow: 1,
-                gridColumn: mp.col + 2,
+                gridColumn: mp.col + 1,
                 fontSize: '10px',
                 color: '#666',
                 background: 'none',
@@ -231,19 +237,19 @@ function HeatmapView({
             </button>
           ))}
 
-          {/* Column 1, rows 2-8: day labels */}
+          {/* Last column, rows 2-8: day labels */}
           {DAY_LABELS.map((label, i) => (
             <div
               key={label}
               style={{
                 gridRow: i + 2,
-                gridColumn: 1,
+                gridColumn: totalWeeks + 1,
                 fontSize: '9px',
                 color: '#999',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'flex-end',
-                paddingRight: '4px',
+                justifyContent: 'flex-start',
+                paddingLeft: '4px',
               }}
             >
               {label}
@@ -253,7 +259,7 @@ function HeatmapView({
           {/* Heatmap cells: explicitly placed */}
           {cells.map((cell, index) => {
             const pos = startDow + index
-            const col = Math.floor(pos / 7) + 2
+            const col = Math.floor(pos / 7) + 1
             const row = (pos % 7) + 2
             const color = getCellColor(cell.entry)
             if (cell.entry) {
