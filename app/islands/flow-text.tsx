@@ -26,6 +26,8 @@ type Props = {
   containerHeight: number
   /** 画像の上方向オフセット（負の値で上にはみ出す） */
   imageTop?: number
+  /** 日付ラベル（画像の反対側に配置し、テキストが回り込む） */
+  dateLabel?: string
 }
 
 export default function FlowText({
@@ -36,16 +38,34 @@ export default function FlowText({
   imageSrc,
   containerHeight,
   imageTop = 0,
+  dateLabel,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
+  const dateRef = useRef<HTMLDivElement>(null)
   const [columns, setColumns] = useState<Column[]>([])
   const [imageSize, setImageSize] = useState<ImageSize | null>(null)
+  const [dateSize, setDateSize] = useState<{
+    width: number
+    height: number
+  } | null>(null)
   const [containerWidth, setContainerWidth] = useState(0)
 
   const handleImageLoad = useCallback((e: Event) => {
     const img = e.target as HTMLImageElement
     setImageSize({ width: img.offsetWidth, height: img.offsetHeight })
   }, [])
+
+  // 日付サイズを計測
+  useEffect(() => {
+    if (dateRef.current) {
+      setDateSize({
+        width: dateRef.current.offsetWidth,
+        height: dateRef.current.offsetHeight,
+      })
+    } else {
+      setDateSize(null)
+    }
+  }, [dateLabel])
 
   // コンテナ幅を監視
   useEffect(() => {
@@ -81,24 +101,43 @@ export default function FlowText({
       ? Math.ceil((imageSize.width + imageMargin) / colWidth)
       : 0
 
+    // 日付がテキスト領域内で占める高さ
+    const dateMargin = fontSize * 2
+    const dateOccupiedHeight = dateSize ? dateSize.height + dateMargin : 0
+    const dateCols = dateSize
+      ? Math.ceil((dateSize.width + dateMargin) / colWidth)
+      : 0
+    // 日付は画像の反対側に配置
+    const dateLayout = imageLayout === 'right' ? 'left' : 'right'
+
     const cols: Column[] = []
     let cursor: LayoutCursor = { segmentIndex: 0, graphemeIndex: 0 }
 
     for (let i = 0; i < totalCols; i++) {
       const x = containerWidth - (i + 1) * colWidth
 
-      let isOverlapping = false
+      let isImgOverlapping = false
       if (imageSize && imgOccupiedHeight > 0) {
         if (imageLayout === 'right') {
-          isOverlapping = i < imgCols
+          isImgOverlapping = i < imgCols
         } else {
-          isOverlapping = i >= totalCols - imgCols
+          isImgOverlapping = i >= totalCols - imgCols
         }
       }
 
-      const availableHeight = isOverlapping
-        ? containerHeight - imgOccupiedHeight
-        : containerHeight
+      let isDateOverlapping = false
+      if (dateSize && dateOccupiedHeight > 0) {
+        if (dateLayout === 'right') {
+          isDateOverlapping = i < dateCols
+        } else {
+          isDateOverlapping = i >= totalCols - dateCols
+        }
+      }
+
+      const imgReduction = isImgOverlapping ? imgOccupiedHeight : 0
+      const dateReduction = isDateOverlapping ? dateOccupiedHeight : 0
+      const yOffset = Math.max(imgReduction, dateReduction)
+      const availableHeight = containerHeight - yOffset
       if (availableHeight <= 0) continue
 
       const line = layoutNextLine(prepared, cursor, availableHeight)
@@ -107,7 +146,7 @@ export default function FlowText({
       cols.push({
         text: line.text,
         x,
-        y: isOverlapping ? imgOccupiedHeight : 0,
+        y: yOffset,
         height: availableHeight,
       })
 
@@ -124,6 +163,7 @@ export default function FlowText({
     imageSize,
     imageLayout,
     imageTop,
+    dateSize,
   ])
 
   return (
@@ -135,6 +175,24 @@ export default function FlowText({
         height: `${containerHeight}px`,
       }}
     >
+      {/* 日付 */}
+      {dateLabel && (
+        <div
+          ref={dateRef}
+          style={{
+            position: 'absolute',
+            top: 0,
+            right: imageLayout === 'right' ? 'auto' : 0,
+            left: imageLayout === 'right' ? 0 : 'auto',
+            fontSize: '2rem',
+            color: '#555',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {dateLabel}
+        </div>
+      )}
+
       {/* 画像 */}
       {imageSrc && (
         <img

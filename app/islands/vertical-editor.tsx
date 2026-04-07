@@ -339,28 +339,15 @@ export default function VerticalEditor({
           class="hide-scrollbar"
         >
           <div style={{ minWidth: '880px' }}>
-            <div
-              style={{
-                position: 'relative',
-                zIndex: 1,
-                marginBottom: '2rem',
-                textAlign: imageLayout === 'right' ? 'left' : 'right',
-              }}
-            >
-              <time
-                style={{ display: 'block', fontSize: '2rem', color: '#555' }}
-              >
-                {date ? formatDiaryDate(date) : '----/--/--'}
-              </time>
-            </div>
             <FlowText
               text={body}
               fontSize={17.6}
               lineHeight={2}
               imageLayout={imageLayout}
               imageSrc={imageSrc}
-              containerHeight={350}
-              imageTop={-70}
+              containerHeight={416}
+              imageTop={0}
+              dateLabel={date ? formatDiaryDate(date) : '----/--/--'}
             />
           </div>
         </div>

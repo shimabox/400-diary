@@ -161,27 +161,15 @@ export default createRoute(async (c) => {
         class="hide-scrollbar"
       >
         <div style={{ minWidth: '880px' }}>
-          <div
-            style={{
-              position: 'relative',
-              zIndex: 1,
-              marginBottom: '2rem',
-              textAlign: pubImageLayout === 'right' ? 'left' : 'right',
-            }}
-          >
-            <time style={{ display: 'block', fontSize: '2rem', color: '#555' }}>
-              {dateLabel}
-            </time>
-          </div>
-
           <FlowText
             text={pubBody}
             fontSize={17.6}
             lineHeight={2}
             imageLayout={pubImageLayout}
             imageSrc={pubImageKey ? `/api/images/${pubImageKey}` : null}
-            containerHeight={350}
-            imageTop={-70}
+            containerHeight={416}
+            imageTop={0}
+            dateLabel={dateLabel}
           />
         </div>
         <script
