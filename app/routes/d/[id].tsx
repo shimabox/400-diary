@@ -154,30 +154,45 @@ export default createRoute(async (c) => {
           maxWidth: '960px',
           width: '100%',
           height: '480px',
-          overflow: 'hidden',
+          overflowX: 'auto',
+          overflowY: 'hidden',
         }}
+        id="diary-scroll"
+        class="hide-scrollbar"
       >
-        <div
-          style={{
-            position: 'relative',
-            zIndex: 1,
-            marginBottom: '2rem',
-            textAlign: pubImageLayout === 'right' ? 'left' : 'right',
-          }}
-        >
-          <time style={{ display: 'block', fontSize: '2rem', color: '#555' }}>
-            {dateLabel}
-          </time>
-        </div>
+        <div style={{ minWidth: '880px' }}>
+          <div
+            style={{
+              position: 'relative',
+              zIndex: 1,
+              marginBottom: '2rem',
+              textAlign: pubImageLayout === 'right' ? 'left' : 'right',
+            }}
+          >
+            <time style={{ display: 'block', fontSize: '2rem', color: '#555' }}>
+              {dateLabel}
+            </time>
+          </div>
 
-        <FlowText
-          text={pubBody}
-          fontSize={17.6}
-          lineHeight={2}
-          imageLayout={pubImageLayout}
-          imageSrc={pubImageKey ? `/api/images/${pubImageKey}` : null}
-          containerHeight={350}
-          imageTop={-70}
+          <FlowText
+            text={pubBody}
+            fontSize={17.6}
+            lineHeight={2}
+            imageLayout={pubImageLayout}
+            imageSrc={pubImageKey ? `/api/images/${pubImageKey}` : null}
+            containerHeight={350}
+            imageTop={-70}
+          />
+        </div>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+          requestAnimationFrame(function() {
+            var el = document.getElementById('diary-scroll');
+            if (el) el.scrollLeft = el.scrollWidth;
+          });
+        `,
+          }}
         />
       </div>
     </div>,

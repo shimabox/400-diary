@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'hono/jsx'
+import { useCallback, useEffect, useRef, useState } from 'hono/jsx'
 import { MAX_BODY_LENGTH } from '../lib/constants'
 import { formatDiaryDate } from '../lib/format'
 import { MOODS, type MoodKey } from '../lib/mood'
@@ -74,6 +74,17 @@ export default function VerticalEditor({
   const [savedId, setSavedId] = useState(diaryId ?? '')
   const [error, setError] = useState('')
   const composingRef = useRef(false)
+  const previewScrollRef = useRef<HTMLDivElement>(null)
+
+  // プレビュー表示時にスクロールを右端（文章の先頭）にセット
+  useEffect(() => {
+    if (showPreview && previewScrollRef.current) {
+      requestAnimationFrame(() => {
+        const el = previewScrollRef.current
+        if (el) el.scrollLeft = el.scrollWidth
+      })
+    }
+  }, [showPreview, body])
   const {
     isSupported: speechSupported,
     isListening,
@@ -319,30 +330,37 @@ export default function VerticalEditor({
             borderRadius: '12px',
             padding: '2rem 2.6rem',
             height: '480px',
-            overflow: 'hidden',
+            overflowX: 'auto',
+            overflowY: 'hidden',
           }}
+          ref={previewScrollRef}
+          class="hide-scrollbar"
         >
-          <div
-            style={{
-              position: 'relative',
-              zIndex: 1,
-              marginBottom: '2rem',
-              textAlign: imageLayout === 'right' ? 'left' : 'right',
-            }}
-          >
-            <time style={{ display: 'block', fontSize: '2rem', color: '#555' }}>
-              {date ? formatDiaryDate(date) : '----/--/--'}
-            </time>
+          <div style={{ minWidth: '880px' }}>
+            <div
+              style={{
+                position: 'relative',
+                zIndex: 1,
+                marginBottom: '2rem',
+                textAlign: imageLayout === 'right' ? 'left' : 'right',
+              }}
+            >
+              <time
+                style={{ display: 'block', fontSize: '2rem', color: '#555' }}
+              >
+                {date ? formatDiaryDate(date) : '----/--/--'}
+              </time>
+            </div>
+            <FlowText
+              text={body}
+              fontSize={17.6}
+              lineHeight={2}
+              imageLayout={imageLayout}
+              imageSrc={imageSrc}
+              containerHeight={350}
+              imageTop={-70}
+            />
           </div>
-          <FlowText
-            text={body}
-            fontSize={17.6}
-            lineHeight={2}
-            imageLayout={imageLayout}
-            imageSrc={imageSrc}
-            containerHeight={350}
-            imageTop={-70}
-          />
         </div>
       ) : (
         <div
