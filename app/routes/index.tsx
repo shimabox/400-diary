@@ -6,11 +6,20 @@ import { formatDiaryDate } from '../lib/format'
 export default createRoute(async (c) => {
   const db = c.env.DB
   const year = new Date().getFullYear()
-  const [diaries, calendarEntries] = await Promise.all([
+  const isAuthenticated = c.get('isAuthenticated')
+  const [allDiaries, calendarEntries] = await Promise.all([
     listDiaries(db),
     listDiaryCalendarEntries(db, year),
   ])
-  const isAuthenticated = c.get('isAuthenticated')
+  const diaries = isAuthenticated
+    ? allDiaries
+    : allDiaries.filter((d) => d.published_at)
+  const pubCalendarEntries = isAuthenticated
+    ? calendarEntries
+    : calendarEntries.filter((e) => {
+        const diary = allDiaries.find((d) => d.id === e.id)
+        return diary?.published_at
+      })
 
   return c.render(
     <div
@@ -52,7 +61,7 @@ export default createRoute(async (c) => {
         </div>
 
         <div style={{ padding: '0 0.5rem 1.5rem' }}>
-          <CalendarView year={year} entries={calendarEntries} />
+          <CalendarView year={year} entries={pubCalendarEntries} />
         </div>
 
         {diaries.length === 0 ? (
@@ -84,57 +93,85 @@ export default createRoute(async (c) => {
               padding: '0 0.5rem',
             }}
           >
-            {diaries.map((diary) => (
-              <a
-                key={diary.id}
-                href={`/d/${diary.id}`}
-                style={{
-                  direction: 'ltr',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  flexShrink: 0,
-                  width: '168px',
-                  background: diary.background_color,
-                  backgroundImage: 'url(/images/background.png)',
-                  backgroundRepeat: 'repeat',
-                  backgroundBlendMode: 'luminosity',
-                  borderRadius: '8px',
-                  padding: '1rem 0.8rem',
-                  transition: 'transform 0.15s',
-                  overflow: 'hidden',
-                }}
-                class="diary-card"
-              >
-                <time
+            {diaries.map((diary) => {
+              const cardBody = isAuthenticated
+                ? diary.body
+                : (diary.published_body ?? diary.body)
+              const cardColor = isAuthenticated
+                ? diary.background_color
+                : (diary.published_background_color ?? diary.background_color)
+              const cardHref = isAuthenticated
+                ? `/edit/${diary.id}`
+                : `/d/${diary.id}`
+              return (
+                <a
+                  key={diary.id}
+                  href={cardHref}
                   style={{
+                    direction: 'ltr',
                     display: 'flex',
-                    justifyContent: 'center',
-                    fontSize: '1rem',
-                    color: '#666',
-                    marginBottom: '0.8rem',
+                    flexDirection: 'column',
                     flexShrink: 0,
-                  }}
-                >
-                  {formatDiaryDate(diary.diary_date)}
-                </time>
-                <div
-                  style={{
-                    flex: 1,
-                    writingMode: 'vertical-rl',
-                    fontSize: '1.25rem',
-                    lineHeight: '1.8',
+                    width: '168px',
+                    background: cardColor,
+                    backgroundImage: 'url(/images/background.png)',
+                    backgroundRepeat: 'repeat',
+                    backgroundBlendMode: 'luminosity',
+                    borderRadius: '8px',
+                    padding: '1rem 0.8rem',
+                    transition: 'transform 0.15s',
                     overflow: 'hidden',
-                    fontWeight: 600,
-                    maskImage:
-                      'radial-gradient(circle at bottom left, transparent 0%, black 3.5rem)',
-                    WebkitMaskImage:
-                      'radial-gradient(circle at bottom left, transparent 0%, black 3.5rem)',
+                    position: 'relative',
                   }}
+                  class="diary-card"
                 >
-                  {diary.body}
-                </div>
-              </a>
-            ))}
+                  {isAuthenticated && !diary.published_at && (
+                    <span
+                      style={{
+                        position: 'absolute',
+                        top: '0.4rem',
+                        left: '0.4rem',
+                        fontSize: '0.65rem',
+                        background: 'rgba(0,0,0,0.45)',
+                        color: '#fff',
+                        padding: '0.1rem 0.4rem',
+                        borderRadius: '3px',
+                      }}
+                    >
+                      下書き
+                    </span>
+                  )}
+                  <time
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'center',
+                      fontSize: '1rem',
+                      color: '#666',
+                      marginBottom: '0.8rem',
+                      flexShrink: 0,
+                    }}
+                  >
+                    {formatDiaryDate(diary.diary_date)}
+                  </time>
+                  <div
+                    style={{
+                      flex: 1,
+                      writingMode: 'vertical-rl',
+                      fontSize: '1.25rem',
+                      lineHeight: '1.8',
+                      overflow: 'hidden',
+                      fontWeight: 600,
+                      maskImage:
+                        'radial-gradient(circle at bottom left, transparent 0%, black 3.5rem)',
+                      WebkitMaskImage:
+                        'radial-gradient(circle at bottom left, transparent 0%, black 3.5rem)',
+                    }}
+                  >
+                    {cardBody}
+                  </div>
+                </a>
+              )
+            })}
           </div>
         )}
 

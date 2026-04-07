@@ -47,6 +47,7 @@ type Props = {
   initialMood?: string | null
   initialImageKey?: string | null
   diaryId?: string
+  publishedAt?: string | null
 }
 
 export default function VerticalEditor({
@@ -58,6 +59,7 @@ export default function VerticalEditor({
   initialMood = null,
   initialImageKey = null,
   diaryId,
+  publishedAt: initialPublishedAt = null,
 }: Props) {
   const [body, setBody] = useState(initialBody)
   const [date, setDate] = useState(initialDate)
@@ -66,6 +68,8 @@ export default function VerticalEditor({
     (initialMood as MoodKey) ?? null,
   )
   const [saving, setSaving] = useState(false)
+  const [publishing, setPublishing] = useState(false)
+  const [publishedAt, setPublishedAt] = useState(initialPublishedAt)
   const [showPreview, setShowPreview] = useState(false)
   const [savedId, setSavedId] = useState(diaryId ?? '')
   const [error, setError] = useState('')
@@ -167,6 +171,29 @@ export default function VerticalEditor({
       setSaving(false)
     }
   }, [body, date, initialColor, imageLayout, mood, diaryId])
+
+  const handlePublish = useCallback(async () => {
+    const currentDiaryId = diaryId || savedId
+    if (!currentDiaryId) return
+
+    setPublishing(true)
+    setError('')
+    try {
+      const res = await fetch(`/api/diaries/${currentDiaryId}/publish`, {
+        method: 'POST',
+      })
+      if (!res.ok) {
+        setError('公開に失敗しました')
+        return
+      }
+      const data = (await res.json()) as { published_at: string }
+      setPublishedAt(data.published_at)
+    } catch {
+      setError('公開に失敗しました')
+    } finally {
+      setPublishing(false)
+    }
+  }, [diaryId, savedId])
 
   const handleImageChange = useCallback(
     async (e: Event) => {
@@ -438,8 +465,10 @@ export default function VerticalEditor({
       <div
         style={{
           display: 'flex',
+          flexWrap: 'wrap',
           justifyContent: 'space-between',
           alignItems: 'center',
+          gap: '0.5rem',
           marginTop: '0.5rem',
         }}
       >
@@ -541,27 +570,34 @@ export default function VerticalEditor({
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        <div
+          style={{
+            display: 'flex',
+            gap: '0.5rem',
+            alignItems: 'center',
+            justifyContent: 'flex-end',
+          }}
+        >
           <a
             href="/"
             style={{
-              padding: '0.5rem 1.2rem',
+              padding: '0.3rem 0.8rem',
               border: '1px solid #ccc',
               borderRadius: '4px',
-              fontSize: '0.95rem',
+              fontSize: '0.85rem',
               color: '#666',
             }}
           >
             一覧へ
           </a>
-          {savedId && !saving && (
+          {savedId && publishedAt && (
             <a
               href={`/d/${savedId}`}
               style={{
-                padding: '0.5rem 1.2rem',
+                padding: '0.3rem 0.8rem',
                 border: '1px solid #ccc',
                 borderRadius: '4px',
-                fontSize: '0.95rem',
+                fontSize: '0.85rem',
                 color: '#666',
               }}
             >
@@ -573,16 +609,33 @@ export default function VerticalEditor({
             onClick={handleSave}
             disabled={saving || isOver}
             style={{
-              padding: '0.5rem 1.5rem',
+              padding: '0.3rem 1rem',
               background: saving || isOver ? '#ccc' : '#333',
               color: '#fff',
               border: 'none',
               borderRadius: '4px',
-              fontSize: '0.95rem',
+              fontSize: '0.85rem',
             }}
           >
             {saving ? '保存中...' : '保存'}
           </button>
+          {savedId && (
+            <button
+              type="button"
+              onClick={handlePublish}
+              disabled={publishing || saving}
+              style={{
+                padding: '0.3rem 1rem',
+                background: publishing ? '#ccc' : '#2e7d32',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '4px',
+                fontSize: '0.85rem',
+              }}
+            >
+              {publishing ? '公開中...' : '公開する'}
+            </button>
+          )}
         </div>
       </div>
 

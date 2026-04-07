@@ -1,7 +1,6 @@
 import { createRoute } from '~/factory'
 import { getDiary, updateDiary } from '../../../../lib/db'
 import {
-  deleteImage,
   generateImageKey,
   uploadImage,
   validateImage,
@@ -32,10 +31,6 @@ export const POST = createRoute(async (c) => {
     return c.json({ error: validation.error }, 400)
   }
 
-  if (diary.image_key) {
-    await deleteImage(bucket, diary.image_key)
-  }
-
   const key = generateImageKey(id, file.type)
   const data = await file.arrayBuffer()
   await uploadImage(bucket, key, data, file.type)
@@ -51,7 +46,6 @@ export const DELETE = createRoute(async (c) => {
 
   const id = c.req.param('id')!
   const db = c.env.DB
-  const bucket = c.env.BUCKET
 
   const diary = await getDiary(db, id)
   if (!diary) {
@@ -59,7 +53,6 @@ export const DELETE = createRoute(async (c) => {
   }
 
   if (diary.image_key) {
-    await deleteImage(bucket, diary.image_key)
     await updateDiary(db, id, { image_key: null })
   }
 

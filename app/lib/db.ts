@@ -9,6 +9,11 @@ export type Diary = {
   background_color: string
   mood: string | null
   published_at: string | null
+  published_body: string | null
+  published_image_key: string | null
+  published_image_layout: string | null
+  published_mood: string | null
+  published_background_color: string | null
   diary_date: string
   created_at: string
   updated_at: string
@@ -140,6 +145,31 @@ export async function listDiaryCalendarEntries(
     .bind(`${year}-01-01`, `${year + 1}-01-01`)
     .all<{ id: string; diary_date: string; mood: string | null }>()
   return results
+}
+
+export async function publishDiary(
+  db: D1Database,
+  id: string,
+): Promise<Diary | null> {
+  const existing = await getDiary(db, id)
+  if (!existing) return null
+
+  await db
+    .prepare(
+      `UPDATE diaries SET
+        published_body = body,
+        published_image_key = image_key,
+        published_image_layout = image_layout,
+        published_mood = mood,
+        published_background_color = background_color,
+        published_at = datetime('now'),
+        updated_at = datetime('now')
+       WHERE id = ?`,
+    )
+    .bind(id)
+    .run()
+
+  return await getDiary(db, id)
 }
 
 export async function deleteDiary(

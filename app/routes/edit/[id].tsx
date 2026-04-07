@@ -51,6 +51,7 @@ export default createRoute(async (c) => {
         initialMood={diary.mood}
         initialImageKey={diary.image_key}
         diaryId={diary.id}
+        publishedAt={diary.published_at}
       />
       <div style={{ padding: '0 1rem 2rem', textAlign: 'right' }}>
         <button

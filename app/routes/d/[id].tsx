@@ -8,7 +8,7 @@ export default createRoute(async (c) => {
   const db = c.env.DB
   const diary = await getDiary(db, id)
 
-  if (!diary) {
+  if (!diary || !diary.published_at) {
     return c.render(
       <div
         style={{
@@ -38,7 +38,14 @@ export default createRoute(async (c) => {
   }
 
   const isAuthenticated = c.get('isAuthenticated')
-  const description = diary.body.slice(0, 80)
+  const pubBody = diary.published_body!
+  const pubImageKey = diary.published_image_key
+  const pubImageLayout = (diary.published_image_layout ?? 'left') as
+    | 'left'
+    | 'right'
+  const pubBgColor = diary.published_background_color!
+  const pubMood = diary.published_mood
+  const description = pubBody.slice(0, 80)
   const dateLabel = formatDiaryDate(diary.diary_date)
 
   return c.render(
@@ -89,10 +96,10 @@ export default createRoute(async (c) => {
                 __html: `
                   document.getElementById('export-md-btn').addEventListener('click', function() {
                     var diaryDate = ${JSON.stringify(diary.diary_date)};
-                    var diaryBody = ${JSON.stringify(diary.body)};
-                    var diaryMood = ${JSON.stringify(diary.mood)};
-                    var diaryBgColor = ${JSON.stringify(diary.background_color)};
-                    var diaryImageKey = ${JSON.stringify(diary.image_key)};
+                    var diaryBody = ${JSON.stringify(pubBody)};
+                    var diaryMood = ${JSON.stringify(pubMood)};
+                    var diaryBgColor = ${JSON.stringify(pubBgColor)};
+                    var diaryImageKey = ${JSON.stringify(pubImageKey)};
 
                     var lines = ['---'];
                     lines.push('date: ' + diaryDate);
@@ -138,7 +145,7 @@ export default createRoute(async (c) => {
       <div
         style={{
           position: 'relative',
-          background: diary.background_color,
+          background: pubBgColor,
           backgroundImage: 'url(/images/background.png)',
           backgroundRepeat: 'repeat',
           backgroundBlendMode: 'luminosity',
@@ -155,7 +162,7 @@ export default createRoute(async (c) => {
             position: 'relative',
             zIndex: 1,
             marginBottom: '2rem',
-            textAlign: diary.image_layout === 'right' ? 'left' : 'right',
+            textAlign: pubImageLayout === 'right' ? 'left' : 'right',
           }}
         >
           <time style={{ display: 'block', fontSize: '2rem', color: '#555' }}>
@@ -164,11 +171,11 @@ export default createRoute(async (c) => {
         </div>
 
         <FlowText
-          text={diary.body}
+          text={pubBody}
           fontSize={17.6}
           lineHeight={2}
-          imageLayout={diary.image_layout}
-          imageSrc={diary.image_key ? `/api/images/${diary.image_key}` : null}
+          imageLayout={pubImageLayout}
+          imageSrc={pubImageKey ? `/api/images/${pubImageKey}` : null}
           containerHeight={350}
           imageTop={-70}
         />
