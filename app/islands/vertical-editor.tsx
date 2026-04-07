@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'hono/jsx'
 import { MAX_BODY_LENGTH } from '../lib/constants'
+import { formatDiaryDate } from '../lib/format'
 import { MOODS, type MoodKey } from '../lib/mood'
 import { useSpeech } from '../lib/use-speech'
 import FlowText from './flow-text'
@@ -304,7 +305,7 @@ export default function VerticalEditor({
             }}
           >
             <time style={{ display: 'block', fontSize: '2rem', color: '#555' }}>
-              {date || '----/--/--'}
+              {date ? formatDiaryDate(date) : '----/--/--'}
             </time>
           </div>
           <FlowText
