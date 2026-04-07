@@ -282,7 +282,7 @@ export default function VerticalEditor({
   }, [diaryId, savedId])
 
   return (
-    <div style={{ padding: '1rem', maxWidth: '100%' }}>
+    <div style={{ padding: '1rem 0', maxWidth: '100%' }}>
       {error && (
         <p
           style={{
@@ -329,6 +329,8 @@ export default function VerticalEditor({
             backgroundBlendMode: 'luminosity',
             borderRadius: '12px',
             padding: '2rem 2.6rem',
+            maxWidth: '960px',
+            width: '100%',
             height: '480px',
             overflowX: 'auto',
             overflowY: 'hidden',

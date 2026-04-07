@@ -41,7 +41,7 @@ export default createRoute(async (c) => {
   }
 
   return c.render(
-    <div style={{ maxWidth: '960px', margin: '0 auto' }}>
+    <div style={{ maxWidth: '960px', margin: '0 auto', padding: '0 1rem' }}>
       <VerticalEditor
         title="日記を編集"
         initialBody={diary.body}
