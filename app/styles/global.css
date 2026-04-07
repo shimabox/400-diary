@@ -35,6 +35,14 @@ button {
   display: none;
 }
 
+@media (max-width: 600px) {
+  .editor-toolbar > * {
+    flex: 1 1 auto;
+    min-width: 0;
+    text-align: center;
+  }
+}
+
 @keyframes pulse {
   0%,
   100% {

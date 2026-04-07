@@ -481,123 +481,108 @@ export default function VerticalEditor({
       </div>
 
       <div
+        class="editor-toolbar"
         style={{
           display: 'flex',
           flexWrap: 'wrap',
-          justifyContent: 'space-between',
           alignItems: 'center',
           gap: '0.5rem',
           marginTop: '0.5rem',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <span
+          style={{
+            fontSize: '0.85rem',
+            color: isOver ? '#c0392b' : '#888',
+            fontWeight: isOver ? 'bold' : 'normal',
+          }}
+        >
+          {charCount} / {MAX_LENGTH}
+        </span>
+        <div style={{ display: 'flex', gap: '0.25rem', fontSize: '0.85rem' }}>
           <button
             type="button"
-            onClick={() => setShowPreview(!showPreview)}
+            onClick={() => setImageLayout('left')}
             style={{
               padding: '0.2rem 0.5rem',
               border: '1px solid #ccc',
-              borderRadius: '4px',
-              background: showPreview ? '#333' : '#fff',
-              color: showPreview ? '#fff' : '#666',
+              borderRadius: '4px 0 0 4px',
+              background: imageLayout === 'left' ? '#333' : '#fff',
+              color: imageLayout === 'left' ? '#fff' : '#666',
               cursor: 'pointer',
-              fontSize: '0.85rem',
             }}
           >
-            {showPreview ? '編集に戻る' : 'プレビュー'}
+            画像左
           </button>
-          <span
+          <button
+            type="button"
+            onClick={() => setImageLayout('right')}
             style={{
-              fontSize: '0.85rem',
-              color: isOver ? '#c0392b' : '#888',
-              fontWeight: isOver ? 'bold' : 'normal',
+              padding: '0.2rem 0.5rem',
+              border: '1px solid #ccc',
+              borderRadius: '0 4px 4px 0',
+              background: imageLayout === 'right' ? '#333' : '#fff',
+              color: imageLayout === 'right' ? '#fff' : '#666',
+              cursor: 'pointer',
             }}
           >
-            {charCount} / {MAX_LENGTH}
-          </span>
-          <div style={{ display: 'flex', gap: '0.25rem', fontSize: '0.85rem' }}>
-            <button
-              type="button"
-              onClick={() => setImageLayout('left')}
-              style={{
-                padding: '0.2rem 0.5rem',
-                border: '1px solid #ccc',
-                borderRadius: '4px 0 0 4px',
-                background: imageLayout === 'left' ? '#333' : '#fff',
-                color: imageLayout === 'left' ? '#fff' : '#666',
-                cursor: 'pointer',
-              }}
-            >
-              画像左
-            </button>
-            <button
-              type="button"
-              onClick={() => setImageLayout('right')}
-              style={{
-                padding: '0.2rem 0.5rem',
-                border: '1px solid #ccc',
-                borderRadius: '0 4px 4px 0',
-                background: imageLayout === 'right' ? '#333' : '#fff',
-                color: imageLayout === 'right' ? '#fff' : '#666',
-                cursor: 'pointer',
-              }}
-            >
-              画像右
-            </button>
-          </div>
+            画像右
+          </button>
+        </div>
 
-          {/* 画像アップロード */}
-          <div
-            style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}
+        {/* 画像アップロード */}
+        <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
+          <label
+            style={{
+              padding: '0.2rem 0.5rem',
+              border: '1px solid #999',
+              borderRadius: '4px',
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+            }}
           >
-            <label
+            {imageKey ? '画像を変更' : '画像を追加'}
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              onChange={handleImageChange}
+              style={{ display: 'none' }}
+            />
+          </label>
+          {imageKey && (
+            <button
+              type="button"
+              onClick={handleImageDelete}
               style={{
                 padding: '0.2rem 0.5rem',
-                border: '1px solid #999',
+                background: 'transparent',
+                color: '#c0392b',
+                border: '1px solid #c0392b',
                 borderRadius: '4px',
                 fontSize: '0.85rem',
                 cursor: 'pointer',
               }}
             >
-              {imageKey ? '画像を変更' : '画像を追加'}
-              <input
-                ref={imageInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/gif"
-                onChange={handleImageChange}
-                style={{ display: 'none' }}
-              />
-            </label>
-            {imageKey && (
-              <button
-                type="button"
-                onClick={handleImageDelete}
-                style={{
-                  padding: '0.2rem 0.5rem',
-                  background: 'transparent',
-                  color: '#c0392b',
-                  border: '1px solid #c0392b',
-                  borderRadius: '4px',
-                  fontSize: '0.85rem',
-                  cursor: 'pointer',
-                }}
-              >
-                画像を削除
-              </button>
-            )}
-          </div>
+              画像を削除
+            </button>
+          )}
         </div>
-
-        <div
+        <a
+          href="/"
           style={{
-            display: 'flex',
-            gap: '0.5rem',
-            alignItems: 'center',
-            justifyContent: 'flex-end',
+            padding: '0.3rem 0.8rem',
+            border: '1px solid #ccc',
+            borderRadius: '4px',
+            fontSize: '0.85rem',
+            color: '#666',
           }}
         >
+          一覧へ
+        </a>
+        {savedId && publishedAt && (
           <a
-            href="/"
+            href={`/d/${savedId}`}
             style={{
               padding: '0.3rem 0.8rem',
               border: '1px solid #ccc',
@@ -606,55 +591,56 @@ export default function VerticalEditor({
               color: '#666',
             }}
           >
-            一覧へ
+            公開ページを見る
           </a>
-          {savedId && publishedAt && (
-            <a
-              href={`/d/${savedId}`}
-              style={{
-                padding: '0.3rem 0.8rem',
-                border: '1px solid #ccc',
-                borderRadius: '4px',
-                fontSize: '0.85rem',
-                color: '#666',
-              }}
-            >
-              公開ページを見る
-            </a>
-          )}
+        )}
+        <button
+          type="button"
+          onClick={() => setShowPreview(!showPreview)}
+          style={{
+            padding: '0.3rem 0.8rem',
+            border: '1px solid #ccc',
+            borderRadius: '4px',
+            background: showPreview ? '#333' : '#fff',
+            color: showPreview ? '#fff' : '#666',
+            cursor: 'pointer',
+            fontSize: '0.85rem',
+          }}
+        >
+          {showPreview ? '編集に戻る' : 'プレビュー'}
+        </button>
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving || isOver}
+          style={{
+            padding: '0.3rem 1rem',
+            background: saving || isOver ? '#ccc' : '#333',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '4px',
+            fontSize: '0.85rem',
+          }}
+        >
+          {saving ? '保存中...' : '保存'}
+        </button>
+        {savedId && (
           <button
             type="button"
-            onClick={handleSave}
-            disabled={saving || isOver}
+            onClick={handlePublish}
+            disabled={publishing || saving}
             style={{
               padding: '0.3rem 1rem',
-              background: saving || isOver ? '#ccc' : '#333',
+              background: publishing ? '#ccc' : '#2e7d32',
               color: '#fff',
               border: 'none',
               borderRadius: '4px',
               fontSize: '0.85rem',
             }}
           >
-            {saving ? '保存中...' : '保存'}
+            {publishing ? '公開中...' : '公開する'}
           </button>
-          {savedId && (
-            <button
-              type="button"
-              onClick={handlePublish}
-              disabled={publishing || saving}
-              style={{
-                padding: '0.3rem 1rem',
-                background: publishing ? '#ccc' : '#2e7d32',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '4px',
-                fontSize: '0.85rem',
-              }}
-            >
-              {publishing ? '公開中...' : '公開する'}
-            </button>
-          )}
-        </div>
+        )}
       </div>
 
       {imageError && (
