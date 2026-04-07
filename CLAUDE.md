@@ -10,16 +10,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## コマンド
 
-- `npm run typecheck` — TypeScript 型チェック
-- `npm run lint` — Biome による lint チェック
-- `npm run lint:fix` — Biome による lint 自動修正
-- `npm run format` — Biome による フォーマット
-- `npm run build` — 型チェック + ビルド
+- `pnpm run typecheck` — TypeScript 型チェック
+- `pnpm run lint` — Biome による lint チェック
+- `pnpm run lint:fix` — Biome による lint 自動修正
+- `pnpm run format` — Biome による フォーマット
+- `pnpm run build` — 型チェック + ビルド
 
 ## ルール
 
 - コミットメッセージはなぜそれを行ったのかwhyを大事にすること
 - コミットは大きくなりすぎないこと
 - 意味のある塊でコミットしていくこと
-- コード修正後は必ず `npm run typecheck` と `npm run lint` を実行して問題がないことを確認すること
+- コード修正後は必ず `pnpm run typecheck` と `pnpm run lint` を実行して問題がないことを確認すること
 
