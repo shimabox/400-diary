@@ -272,6 +272,7 @@ function HeatmapView({
                     background: color,
                     borderRadius: '2px',
                     display: 'block',
+                    position: 'relative',
                   }}
                 >
                   <span
