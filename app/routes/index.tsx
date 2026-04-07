@@ -5,7 +5,10 @@ import { formatDiaryDate } from '../lib/format'
 
 export default createRoute(async (c) => {
   const db = c.env.DB
-  const year = new Date().getFullYear()
+  const yearParam = c.req.query('year')
+  const year = yearParam
+    ? Number.parseInt(yearParam, 10)
+    : new Date().getFullYear()
   const isAuthenticated = c.get('isAuthenticated')
   const [allDiaries, calendarEntries] = await Promise.all([
     listDiaries(db),
@@ -20,6 +23,12 @@ export default createRoute(async (c) => {
         const diary = allDiaries.find((d) => d.id === e.id)
         return diary?.published_at
       })
+
+  const diaryYears = diaries.map((d) =>
+    Number.parseInt(d.diary_date.slice(0, 4), 10),
+  )
+  const minYear = diaryYears.length > 0 ? Math.min(...diaryYears) : year
+  const maxYear = diaryYears.length > 0 ? Math.max(...diaryYears) : year
 
   return c.render(
     <div
@@ -61,7 +70,13 @@ export default createRoute(async (c) => {
         </div>
 
         <div style={{ padding: '0 0.5rem 1.5rem' }}>
-          <CalendarView year={year} entries={pubCalendarEntries} />
+          <CalendarView
+            year={year}
+            entries={pubCalendarEntries}
+            isAuthenticated={isAuthenticated}
+            minYear={minYear}
+            maxYear={maxYear}
+          />
         </div>
 
         {diaries.length === 0 ? (

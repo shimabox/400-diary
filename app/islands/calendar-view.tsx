@@ -10,6 +10,9 @@ type Entry = {
 type Props = {
   year: number
   entries: Entry[]
+  isAuthenticated?: boolean
+  minYear?: number
+  maxYear?: number
 }
 
 const MONTH_LABELS = [
@@ -46,7 +49,13 @@ function getCellColor(entry: Entry | undefined): string {
   return '#c6e48b'
 }
 
-export default function CalendarView({ year, entries }: Props) {
+export default function CalendarView({
+  year,
+  entries,
+  isAuthenticated,
+  minYear,
+  maxYear,
+}: Props) {
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null)
 
   const entryMap = new Map<string, Entry>()
@@ -60,6 +69,7 @@ export default function CalendarView({ year, entries }: Props) {
         year={year}
         month={selectedMonth}
         entryMap={entryMap}
+        isAuthenticated={isAuthenticated}
         onBack={() => setSelectedMonth(null)}
         onPrevMonth={() =>
           setSelectedMonth((prev) =>
@@ -79,6 +89,9 @@ export default function CalendarView({ year, entries }: Props) {
     <HeatmapView
       year={year}
       entryMap={entryMap}
+      isAuthenticated={isAuthenticated}
+      minYear={minYear}
+      maxYear={maxYear}
       onMonthClick={setSelectedMonth}
     />
   )
@@ -87,10 +100,16 @@ export default function CalendarView({ year, entries }: Props) {
 function HeatmapView({
   year,
   entryMap,
+  isAuthenticated,
+  minYear,
+  maxYear,
   onMonthClick,
 }: {
   year: number
   entryMap: Map<string, Entry>
+  isAuthenticated?: boolean
+  minYear?: number
+  maxYear?: number
   onMonthClick: (month: number) => void
 }) {
   const startDate = new Date(year, 0, 1)
@@ -135,31 +154,39 @@ function HeatmapView({
           marginBottom: '1.5rem',
         }}
       >
-        <a
-          href={`/calendar?year=${year - 1}`}
-          style={{
-            padding: '0.3rem 0.8rem',
-            border: '1px solid #ccc',
-            borderRadius: '4px',
-            fontSize: '0.9rem',
-            color: '#666',
-          }}
-        >
-          {year - 1}
-        </a>
+        {minYear != null && year > minYear ? (
+          <a
+            href={`/?year=${year - 1}`}
+            style={{
+              padding: '0.3rem 0.8rem',
+              border: '1px solid #ccc',
+              borderRadius: '4px',
+              fontSize: '0.9rem',
+              color: '#666',
+            }}
+          >
+            {year - 1}
+          </a>
+        ) : (
+          <span style={{ width: '4rem' }} />
+        )}
         <span style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{year}</span>
-        <a
-          href={`/calendar?year=${year + 1}`}
-          style={{
-            padding: '0.3rem 0.8rem',
-            border: '1px solid #ccc',
-            borderRadius: '4px',
-            fontSize: '0.9rem',
-            color: '#666',
-          }}
-        >
-          {year + 1}
-        </a>
+        {maxYear != null && year < maxYear ? (
+          <a
+            href={`/?year=${year + 1}`}
+            style={{
+              padding: '0.3rem 0.8rem',
+              border: '1px solid #ccc',
+              borderRadius: '4px',
+              fontSize: '0.9rem',
+              color: '#666',
+            }}
+          >
+            {year + 1}
+          </a>
+        ) : (
+          <span style={{ width: '4rem' }} />
+        )}
       </div>
 
       {/* Heatmap */}
@@ -230,14 +257,13 @@ function HeatmapView({
             const row = (pos % 7) + 2
             const color = getCellColor(cell.entry)
             if (cell.entry) {
-              const entryId = cell.entry.id
+              const href = isAuthenticated
+                ? `/edit/${cell.entry.id}`
+                : `/d/${cell.entry.id}`
               return (
-                <button
-                  type="button"
+                <a
                   key={cell.date}
-                  onClick={() => {
-                    window.location.href = `/d/${entryId}`
-                  }}
+                  href={href}
                   title={cell.date}
                   style={{
                     gridRow: row,
@@ -245,11 +271,21 @@ function HeatmapView({
                     height: '12px',
                     background: color,
                     borderRadius: '2px',
-                    cursor: 'pointer',
-                    border: 'none',
-                    padding: 0,
+                    display: 'block',
                   }}
-                />
+                >
+                  <span
+                    style={{
+                      position: 'absolute',
+                      width: '1px',
+                      height: '1px',
+                      overflow: 'hidden',
+                      clip: 'rect(0,0,0,0)',
+                    }}
+                  >
+                    {cell.date}
+                  </span>
+                </a>
               )
             }
             return (
@@ -276,6 +312,7 @@ function MonthView({
   year,
   month,
   entryMap,
+  isAuthenticated,
   onBack,
   onPrevMonth,
   onNextMonth,
@@ -283,6 +320,7 @@ function MonthView({
   year: number
   month: number
   entryMap: Map<string, Entry>
+  isAuthenticated?: boolean
   onBack: () => void
   onPrevMonth: () => void
   onNextMonth: () => void
@@ -377,31 +415,27 @@ function MonthView({
 
         {/* Day cells */}
         {days.map(({ day, entry }) => {
+          const bgColor = entry ? getCellColor(entry) : 'transparent'
           if (entry) {
-            const entryId = entry.id
-            const bgColor = getCellColor(entry)
+            const href = isAuthenticated
+              ? `/edit/${entry.id}`
+              : `/d/${entry.id}`
             return (
-              <button
-                type="button"
+              <a
                 key={day}
-                onClick={() => {
-                  window.location.href = `/d/${entryId}`
-                }}
+                href={href}
                 style={{
                   textAlign: 'center',
                   padding: '0.5rem 0.2rem',
                   borderRadius: '4px',
                   background: bgColor,
-                  cursor: 'pointer',
                   fontSize: '0.9rem',
                   color: '#333',
                   fontWeight: 'bold',
-                  border: 'none',
-                  fontFamily: 'inherit',
                 }}
               >
                 {day}
-              </button>
+              </a>
             )
           }
           return (
@@ -411,7 +445,7 @@ function MonthView({
                 textAlign: 'center',
                 padding: '0.5rem 0.2rem',
                 borderRadius: '4px',
-                background: 'transparent',
+                background: bgColor,
                 fontSize: '0.9rem',
                 color: '#999',
               }}
