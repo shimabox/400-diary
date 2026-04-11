@@ -3,7 +3,7 @@ import {
   layoutNextLine,
   prepareWithSegments,
 } from '@chenglou/pretext'
-import { useCallback, useEffect, useRef, useState } from 'hono/jsx'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'hono/jsx'
 
 type Column = {
   text: string
@@ -42,7 +42,6 @@ export default function FlowText({
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const dateRef = useRef<HTMLDivElement>(null)
-  const [columns, setColumns] = useState<Column[]>([])
   const [imageSize, setImageSize] = useState<ImageSize | null>(null)
   const [dateSize, setDateSize] = useState<{
     width: number
@@ -80,9 +79,9 @@ export default function FlowText({
     return () => obs.disconnect()
   }, [])
 
-  // Pretextでテキストを列に分割
-  useEffect(() => {
-    if (!containerWidth || containerWidth < 100) return
+  // Pretextでテキストを列に分割（props/stateからの派生値）
+  const columns = useMemo(() => {
+    if (!containerWidth || containerWidth < 100) return []
 
     const font = `600 ${fontSize}px sans-serif`
     const prepared = prepareWithSegments(text, font, {
@@ -153,7 +152,7 @@ export default function FlowText({
       cursor = line.end
     }
 
-    setColumns(cols)
+    return cols
   }, [
     text,
     fontSize,
