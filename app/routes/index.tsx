@@ -1,6 +1,10 @@
 import { createRoute } from '~/factory'
 import CalendarView from '../islands/calendar-view'
-import { listDiaries, listDiaryCalendarEntries } from '../lib/db'
+import {
+  listDiaries,
+  listDiaryCalendarEntries,
+  listPublishedCalendarEntries,
+} from '../lib/db'
 import { formatDiaryDate } from '../lib/format'
 
 export default createRoute(async (c) => {
@@ -12,17 +16,13 @@ export default createRoute(async (c) => {
   const isAuthenticated = c.get('isAuthenticated')
   const [allDiaries, calendarEntries] = await Promise.all([
     listDiaries(db),
-    listDiaryCalendarEntries(db, year),
+    isAuthenticated
+      ? listDiaryCalendarEntries(db, year)
+      : listPublishedCalendarEntries(db, year),
   ])
   const diaries = isAuthenticated
     ? allDiaries
-    : allDiaries.filter((d) => d.published_at)
-  const pubCalendarEntries = isAuthenticated
-    ? calendarEntries
-    : calendarEntries.filter((e) => {
-        const diary = allDiaries.find((d) => d.id === e.id)
-        return diary?.published_at
-      })
+    : allDiaries.filter((d) => d.published_snapshot_id)
 
   const diaryYears = diaries.map((d) =>
     Number.parseInt(d.diary_date.slice(0, 4), 10),
@@ -72,7 +72,7 @@ export default createRoute(async (c) => {
         <div style={{ padding: '0 0.5rem 1.5rem' }}>
           <CalendarView
             year={year}
-            entries={pubCalendarEntries}
+            entries={calendarEntries}
             isAuthenticated={isAuthenticated}
             minYear={minYear}
             maxYear={maxYear}
@@ -109,12 +109,13 @@ export default createRoute(async (c) => {
             }}
           >
             {diaries.map((diary) => {
-              const cardBody = isAuthenticated
-                ? diary.body
-                : (diary.published_body ?? diary.body)
-              const cardColor = isAuthenticated
-                ? diary.background_color
-                : (diary.published_background_color ?? diary.background_color)
+              const cardBody = diary.snapshot_body ?? diary.body
+              const cardColor =
+                diary.snapshot_background_color ?? diary.background_color
+              const hasDraft =
+                isAuthenticated &&
+                diary.published_snapshot_id &&
+                diary.body !== diary.snapshot_body
               const cardHref = isAuthenticated
                 ? `/edit/${diary.id}`
                 : `/d/${diary.id}`
@@ -140,7 +141,7 @@ export default createRoute(async (c) => {
                   }}
                   class="diary-card"
                 >
-                  {isAuthenticated && !diary.published_at && (
+                  {isAuthenticated && !diary.published_snapshot_id && (
                     <span
                       style={{
                         position: 'absolute',
@@ -154,6 +155,22 @@ export default createRoute(async (c) => {
                       }}
                     >
                       下書き
+                    </span>
+                  )}
+                  {hasDraft && (
+                    <span
+                      style={{
+                        position: 'absolute',
+                        top: '0.4rem',
+                        left: '0.4rem',
+                        fontSize: '0.65rem',
+                        background: 'rgba(180,100,0,0.7)',
+                        color: '#fff',
+                        padding: '0.1rem 0.4rem',
+                        borderRadius: '3px',
+                      }}
+                    >
+                      未公開の変更
                     </span>
                   )}
                   <time
