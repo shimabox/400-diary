@@ -8,15 +8,33 @@ export type Diary = {
   image_layout: 'left' | 'right'
   background_color: string
   mood: string | null
-  published_at: string | null
-  published_body: string | null
-  published_image_key: string | null
-  published_image_layout: string | null
-  published_mood: string | null
-  published_background_color: string | null
   diary_date: string
+  published_snapshot_id: string | null
   created_at: string
   updated_at: string
+}
+
+export type DiarySnapshot = {
+  id: string
+  diary_id: string
+  body: string
+  image_key: string | null
+  image_layout: 'left' | 'right'
+  background_color: string
+  mood: string | null
+  published_at: string
+}
+
+/** 一覧表示用: 下書き + 公開情報 */
+export type DiaryWithPublished = Diary & {
+  published_at: string | null
+  snapshot_body: string | null
+  snapshot_background_color: string | null
+}
+
+/** 公開ページ用: diary + snapshot */
+export type DiaryWithSnapshot = Diary & {
+  snapshot: DiarySnapshot
 }
 
 export async function createDiary(
@@ -27,23 +45,15 @@ export async function createDiary(
     background_color: string
     image_layout?: 'left' | 'right'
     mood?: string | null
-    published_at?: string | null
   },
 ): Promise<Diary> {
   const id = nanoid(12)
-  const {
-    body,
-    diary_date,
-    background_color,
-    image_layout,
-    mood,
-    published_at,
-  } = params
+  const { body, diary_date, background_color, image_layout, mood } = params
 
   await db
     .prepare(
-      `INSERT INTO diaries (id, body, background_color, image_layout, mood, published_at, diary_date)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO diaries (id, body, background_color, image_layout, mood, diary_date)
+       VALUES (?, ?, ?, ?, ?, ?)`,
     )
     .bind(
       id,
@@ -51,7 +61,6 @@ export async function createDiary(
       background_color,
       image_layout ?? 'left',
       mood ?? null,
-      published_at ?? null,
       diary_date,
     )
     .run()
@@ -69,10 +78,18 @@ export async function getDiary(
     .first<Diary>()
 }
 
-export async function listDiaries(db: D1Database): Promise<Diary[]> {
+/** 一覧用: LEFT JOIN で published_at を取得 */
+export async function listDiaries(
+  db: D1Database,
+): Promise<DiaryWithPublished[]> {
   const { results } = await db
-    .prepare('SELECT * FROM diaries ORDER BY diary_date DESC')
-    .all<Diary>()
+    .prepare(
+      `SELECT d.*, s.published_at, s.body AS snapshot_body, s.background_color AS snapshot_background_color
+       FROM diaries d
+       LEFT JOIN diary_snapshots s ON d.published_snapshot_id = s.id
+       ORDER BY d.diary_date DESC`,
+    )
+    .all<DiaryWithPublished>()
   return results
 }
 
@@ -85,7 +102,6 @@ export async function updateDiary(
     background_color?: string
     image_layout?: 'left' | 'right'
     mood?: string | null
-    published_at?: string | null
     image_key?: string | null
   },
 ): Promise<Diary | null> {
@@ -115,10 +131,6 @@ export async function updateDiary(
     setClauses.push('mood = ?')
     values.push(params.mood ?? null)
   }
-  if ('published_at' in params) {
-    setClauses.push('published_at = ?')
-    values.push(params.published_at ?? null)
-  }
   if ('image_key' in params) {
     setClauses.push('image_key = ?')
     values.push(params.image_key ?? null)
@@ -134,6 +146,80 @@ export async function updateDiary(
   return await getDiary(db, id)
 }
 
+/** 公開: diaries の現在の値を diary_snapshots に INSERT し、published_snapshot_id を更新 */
+export async function publishDiary(
+  db: D1Database,
+  id: string,
+): Promise<DiarySnapshot | null> {
+  const diary = await getDiary(db, id)
+  if (!diary) return null
+
+  const snapshotId = nanoid(12)
+
+  await db
+    .prepare(
+      `INSERT INTO diary_snapshots (id, diary_id, body, image_key, image_layout, background_color, mood)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .bind(
+      snapshotId,
+      id,
+      diary.body,
+      diary.image_key,
+      diary.image_layout,
+      diary.background_color,
+      diary.mood,
+    )
+    .run()
+
+  await db
+    .prepare(
+      "UPDATE diaries SET published_snapshot_id = ?, updated_at = datetime('now') WHERE id = ?",
+    )
+    .bind(snapshotId, id)
+    .run()
+
+  return await db
+    .prepare('SELECT * FROM diary_snapshots WHERE id = ?')
+    .bind(snapshotId)
+    .first<DiarySnapshot>()
+}
+
+/** 編集ページ用: diary + published_at を取得 */
+export async function getDiaryWithPublished(
+  db: D1Database,
+  id: string,
+): Promise<DiaryWithPublished | null> {
+  return await db
+    .prepare(
+      `SELECT d.*, s.published_at, s.body AS snapshot_body, s.background_color AS snapshot_background_color
+       FROM diaries d
+       LEFT JOIN diary_snapshots s ON d.published_snapshot_id = s.id
+       WHERE d.id = ?`,
+    )
+    .bind(id)
+    .first<DiaryWithPublished>()
+}
+
+/** 公開ページ用: diary + 公開中の snapshot を取得 */
+export async function getDiaryWithSnapshot(
+  db: D1Database,
+  id: string,
+): Promise<DiaryWithSnapshot | null> {
+  const diary = await getDiary(db, id)
+  if (!diary || !diary.published_snapshot_id) return null
+
+  const snapshot = await db
+    .prepare('SELECT * FROM diary_snapshots WHERE id = ?')
+    .bind(diary.published_snapshot_id)
+    .first<DiarySnapshot>()
+
+  if (!snapshot) return null
+
+  return { ...diary, snapshot }
+}
+
+/** カレンダー用 */
 export async function listDiaryCalendarEntries(
   db: D1Database,
   year: number,
@@ -147,29 +233,36 @@ export async function listDiaryCalendarEntries(
   return results
 }
 
-export async function publishDiary(
+/** カレンダー用（未認証: 公開済みのみ、snapshot の mood を使用） */
+export async function listPublishedCalendarEntries(
   db: D1Database,
-  id: string,
-): Promise<Diary | null> {
-  const existing = await getDiary(db, id)
-  if (!existing) return null
-
-  await db
+  year: number,
+): Promise<{ id: string; diary_date: string; mood: string | null }[]> {
+  const { results } = await db
     .prepare(
-      `UPDATE diaries SET
-        published_body = body,
-        published_image_key = image_key,
-        published_image_layout = image_layout,
-        published_mood = mood,
-        published_background_color = background_color,
-        published_at = datetime('now'),
-        updated_at = datetime('now')
-       WHERE id = ?`,
+      `SELECT d.id, d.diary_date, s.mood
+       FROM diaries d
+       JOIN diary_snapshots s ON d.published_snapshot_id = s.id
+       WHERE d.diary_date >= ? AND d.diary_date < ?
+       ORDER BY d.diary_date`,
     )
-    .bind(id)
-    .run()
+    .bind(`${year}-01-01`, `${year + 1}-01-01`)
+    .all<{ id: string; diary_date: string; mood: string | null }>()
+  return results
+}
 
-  return await getDiary(db, id)
+/** diary に紐づく全 snapshot の image_key を取得（削除時に R2 からも消すため） */
+export async function listSnapshotImageKeys(
+  db: D1Database,
+  diaryId: string,
+): Promise<string[]> {
+  const { results } = await db
+    .prepare(
+      'SELECT DISTINCT image_key FROM diary_snapshots WHERE diary_id = ? AND image_key IS NOT NULL',
+    )
+    .bind(diaryId)
+    .all<{ image_key: string }>()
+  return results.map((r) => r.image_key)
 }
 
 export async function deleteDiary(

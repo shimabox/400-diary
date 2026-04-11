@@ -1,6 +1,11 @@
 import { createRoute } from '~/factory'
 import { MAX_BODY_LENGTH } from '../../../lib/constants'
-import { deleteDiary, getDiary, updateDiary } from '../../../lib/db'
+import {
+  deleteDiary,
+  getDiary,
+  listSnapshotImageKeys,
+  updateDiary,
+} from '../../../lib/db'
 import { deleteImage } from '../../../lib/storage'
 
 export const GET = createRoute(async (c) => {
@@ -64,9 +69,11 @@ export const DELETE = createRoute(async (c) => {
     return c.json({ error: '日記が見つかりません' }, 404)
   }
 
-  if (diary.image_key) {
-    await deleteImage(c.env.BUCKET, diary.image_key)
-  }
+  // 下書きの画像 + snapshot の画像を R2 から削除
+  const snapshotKeys = await listSnapshotImageKeys(db, id)
+  const allKeys = new Set(snapshotKeys)
+  if (diary.image_key) allKeys.add(diary.image_key)
+  await Promise.all([...allKeys].map((key) => deleteImage(c.env.BUCKET, key)))
 
   await deleteDiary(db, id)
 

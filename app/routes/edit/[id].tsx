@@ -1,6 +1,6 @@
 import { createRoute } from '~/factory'
 import VerticalEditor from '../../islands/vertical-editor'
-import { getDiary } from '../../lib/db'
+import { getDiaryWithPublished } from '../../lib/db'
 
 export default createRoute(async (c) => {
   if (!c.get('isAuthenticated')) {
@@ -9,7 +9,7 @@ export default createRoute(async (c) => {
 
   const id = c.req.param('id')!
   const db = c.env.DB
-  const diary = await getDiary(db, id)
+  const diary = await getDiaryWithPublished(db, id)
 
   if (!diary) {
     return c.render(

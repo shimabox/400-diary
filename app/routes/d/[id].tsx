@@ -1,14 +1,14 @@
 import { createRoute } from '~/factory'
 import FlowText from '../../islands/flow-text'
-import { getDiary } from '../../lib/db'
+import { getDiaryWithSnapshot } from '../../lib/db'
 import { formatDiaryDate } from '../../lib/format'
 
 export default createRoute(async (c) => {
   const id = c.req.param('id')!
   const db = c.env.DB
-  const diary = await getDiary(db, id)
+  const result = await getDiaryWithSnapshot(db, id)
 
-  if (!diary || !diary.published_at) {
+  if (!result) {
     return c.render(
       <div
         style={{
@@ -38,13 +38,12 @@ export default createRoute(async (c) => {
   }
 
   const isAuthenticated = c.get('isAuthenticated')
-  const pubBody = diary.published_body!
-  const pubImageKey = diary.published_image_key
-  const pubImageLayout = (diary.published_image_layout ?? 'left') as
-    | 'left'
-    | 'right'
-  const pubBgColor = diary.published_background_color!
-  const pubMood = diary.published_mood
+  const { snapshot, ...diary } = result
+  const pubBody = snapshot.body
+  const pubImageKey = snapshot.image_key
+  const pubImageLayout = snapshot.image_layout as 'left' | 'right'
+  const pubBgColor = snapshot.background_color
+  const pubMood = snapshot.mood
   const description = pubBody.slice(0, 80)
   const dateLabel = formatDiaryDate(diary.diary_date)
 

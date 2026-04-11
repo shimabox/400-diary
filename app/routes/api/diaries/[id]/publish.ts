@@ -8,11 +8,11 @@ export const POST = createRoute(async (c) => {
 
   const id = c.req.param('id')!
   const db = c.env.DB
-  const diary = await publishDiary(db, id)
+  const snapshot = await publishDiary(db, id)
 
-  if (!diary) {
+  if (!snapshot) {
     return c.json({ error: '日記が見つかりません' }, 404)
   }
 
-  return c.json(diary)
+  return c.json({ published_at: snapshot.published_at })
 })
