@@ -151,8 +151,9 @@ export default function VerticalEditor({
     setSaving(true)
     setError('')
 
-    const url = diaryId ? `/api/diaries/${diaryId}` : '/api/diaries'
-    const method = diaryId ? 'PUT' : 'POST'
+    const currentId = diaryId || savedId
+    const url = currentId ? `/api/diaries/${currentId}` : '/api/diaries'
+    const method = currentId ? 'PUT' : 'POST'
 
     try {
       const res = await fetch(url, {
@@ -181,7 +182,7 @@ export default function VerticalEditor({
       setError('保存に失敗しました')
       setSaving(false)
     }
-  }, [body, date, initialColor, imageLayout, mood, diaryId])
+  }, [body, date, initialColor, imageLayout, mood, diaryId, savedId])
 
   const handlePublish = useCallback(async () => {
     const currentDiaryId = diaryId || savedId
