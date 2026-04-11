@@ -6,7 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **400日記** — 400（20×20）文字の世界で綴る日記
 
-新規プロジェクトのため、コードベースの発展に伴いビルド・テストコマンドやアーキテクチャ情報をここに追記していく。
+## アーキテクチャ
+
+HonoX + Cloudflare Workers / D1 / R2。Islands Architecture で必要な部分だけハイドレーション。
+詳細は `docs/architecture/` を参照。
 
 ## コマンド
 
