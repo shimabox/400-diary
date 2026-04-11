@@ -35,7 +35,14 @@ button {
   display: none;
 }
 
+.editor-grid {
+  font-size: 1.1rem;
+}
+
 @media (max-width: 600px) {
+  .editor-grid {
+    font-size: min(1.1rem, calc((100vw - 5rem) / 40));
+  }
   .editor-toolbar > * {
     flex: 1 1 auto;
     min-width: 0;

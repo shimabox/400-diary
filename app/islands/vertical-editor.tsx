@@ -353,13 +353,13 @@ export default function VerticalEditor({
         </div>
       ) : (
         <div
+          class="editor-grid"
           style={{
             position: 'relative',
             background: initialColor,
             borderRadius: '8px',
             padding: '1.5rem',
             overflow: 'hidden',
-            fontSize: '1.1rem',
             width: 'fit-content',
             margin: '0 auto',
           }}
