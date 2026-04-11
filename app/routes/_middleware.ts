@@ -1,3 +1,4 @@
+import { getCookie } from 'hono/cookie'
 import { createMiddleware } from 'hono/factory'
 import type { AppEnv } from '~/factory'
 import { verifyAccess } from '../lib/auth'
@@ -9,7 +10,8 @@ const authMiddleware = createMiddleware<AppEnv>(async (c, next) => {
     return next()
   }
 
-  const token = c.req.header('Cf-Access-Jwt-Assertion')
+  const token =
+    c.req.header('Cf-Access-Jwt-Assertion') ?? getCookie(c, 'CF_Authorization')
   const teamDomain = c.env.CF_ACCESS_TEAM_DOMAIN
   const aud = c.env.CF_ACCESS_AUD
 
