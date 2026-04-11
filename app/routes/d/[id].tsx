@@ -4,6 +4,7 @@ import { getDiaryWithSnapshot } from '../../lib/db'
 import { formatDiaryDate } from '../../lib/format'
 
 export default createRoute(async (c) => {
+  const appName = c.env.APP_NAME || '400字日記'
   const id = c.req.param('id')!
   const db = c.env.DB
   const result = await getDiaryWithSnapshot(db, id)
@@ -33,7 +34,7 @@ export default createRoute(async (c) => {
           一覧に戻る
         </a>
       </div>,
-      { title: 'Not Found — しまぶ日記' },
+      { title: `Not Found — ${appName}` },
     )
   }
 
@@ -73,7 +74,7 @@ export default createRoute(async (c) => {
           }}
         >
           <h1 style={{ fontSize: '1.3rem' }}>
-            <a href="/">しまぶ日記</a>
+            <a href="/">{appName}</a>
           </h1>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <button
@@ -184,7 +185,7 @@ export default createRoute(async (c) => {
       </div>
     </div>,
     {
-      title: `${dateLabel}の日記 — しまぶ日記`,
+      title: `${dateLabel}の日記 — ${appName}`,
       description,
     },
   )

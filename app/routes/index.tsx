@@ -8,6 +8,7 @@ import {
 import { formatDiaryDate } from '../lib/format'
 
 export default createRoute(async (c) => {
+  const appName = c.env.APP_NAME || '400字日記'
   const db = c.env.DB
   const yearParam = c.req.query('year')
   const year = yearParam
@@ -53,7 +54,7 @@ export default createRoute(async (c) => {
             padding: '0 0.5rem 1rem',
           }}
         >
-          <h1 style={{ fontSize: '1.3rem' }}>しまぶ日記</h1>
+          <h1 style={{ fontSize: '1.3rem' }}>{appName}</h1>
           {isAuthenticated && (
             <a
               href="/new"
@@ -214,6 +215,6 @@ export default createRoute(async (c) => {
       `}</style>
       </div>
     </div>,
-    { title: 'しまぶ日記' },
+    { title: appName },
   )
 })

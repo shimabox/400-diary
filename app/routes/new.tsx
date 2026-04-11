@@ -3,6 +3,7 @@ import VerticalEditor from '../islands/vertical-editor'
 import { randomPastelColor } from '../lib/colors'
 
 export default createRoute((c) => {
+  const appName = c.env.APP_NAME || '400字日記'
   if (!c.get('isAuthenticated')) {
     return c.redirect('/')
   }
@@ -18,6 +19,6 @@ export default createRoute((c) => {
         initialColor={color}
       />
     </div>,
-    { title: '日記を書く — しまぶ日記' },
+    { title: `日記を書く — ${appName}` },
   )
 })

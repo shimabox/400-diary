@@ -15,3 +15,4 @@ bucket_name = "400-diary-images"
 [vars]
 CF_ACCESS_TEAM_DOMAIN = "YOUR_TEAM.cloudflareaccess.com"
 CF_ACCESS_AUD = "YOUR_APPLICATION_AUD_TAG"
+APP_NAME = "しまぶ日記"

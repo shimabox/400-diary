@@ -3,6 +3,7 @@ import VerticalEditor from '../../islands/vertical-editor'
 import { getDiaryWithPublished } from '../../lib/db'
 
 export default createRoute(async (c) => {
+  const appName = c.env.APP_NAME || '400字日記'
   if (!c.get('isAuthenticated')) {
     return c.redirect('/')
   }
@@ -36,7 +37,7 @@ export default createRoute(async (c) => {
           一覧に戻る
         </a>
       </div>,
-      { title: 'Not Found — しまぶ日記' },
+      { title: `Not Found — ${appName}` },
     )
   }
 
@@ -92,6 +93,6 @@ export default createRoute(async (c) => {
         </div>
       </div>
     </div>,
-    { title: '日記を編集 — しまぶ日記' },
+    { title: `日記を編集 — ${appName}` },
   )
 })

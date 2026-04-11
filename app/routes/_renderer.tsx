@@ -2,7 +2,7 @@ import { jsxRenderer } from 'hono/jsx-renderer'
 import { Script } from 'honox/server'
 
 export default jsxRenderer(({ children, title, description, ogImage }) => {
-  const pageTitle = title ?? 'しまぶ日記'
+  const pageTitle = title ?? '400字日記'
   return (
     <html lang="ja">
       <head>
