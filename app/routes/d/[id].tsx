@@ -77,54 +77,58 @@ export default createRoute(async (c) => {
             <a href="/">{appName}</a>
           </h1>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button
-              type="button"
-              id="export-md-btn"
-              style={{
-                padding: '0.3rem 0.8rem',
-                border: '1px solid #333',
-                borderRadius: '4px',
-                fontSize: '0.85rem',
-                background: 'transparent',
-                cursor: 'pointer',
-              }}
-            >
-              MDエクスポート
-            </button>
-            <script
-              dangerouslySetInnerHTML={{
-                __html: `
-                  document.getElementById('export-md-btn').addEventListener('click', function() {
-                    var diaryDate = ${JSON.stringify(diary.diary_date)};
-                    var diaryBody = ${JSON.stringify(pubBody)};
-                    var diaryMood = ${JSON.stringify(pubMood)};
-                    var diaryBgColor = ${JSON.stringify(pubBgColor)};
-                    var diaryImageKey = ${JSON.stringify(pubImageKey)};
+            {isAuthenticated && (
+              <>
+                <button
+                  type="button"
+                  id="export-md-btn"
+                  style={{
+                    padding: '0.3rem 0.8rem',
+                    border: '1px solid #333',
+                    borderRadius: '4px',
+                    fontSize: '0.85rem',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                  }}
+                >
+                  MDエクスポート
+                </button>
+                <script
+                  dangerouslySetInnerHTML={{
+                    __html: `
+                      document.getElementById('export-md-btn').addEventListener('click', function() {
+                        var diaryDate = ${JSON.stringify(diary.diary_date)};
+                        var diaryBody = ${JSON.stringify(pubBody)};
+                        var diaryMood = ${JSON.stringify(pubMood)};
+                        var diaryBgColor = ${JSON.stringify(pubBgColor)};
+                        var diaryImageKey = ${JSON.stringify(pubImageKey)};
 
-                    var lines = ['---'];
-                    lines.push('date: ' + diaryDate);
-                    if (diaryMood) lines.push('mood: ' + diaryMood);
-                    lines.push('background_color: "' + diaryBgColor + '"');
-                    lines.push('---');
+                        var lines = ['---'];
+                        lines.push('date: ' + diaryDate);
+                        if (diaryMood) lines.push('mood: ' + diaryMood);
+                        lines.push('background_color: "' + diaryBgColor + '"');
+                        lines.push('---');
 
-                    var md = lines.join('\\n') + '\\n\\n';
-                    md += diaryBody;
+                        var md = lines.join('\\n') + '\\n\\n';
+                        md += diaryBody;
 
-                    if (diaryImageKey) {
-                      md += '\\n\\n![日記の写真](/api/images/' + diaryImageKey + ')';
-                    }
+                        if (diaryImageKey) {
+                          md += '\\n\\n![日記の写真](/api/images/' + diaryImageKey + ')';
+                        }
 
-                    var blob = new Blob([md], { type: 'text/markdown' });
-                    var url = URL.createObjectURL(blob);
-                    var a = document.createElement('a');
-                    a.href = url;
-                    a.download = diaryDate + '.md';
-                    a.click();
-                    URL.revokeObjectURL(url);
-                  });
-                `,
-              }}
-            />
+                        var blob = new Blob([md], { type: 'text/markdown' });
+                        var url = URL.createObjectURL(blob);
+                        var a = document.createElement('a');
+                        a.href = url;
+                        a.download = diaryDate + '.md';
+                        a.click();
+                        URL.revokeObjectURL(url);
+                      });
+                    `,
+                  }}
+                />
+              </>
+            )}
             {isAuthenticated && (
               <a
                 href={`/edit/${diary.id}`}
