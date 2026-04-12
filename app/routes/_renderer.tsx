@@ -17,10 +17,19 @@ export default jsxRenderer(({ children, title, description, ogImage }) => {
             <meta name="description" content={description} />
             <meta property="og:title" content={pageTitle} />
             <meta property="og:description" content={description} />
-            <meta name="twitter:card" content="summary" />
           </>
         )}
-        {ogImage && <meta property="og:image" content={ogImage} />}
+        {ogImage ? (
+          <>
+            <meta
+              property="og:image"
+              content={`${new URL(c.req.url).origin}${ogImage}`}
+            />
+            <meta name="twitter:card" content="summary_large_image" />
+          </>
+        ) : (
+          description && <meta name="twitter:card" content="summary" />
+        )}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
           rel="preconnect"

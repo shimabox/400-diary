@@ -215,6 +215,10 @@ export default createRoute(async (c) => {
       `}</style>
       </div>
     </div>,
-    { title: appName },
+    {
+      title: appName,
+      description: 'しまぶが400文字で綴る日記',
+      ogImage: '/api/og',
+    },
   )
 })

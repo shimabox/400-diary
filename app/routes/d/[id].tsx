@@ -191,6 +191,7 @@ export default createRoute(async (c) => {
     {
       title: `${dateLabel}の日記 — ${appName}`,
       description,
+      ogImage: `/api/og/${diary.id}`,
     },
   )
 })
