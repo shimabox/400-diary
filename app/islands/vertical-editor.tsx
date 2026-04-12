@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'hono/jsx'
+import { PASTEL_COLORS } from '../lib/colors'
 import { MAX_BODY_LENGTH } from '../lib/constants'
 import { formatDiaryDate } from '../lib/format'
 import { MOODS, type MoodKey } from '../lib/mood'
@@ -317,20 +318,26 @@ export default function VerticalEditor({
               background: '#fff',
             }}
           />
-          <input
-            type="color"
-            value={bgColor}
-            onInput={(e) => setBgColor((e.target as HTMLInputElement).value)}
-            title="背景色"
-            style={{
-              width: '2rem',
-              height: '2rem',
-              padding: '0',
-              border: '1px solid #ccc',
-              borderRadius: '4px',
-              cursor: 'pointer',
-            }}
-          />
+          <div style={{ display: 'flex', gap: '0.2rem' }}>
+            {PASTEL_COLORS.map((color) => (
+              <button
+                key={color}
+                type="button"
+                onClick={() => setBgColor(color)}
+                title={color}
+                style={{
+                  width: '1.5rem',
+                  height: '1.5rem',
+                  padding: '0',
+                  border: '1px solid #ccc',
+                  borderRadius: '50%',
+                  background: color,
+                  cursor: 'pointer',
+                  boxShadow: bgColor === color ? `0 0 0 2px ${color}` : 'none',
+                }}
+              />
+            ))}
+          </div>
         </div>
       </div>
 

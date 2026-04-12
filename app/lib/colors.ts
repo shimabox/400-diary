@@ -13,6 +13,8 @@ const PASTEL_COLORS = [
   '#E6E6FA', // lavender
 ] as const
 
+export { PASTEL_COLORS }
+
 export function randomPastelColor(): string {
   return PASTEL_COLORS[Math.floor(Math.random() * PASTEL_COLORS.length)]
 }
