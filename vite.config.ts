@@ -18,6 +18,7 @@ export default defineConfig(({ mode }) => {
     return {
       ...common,
       build: {
+        manifest: true,
         rollupOptions: {
           input: ['/app/client.ts', '/app/styles/global.css'],
           output: {
