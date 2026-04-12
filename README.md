@@ -10,7 +10,7 @@ https://400-diary.shimabox.net で公開されているアプリのソースコ�
 - **下書き・公開管理** — スナップショット方式で公開後も下書きを編集可能
 - **気分タグ** — 6種類（happy / calm / sad / angry / anxious / fun）の気分を記録
 - **パステル背景色** — 12色のプリセットからランダム選択またはカスタム指定
-- **画像アップロード** — 左右配置を選択でき、[chenglou/pretext](https://github.com/chenglou/pretext) によりテキストが画像を回り込む
+- **画像アップロード** — ドラッグで自由に配置でき、[chenglou/pretext](https://github.com/chenglou/pretext) によりテキストが画像を回り込む
 - **音声入力** — Web Speech API による日本語リアルタイム音声認識
 - **カレンダー** — GitHub風ヒートマップ + 月間カレンダーで気分を可視化
 - **SPA ナビゲーション** — History API によるページ遷移
