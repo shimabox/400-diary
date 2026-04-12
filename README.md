@@ -2,6 +2,8 @@
 
 **400字日記** — 400（20×20）文字の世界で綴る日記
 
+https://400-diary.shimabox.net で公開されているアプリのソースコードです。
+
 ## 主な機能
 
 - **20×20 縦書きグリッドエディタ** — CSS Grid + `writing-mode: vertical-rl` による縦書き入力
@@ -24,7 +26,7 @@
 | 認証 | Cloudflare Access（JWT） |
 | フロントエンド | Islands Architecture / Hono JSX |
 | ビルド | Vite |
-| 品質管理 | TypeScript / Biome |
+| 品質管理 | TypeScript / Biome / Vitest |
 
 ## セットアップ
 
@@ -48,6 +50,7 @@ pnpm run dev
 |---------|------|
 | `pnpm run dev` | 開発サーバーの起動 |
 | `pnpm run typecheck` | TypeScript 型チェック |
+| `pnpm run test` | テストの実行 |
 | `pnpm run lint` | Biome による lint チェック |
 | `pnpm run lint:fix` | Biome による lint 自動修正 |
 | `pnpm run format` | Biome によるフォーマット |
@@ -55,25 +58,6 @@ pnpm run dev
 | `pnpm run deploy` | ビルド + Cloudflare Pages へデプロイ |
 | `pnpm run db:migrate:local` | ローカル D1 にスキーマ適用 |
 | `pnpm run db:migrate:remote` | リモート D1 にスキーマ適用 |
-
-## デプロイ
-
-Cloudflare Pages にデプロイします。
-
-```bash
-pnpm run deploy
-```
-
-以下のバインディングが必要です。
-
-| バインディング | 種別 | 用途 |
-|--------------|------|------|
-| `DB` | D1 Database | 日記データの保存 |
-| `BUCKET` | R2 Bucket | 画像の保存 |
-| `CF_ACCESS_TEAM_DOMAIN` | 環境変数 | Cloudflare Access のチームドメイン |
-| `CF_ACCESS_AUD` | 環境変数 | Cloudflare Access の AUD タグ |
-| `APP_NAME` | 環境変数（任意） | アプリ表示名（デフォルト: 400字日記） |
-| `CF_WEB_ANALYTICS_TOKEN` | 環境変数（任意） | Cloudflare Web Analytics のトークン |
 
 ## アーキテクチャ
 
@@ -86,6 +70,23 @@ pnpm run deploy
 - [画像アップロード](docs/architecture/image-upload.md) — R2 ストレージ管理
 - [カレンダー](docs/architecture/calendar.md) — ヒートマップと気分システム
 - [音声入力](docs/architecture/speech-input.md) — Web Speech API 連携
+
+## デプロイ
+
+Cloudflare Pages にデプロイします。詳細な手順は [`docs/deploy/README.md`](docs/deploy/README.md) を参照してください。
+
+| バインディング | 種別 | 用途 |
+|--------------|------|------|
+| `DB` | D1 Database | 日記データの保存 |
+| `BUCKET` | R2 Bucket | 画像の保存 |
+| `CF_ACCESS_TEAM_DOMAIN` | 環境変数 | Cloudflare Access のチームドメイン |
+| `CF_ACCESS_AUD` | 環境変数 | Cloudflare Access の AUD タグ |
+| `APP_NAME` | 環境変数（任意） | アプリ表示名（デフォルト: 400字日記） |
+| `CF_WEB_ANALYTICS_TOKEN` | 環境変数（任意） | Cloudflare Web Analytics のトークン |
+
+## 免責事項
+
+デプロイや設定に伴う費用・トラブルについては自己責任でお願いします。Cloudflare の仕様変更により手順が異なる場合があります。
 
 ## ライセンス
 
