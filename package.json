@@ -4,7 +4,7 @@
   "scripts": {
     "dev": "vite",
     "typecheck": "tsc --noEmit",
-    "build": "npm run typecheck && vite build --mode client && vite build",
+    "build": "npm run typecheck && rm -rf dist && vite build --mode client && vite build",
     "deploy": "npm run build && wrangler pages deploy dist",
     "lint": "biome check .",
     "lint:fix": "biome check --fix .",
