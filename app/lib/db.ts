@@ -34,8 +34,11 @@ export type DiaryWithPublished = Diary & {
   published_at: string | null
   snapshot_body: string | null
   snapshot_background_color: string | null
+  snapshot_image_key: string | null
+  snapshot_image_layout: string | null
   snapshot_image_x: number | null
   snapshot_image_y: number | null
+  snapshot_mood: string | null
 }
 
 /** 公開ページ用: diary + snapshot */
@@ -102,7 +105,7 @@ export async function listDiaries(
 ): Promise<DiaryWithPublished[]> {
   const { results } = await db
     .prepare(
-      `SELECT d.*, s.published_at, s.body AS snapshot_body, s.background_color AS snapshot_background_color, s.image_x AS snapshot_image_x, s.image_y AS snapshot_image_y
+      `SELECT d.*, s.published_at, s.body AS snapshot_body, s.background_color AS snapshot_background_color, s.image_key AS snapshot_image_key, s.image_layout AS snapshot_image_layout, s.image_x AS snapshot_image_x, s.image_y AS snapshot_image_y, s.mood AS snapshot_mood
        FROM diaries d
        LEFT JOIN diary_snapshots s ON d.published_snapshot_id = s.id
        ORDER BY d.diary_date DESC`,
@@ -222,7 +225,7 @@ export async function getDiaryWithPublished(
 ): Promise<DiaryWithPublished | null> {
   return await db
     .prepare(
-      `SELECT d.*, s.published_at, s.body AS snapshot_body, s.background_color AS snapshot_background_color, s.image_x AS snapshot_image_x, s.image_y AS snapshot_image_y
+      `SELECT d.*, s.published_at, s.body AS snapshot_body, s.background_color AS snapshot_background_color, s.image_key AS snapshot_image_key, s.image_layout AS snapshot_image_layout, s.image_x AS snapshot_image_x, s.image_y AS snapshot_image_y, s.mood AS snapshot_mood
        FROM diaries d
        LEFT JOIN diary_snapshots s ON d.published_snapshot_id = s.id
        WHERE d.id = ?`,

@@ -118,8 +118,12 @@ export default createRoute(async (c) => {
                 isAuthenticated &&
                 diary.published_snapshot_id &&
                 (diary.body !== diary.snapshot_body ||
+                  diary.background_color !== diary.snapshot_background_color ||
+                  diary.image_key !== diary.snapshot_image_key ||
+                  diary.image_layout !== diary.snapshot_image_layout ||
                   diary.image_x !== diary.snapshot_image_x ||
-                  diary.image_y !== diary.snapshot_image_y)
+                  diary.image_y !== diary.snapshot_image_y ||
+                  diary.mood !== diary.snapshot_mood)
               const cardHref = isAuthenticated
                 ? `/edit/${diary.id}`
                 : `/d/${diary.id}`
