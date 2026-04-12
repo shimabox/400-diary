@@ -47,6 +47,8 @@ type Props = {
   initialImageLayout?: 'left' | 'right'
   initialMood?: string | null
   initialImageKey?: string | null
+  initialImageX?: number | null
+  initialImageY?: number | null
   diaryId?: string
   publishedAt?: string | null
 }
@@ -59,6 +61,8 @@ export default function VerticalEditor({
   initialImageLayout = 'left',
   initialMood = null,
   initialImageKey = null,
+  initialImageX = null,
+  initialImageY = null,
   diaryId,
   publishedAt: initialPublishedAt = null,
 }: Props) {
@@ -100,7 +104,10 @@ export default function VerticalEditor({
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [imageError, setImageError] = useState('')
   const imageInputRef = useRef<HTMLInputElement>(null)
+  const [imageX, setImageX] = useState<number | null>(initialImageX)
+  const [imageY, setImageY] = useState<number | null>(initialImageY)
 
+  const currentDiaryId = diaryId || savedId
   const imageSrc = imagePreview ?? (imageKey ? `/api/images/${imageKey}` : null)
 
   const handleSpeechResult = useCallback((text: string) => {
@@ -152,9 +159,10 @@ export default function VerticalEditor({
     setSaving(true)
     setError('')
 
-    const currentId = diaryId || savedId
-    const url = currentId ? `/api/diaries/${currentId}` : '/api/diaries'
-    const method = currentId ? 'PUT' : 'POST'
+    const url = currentDiaryId
+      ? `/api/diaries/${currentDiaryId}`
+      : '/api/diaries'
+    const method = currentDiaryId ? 'PUT' : 'POST'
 
     try {
       const res = await fetch(url, {
@@ -166,6 +174,8 @@ export default function VerticalEditor({
           background_color: bgColor,
           image_layout: imageLayout,
           mood,
+          image_x: imageX,
+          image_y: imageY,
         }),
       })
 
@@ -183,10 +193,9 @@ export default function VerticalEditor({
       setError('保存に失敗しました')
       setSaving(false)
     }
-  }, [body, date, bgColor, imageLayout, mood, diaryId, savedId])
+  }, [body, date, bgColor, imageLayout, mood, imageX, imageY, currentDiaryId])
 
   const handlePublish = useCallback(async () => {
-    const currentDiaryId = diaryId || savedId
     if (!currentDiaryId) return
 
     setPublishing(true)
@@ -206,11 +215,10 @@ export default function VerticalEditor({
     } finally {
       setPublishing(false)
     }
-  }, [diaryId, savedId])
+  }, [currentDiaryId])
 
   const handleImageChange = useCallback(
     async (e: Event) => {
-      const currentDiaryId = diaryId || savedId
       if (!currentDiaryId) {
         setImageError('先に日記を保存してください')
         return
@@ -257,11 +265,10 @@ export default function VerticalEditor({
         if (imageInputRef.current) imageInputRef.current.value = ''
       }
     },
-    [diaryId, savedId],
+    [currentDiaryId],
   )
 
   const handleImageDelete = useCallback(async () => {
-    const currentDiaryId = diaryId || savedId
     if (!currentDiaryId) return
     if (!confirm('画像を削除しますか？')) return
 
@@ -279,7 +286,7 @@ export default function VerticalEditor({
     } catch {
       setImageError('削除に失敗しました')
     }
-  }, [diaryId, savedId])
+  }, [currentDiaryId])
 
   return (
     <div style={{ padding: '1rem 0', maxWidth: '100%' }}>
@@ -377,8 +384,17 @@ export default function VerticalEditor({
               imageLayout={imageLayout}
               imageSrc={imageSrc}
               containerHeight={416}
-              imageTop={0}
               dateLabel={date ? formatDiaryDate(date) : '----/--/--'}
+              imagePosition={
+                imageX != null && imageY != null
+                  ? { x: imageX, y: imageY }
+                  : null
+              }
+              draggable={true}
+              onPositionChange={(x, y) => {
+                setImageX(x)
+                setImageY(y)
+              }}
             />
           </div>
         </div>
@@ -522,7 +538,11 @@ export default function VerticalEditor({
         <div style={{ display: 'flex', gap: '0.25rem', fontSize: '0.85rem' }}>
           <button
             type="button"
-            onClick={() => setImageLayout('left')}
+            onClick={() => {
+              setImageLayout('left')
+              setImageX(null)
+              setImageY(null)
+            }}
             style={{
               padding: '0.2rem 0.5rem',
               border: '1px solid #ccc',
@@ -536,7 +556,11 @@ export default function VerticalEditor({
           </button>
           <button
             type="button"
-            onClick={() => setImageLayout('right')}
+            onClick={() => {
+              setImageLayout('right')
+              setImageX(null)
+              setImageY(null)
+            }}
             style={{
               padding: '0.2rem 0.5rem',
               border: '1px solid #ccc',

@@ -43,6 +43,8 @@ export default createRoute(async (c) => {
   const pubBody = snapshot.body
   const pubImageKey = snapshot.image_key
   const pubImageLayout = snapshot.image_layout as 'left' | 'right'
+  const pubImageX = snapshot.image_x
+  const pubImageY = snapshot.image_y
   const pubBgColor = snapshot.background_color
   const pubMood = snapshot.mood
   const description = pubBody.slice(0, 80)
@@ -172,8 +174,12 @@ export default createRoute(async (c) => {
             imageLayout={pubImageLayout}
             imageSrc={pubImageKey ? `/api/images/${pubImageKey}` : null}
             containerHeight={416}
-            imageTop={0}
             dateLabel={dateLabel}
+            imagePosition={
+              pubImageX != null && pubImageY != null
+                ? { x: pubImageX, y: pubImageY }
+                : null
+            }
           />
         </div>
         <script

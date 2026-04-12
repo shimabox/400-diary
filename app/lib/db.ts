@@ -6,6 +6,8 @@ export type Diary = {
   body: string
   image_key: string | null
   image_layout: 'left' | 'right'
+  image_x: number | null
+  image_y: number | null
   background_color: string
   mood: string | null
   diary_date: string
@@ -20,6 +22,8 @@ export type DiarySnapshot = {
   body: string
   image_key: string | null
   image_layout: 'left' | 'right'
+  image_x: number | null
+  image_y: number | null
   background_color: string
   mood: string | null
   published_at: string
@@ -30,6 +34,11 @@ export type DiaryWithPublished = Diary & {
   published_at: string | null
   snapshot_body: string | null
   snapshot_background_color: string | null
+  snapshot_image_key: string | null
+  snapshot_image_layout: string | null
+  snapshot_image_x: number | null
+  snapshot_image_y: number | null
+  snapshot_mood: string | null
 }
 
 /** 公開ページ用: diary + snapshot */
@@ -45,15 +54,25 @@ export async function createDiary(
     background_color: string
     image_layout?: 'left' | 'right'
     mood?: string | null
+    image_x?: number | null
+    image_y?: number | null
   },
 ): Promise<Diary> {
   const id = nanoid(12)
-  const { body, diary_date, background_color, image_layout, mood } = params
+  const {
+    body,
+    diary_date,
+    background_color,
+    image_layout,
+    mood,
+    image_x,
+    image_y,
+  } = params
 
   await db
     .prepare(
-      `INSERT INTO diaries (id, body, background_color, image_layout, mood, diary_date)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO diaries (id, body, background_color, image_layout, mood, diary_date, image_x, image_y)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .bind(
       id,
@@ -62,6 +81,8 @@ export async function createDiary(
       image_layout ?? 'left',
       mood ?? null,
       diary_date,
+      image_x ?? null,
+      image_y ?? null,
     )
     .run()
 
@@ -84,7 +105,15 @@ export async function listDiaries(
 ): Promise<DiaryWithPublished[]> {
   const { results } = await db
     .prepare(
-      `SELECT d.*, s.published_at, s.body AS snapshot_body, s.background_color AS snapshot_background_color
+      `SELECT d.*,
+              s.published_at,
+              s.body AS snapshot_body,
+              s.background_color AS snapshot_background_color,
+              s.image_key AS snapshot_image_key,
+              s.image_layout AS snapshot_image_layout,
+              s.image_x AS snapshot_image_x,
+              s.image_y AS snapshot_image_y,
+              s.mood AS snapshot_mood
        FROM diaries d
        LEFT JOIN diary_snapshots s ON d.published_snapshot_id = s.id
        ORDER BY d.diary_date DESC`,
@@ -103,6 +132,8 @@ export async function updateDiary(
     image_layout?: 'left' | 'right'
     mood?: string | null
     image_key?: string | null
+    image_x?: number | null
+    image_y?: number | null
   },
 ): Promise<Diary | null> {
   const existing = await getDiary(db, id)
@@ -135,6 +166,14 @@ export async function updateDiary(
     setClauses.push('image_key = ?')
     values.push(params.image_key ?? null)
   }
+  if ('image_x' in params) {
+    setClauses.push('image_x = ?')
+    values.push(params.image_x ?? null)
+  }
+  if ('image_y' in params) {
+    setClauses.push('image_y = ?')
+    values.push(params.image_y ?? null)
+  }
 
   values.push(id)
 
@@ -158,8 +197,8 @@ export async function publishDiary(
 
   await db
     .prepare(
-      `INSERT INTO diary_snapshots (id, diary_id, body, image_key, image_layout, background_color, mood)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO diary_snapshots (id, diary_id, body, image_key, image_layout, image_x, image_y, background_color, mood)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .bind(
       snapshotId,
@@ -167,6 +206,8 @@ export async function publishDiary(
       diary.body,
       diary.image_key,
       diary.image_layout,
+      diary.image_x,
+      diary.image_y,
       diary.background_color,
       diary.mood,
     )
@@ -192,7 +233,15 @@ export async function getDiaryWithPublished(
 ): Promise<DiaryWithPublished | null> {
   return await db
     .prepare(
-      `SELECT d.*, s.published_at, s.body AS snapshot_body, s.background_color AS snapshot_background_color
+      `SELECT d.*,
+              s.published_at,
+              s.body AS snapshot_body,
+              s.background_color AS snapshot_background_color,
+              s.image_key AS snapshot_image_key,
+              s.image_layout AS snapshot_image_layout,
+              s.image_x AS snapshot_image_x,
+              s.image_y AS snapshot_image_y,
+              s.mood AS snapshot_mood
        FROM diaries d
        LEFT JOIN diary_snapshots s ON d.published_snapshot_id = s.id
        WHERE d.id = ?`,

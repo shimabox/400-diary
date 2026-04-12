@@ -4,13 +4,16 @@ import {
   prepareWithSegments,
 } from '@chenglou/pretext'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'hono/jsx'
+import {
+  adjustSlotsForDate,
+  computeSlots,
+  type ObstacleRect,
+  type Slot,
+} from '../lib/layout'
 
-type Column = {
+type Segment = {
   text: string
-  x: number
-  y: number
-  height: number
-}
+} & Slot
 
 type ImageSize = {
   width: number
@@ -24,10 +27,14 @@ type Props = {
   imageLayout: 'left' | 'right'
   imageSrc: string | null
   containerHeight: number
-  /** 画像の上方向オフセット（負の値で上にはみ出す） */
-  imageTop?: number
+  /** 画像の位置（指定時は imageLayout より優先） */
+  imagePosition?: { x: number; y: number } | null
   /** 日付ラベル（画像の反対側に配置し、テキストが回り込む） */
   dateLabel?: string
+  /** ドラッグで画像を移動可能にする */
+  draggable?: boolean
+  /** ドラッグによる位置変更コールバック */
+  onPositionChange?: (x: number, y: number) => void
 }
 
 export default function FlowText({
@@ -37,8 +44,10 @@ export default function FlowText({
   imageLayout,
   imageSrc,
   containerHeight,
-  imageTop = 0,
+  imagePosition,
   dateLabel,
+  draggable = false,
+  onPositionChange,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const dateRef = useRef<HTMLDivElement>(null)
@@ -80,8 +89,25 @@ export default function FlowText({
     return () => obs.disconnect()
   }, [])
 
-  // Pretextでテキストを列に分割（props/stateからの派生値）
-  const columns = useMemo(() => {
+  // 画像の obstacleRect を計算
+  const obstacleRect = useMemo<ObstacleRect>(() => {
+    if (!imageSize || !containerWidth)
+      return { x: 0, y: 0, width: 0, height: 0 }
+
+    if (imagePosition) {
+      return { ...imagePosition, ...imageSize }
+    }
+
+    // imagePosition が未指定なら imageLayout から導出
+    const x = imageLayout === 'right' ? containerWidth - imageSize.width : 0
+    return { x, y: 0, ...imageSize }
+  }, [imageSize, imagePosition, imageLayout, containerWidth])
+
+  // 日付の表示位置（画像の反対側）
+  const dateSide = imageLayout === 'right' ? 'left' : 'right'
+
+  // computeSlots + 日付補正でスロットを計算し、テキストを流し込む
+  const segments = useMemo(() => {
     if (!containerWidth || containerWidth < 100) return []
 
     const font = `600 ${fontSize}px sans-serif`
@@ -89,82 +115,88 @@ export default function FlowText({
       whiteSpace: 'pre-wrap',
     })
 
-    const colWidth = fontSize * lineHeight // 1列の幅（横方向の間隔）
-    const totalCols = Math.floor(containerWidth / colWidth)
+    const containerSize = { width: containerWidth, height: containerHeight }
+    const colWidth = fontSize * lineHeight
 
-    // 画像がテキスト領域内で占める高さ（imageTopが負の場合、上にはみ出した分を引く）
-    const imageMargin = fontSize // 画像まわりの余白（≒1文字分）
-    const imgOccupiedHeight = imageSize
-      ? imageSize.height + imageTop + imageMargin
-      : 0
-    const imgCols = imageSize
-      ? Math.ceil((imageSize.width + imageMargin) / colWidth)
-      : 0
+    let slots = computeSlots(containerSize, fontSize, lineHeight, obstacleRect)
 
-    // 日付がテキスト領域内で占める高さ
-    const dateMargin = fontSize * 2
-    const dateOccupiedHeight = dateSize ? dateSize.height + dateMargin : 0
-    const dateCols = dateSize
-      ? Math.ceil((dateSize.width + dateMargin) / colWidth)
-      : 0
-    // 日付は画像の反対側に配置
-    const dateLayout = imageLayout === 'right' ? 'left' : 'right'
+    // 日付ラベルによるスロット補正
+    if (dateSize) {
+      const dateX = dateSide === 'right' ? containerWidth - dateSize.width : 0
+      const dateRect = {
+        x: dateX,
+        width: dateSize.width,
+        height: dateSize.height,
+      }
+      slots = adjustSlotsForDate(slots, dateRect, colWidth, fontSize)
+    }
 
-    const cols: Column[] = []
+    const result: Segment[] = []
     let cursor: LayoutCursor = { segmentIndex: 0, graphemeIndex: 0 }
-
-    for (let i = 0; i < totalCols; i++) {
-      const x = containerWidth - (i + 1) * colWidth
-
-      let isImgOverlapping = false
-      if (imageSize && imgOccupiedHeight > 0) {
-        if (imageLayout === 'right') {
-          isImgOverlapping = i < imgCols
-        } else {
-          isImgOverlapping = i >= totalCols - imgCols
-        }
-      }
-
-      let isDateOverlapping = false
-      if (dateSize && dateOccupiedHeight > 0) {
-        if (dateLayout === 'right') {
-          isDateOverlapping = i < dateCols
-        } else {
-          isDateOverlapping = i >= totalCols - dateCols
-        }
-      }
-
-      const imgReduction = isImgOverlapping ? imgOccupiedHeight : 0
-      const dateReduction = isDateOverlapping ? dateOccupiedHeight : 0
-      const yOffset = Math.max(imgReduction, dateReduction)
-      const availableHeight = containerHeight - yOffset
-      if (availableHeight <= 0) continue
-
-      const line = layoutNextLine(prepared, cursor, availableHeight)
+    for (const slot of slots) {
+      const line = layoutNextLine(prepared, cursor, slot.height)
       if (!line) break
-
-      cols.push({
-        text: line.text,
-        x,
-        y: yOffset,
-        height: availableHeight,
-      })
-
+      result.push({ text: line.text, ...slot })
       cursor = line.end
     }
 
-    return cols
+    return result
   }, [
     text,
     fontSize,
     lineHeight,
     containerWidth,
     containerHeight,
-    imageSize,
-    imageLayout,
-    imageTop,
+    obstacleRect,
     dateSize,
+    dateSide,
   ])
+
+  // ドラッグ処理
+  const handlePointerDown = useCallback(
+    (e: PointerEvent) => {
+      if (!draggable || !onPositionChange) return
+      e.preventDefault()
+
+      const target = e.currentTarget as HTMLElement
+      target.setPointerCapture(e.pointerId)
+
+      const containerEl = containerRef.current
+      if (!containerEl || !imageSize) return
+      const rect = containerEl.getBoundingClientRect()
+
+      const offsetX = e.clientX - rect.left - obstacleRect.x
+      const offsetY = e.clientY - rect.top - obstacleRect.y
+
+      const maxX = containerWidth - imageSize.width
+      const maxY = containerHeight - imageSize.height
+
+      const onPointerMove = (ev: globalThis.PointerEvent) => {
+        const nx = ev.clientX - rect.left - offsetX
+        const ny = ev.clientY - rect.top - offsetY
+        onPositionChange(
+          Math.max(0, Math.min(nx, maxX)),
+          Math.max(0, Math.min(ny, maxY)),
+        )
+      }
+
+      const onPointerUp = () => {
+        window.removeEventListener('pointermove', onPointerMove)
+        window.removeEventListener('pointerup', onPointerUp)
+      }
+
+      window.addEventListener('pointermove', onPointerMove)
+      window.addEventListener('pointerup', onPointerUp)
+    },
+    [
+      draggable,
+      onPositionChange,
+      imageSize,
+      obstacleRect,
+      containerWidth,
+      containerHeight,
+    ],
+  )
 
   return (
     <div
@@ -182,8 +214,8 @@ export default function FlowText({
           style={{
             position: 'absolute',
             top: 0,
-            right: imageLayout === 'right' ? 'auto' : 0,
-            left: imageLayout === 'right' ? 0 : 'auto',
+            right: dateSide === 'right' ? 0 : 'auto',
+            left: dateSide === 'left' ? 0 : 'auto',
             fontSize: '2rem',
             color: '#555',
             whiteSpace: 'nowrap',
@@ -197,19 +229,20 @@ export default function FlowText({
       {imageSrc && (
         <button
           type="button"
-          onClick={() => setShowViewer(true)}
+          onClick={draggable ? undefined : () => setShowViewer(true)}
+          onPointerDown={draggable ? handlePointerDown : undefined}
           style={{
             position: 'absolute',
-            top: `${imageTop}px`,
-            right: imageLayout === 'right' ? 0 : 'auto',
-            left: imageLayout === 'left' ? 0 : 'auto',
+            left: `${obstacleRect.x}px`,
+            top: `${obstacleRect.y}px`,
             maxWidth: '30%',
             padding: 0,
             border: 'none',
             background: 'none',
-            cursor: 'pointer',
+            cursor: draggable ? 'grab' : 'pointer',
             WebkitTapHighlightColor: 'transparent',
             outline: 'none',
+            touchAction: draggable ? 'none' : 'auto',
           }}
         >
           <img
@@ -218,10 +251,11 @@ export default function FlowText({
             onLoad={handleImageLoad}
             style={{
               maxWidth: '100%',
-              maxHeight: `${containerHeight - imageTop}px`,
+              maxHeight: `${containerHeight}px`,
               objectFit: 'cover',
               borderRadius: '12px',
               display: 'block',
+              pointerEvents: draggable ? 'none' : 'auto',
             }}
           />
         </button>
@@ -264,15 +298,15 @@ export default function FlowText({
       )}
 
       {/* テキスト列 */}
-      {columns.map((col, i) => (
+      {segments.map((seg, i) => (
         <div
-          key={`${i}-${col.x}`}
+          key={`${i}-${seg.x}`}
           style={{
             position: 'absolute',
-            left: `${col.x}px`,
-            top: `${col.y}px`,
+            left: `${seg.x}px`,
+            top: `${seg.y}px`,
             width: `${fontSize * lineHeight}px`,
-            height: `${col.height}px`,
+            height: `${seg.height}px`,
             writingMode: 'vertical-rl',
             whiteSpace: 'pre-wrap',
             fontSize: `${fontSize}px`,
@@ -281,7 +315,7 @@ export default function FlowText({
             overflow: 'hidden',
           }}
         >
-          {col.text}
+          {seg.text}
         </div>
       ))}
     </div>
