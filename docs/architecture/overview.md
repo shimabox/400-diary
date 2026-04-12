@@ -67,7 +67,9 @@ app/
 │       ├── diaries/[id].ts
 │       ├── diaries/[id]/publish.ts
 │       ├── diaries/[id]/image.ts
-│       └── images/[...key].ts
+│       ├── images/[...key].ts
+│       ├── og/index.ts
+│       └── og/[id].ts
 ├── islands/               # インタラクティブコンポーネント
 │   ├── vertical-editor.tsx
 │   ├── flow-text.tsx
@@ -190,6 +192,7 @@ flowchart LR
 | `CF_ACCESS_TEAM_DOMAIN` | Yes | Cloudflare Access のチームドメイン |
 | `CF_ACCESS_AUD` | Yes | Cloudflare Access の AUD タグ |
 | `APP_NAME` | No | アプリ名（デフォルト: `400字日記`） |
+| `CF_WEB_ANALYTICS_TOKEN` | No | Cloudflare Web Analytics のトークン |
 | `DEV_AUTH_BYPASS` | No | 開発時の認証バイパス |
 
 ## 設計文書一覧
