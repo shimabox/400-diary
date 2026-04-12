@@ -48,6 +48,7 @@ export default function FlowText({
     height: number
   } | null>(null)
   const [containerWidth, setContainerWidth] = useState(0)
+  const [showViewer, setShowViewer] = useState(false)
 
   const handleImageLoad = useCallback((e: Event) => {
     const img = e.target as HTMLImageElement
@@ -194,21 +195,72 @@ export default function FlowText({
 
       {/* 画像 */}
       {imageSrc && (
-        <img
-          src={imageSrc}
-          alt="日記の写真"
-          onLoad={handleImageLoad}
+        <button
+          type="button"
+          onClick={() => setShowViewer(true)}
           style={{
             position: 'absolute',
             top: `${imageTop}px`,
             right: imageLayout === 'right' ? 0 : 'auto',
             left: imageLayout === 'left' ? 0 : 'auto',
             maxWidth: '30%',
-            maxHeight: `${containerHeight - imageTop}px`,
-            objectFit: 'cover',
-            borderRadius: '12px',
+            padding: 0,
+            border: 'none',
+            background: 'none',
+            cursor: 'pointer',
+            WebkitTapHighlightColor: 'transparent',
+            outline: 'none',
           }}
-        />
+        >
+          <img
+            src={imageSrc}
+            alt="日記の写真"
+            onLoad={handleImageLoad}
+            style={{
+              maxWidth: '100%',
+              maxHeight: `${containerHeight - imageTop}px`,
+              objectFit: 'cover',
+              borderRadius: '12px',
+              display: 'block',
+            }}
+          />
+        </button>
+      )}
+
+      {/* 画像ビューワー */}
+      {showViewer && imageSrc && (
+        <button
+          type="button"
+          onClick={() => setShowViewer(false)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') setShowViewer(false)
+          }}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            background: 'rgba(0, 0, 0, 0.85)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            cursor: 'pointer',
+            border: 'none',
+            padding: 0,
+            width: '100%',
+            height: '100%',
+          }}
+        >
+          <img
+            src={imageSrc}
+            alt="日記の写真"
+            style={{
+              maxWidth: '90vw',
+              maxHeight: '90vh',
+              objectFit: 'contain',
+              borderRadius: '8px',
+            }}
+          />
+        </button>
       )}
 
       {/* テキスト列 */}

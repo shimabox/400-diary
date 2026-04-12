@@ -300,11 +300,20 @@ export default function VerticalEditor({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '0.5rem',
           marginBottom: '1rem',
         }}
       >
         {title && <h1 style={{ fontSize: '1.2rem', margin: 0 }}>{title}</h1>}
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        <div
+          style={{
+            display: 'flex',
+            gap: '0.5rem',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+          }}
+        >
           <input
             type="date"
             value={date}
@@ -318,7 +327,7 @@ export default function VerticalEditor({
               background: '#fff',
             }}
           />
-          <div style={{ display: 'flex', gap: '0.2rem' }}>
+          <div style={{ display: 'flex', gap: '0.2rem', flexWrap: 'wrap' }}>
             {PASTEL_COLORS.map((color) => (
               <button
                 key={color}
