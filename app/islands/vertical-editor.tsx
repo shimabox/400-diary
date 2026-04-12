@@ -85,7 +85,7 @@ export default function VerticalEditor({
         if (el) el.scrollLeft = el.scrollWidth
       })
     }
-  }, [showPreview, body])
+  }, [showPreview])
   const {
     isSupported: speechSupported,
     isListening,
@@ -97,7 +97,6 @@ export default function VerticalEditor({
   // 画像関連
   const [imageKey, setImageKey] = useState(initialImageKey)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
-  const [_uploading, setUploading] = useState(false)
   const [imageError, setImageError] = useState('')
   const imageInputRef = useRef<HTMLInputElement>(null)
 
@@ -234,7 +233,6 @@ export default function VerticalEditor({
       reader.onload = () => setImagePreview(reader.result as string)
       reader.readAsDataURL(file)
 
-      setUploading(true)
       try {
         const formData = new FormData()
         formData.append('file', file)
@@ -255,7 +253,6 @@ export default function VerticalEditor({
         setImageError('アップロードに失敗しました')
         setImagePreview(null)
       } finally {
-        setUploading(false)
         if (imageInputRef.current) imageInputRef.current.value = ''
       }
     },
