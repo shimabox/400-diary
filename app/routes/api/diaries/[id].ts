@@ -36,6 +36,8 @@ export const PUT = createRoute(async (c) => {
     background_color?: string
     image_layout?: 'left' | 'right'
     mood?: string | null
+    image_x?: number | null
+    image_y?: number | null
   }>()
 
   if (json.body !== undefined) {

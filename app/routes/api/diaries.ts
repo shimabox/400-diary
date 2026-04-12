@@ -14,6 +14,8 @@ export const POST = createRoute(async (c) => {
     background_color?: string
     image_layout?: 'left' | 'right'
     mood?: string | null
+    image_x?: number | null
+    image_y?: number | null
   }>()
 
   if (!json.body || json.body.length === 0) {
@@ -36,6 +38,8 @@ export const POST = createRoute(async (c) => {
     background_color: json.background_color || randomPastelColor(),
     image_layout: json.image_layout,
     mood: json.mood,
+    image_x: json.image_x,
+    image_y: json.image_y,
   })
 
   return c.json(diary, 201)
