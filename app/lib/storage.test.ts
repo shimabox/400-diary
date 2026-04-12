@@ -31,15 +31,15 @@ describe('validateImage', () => {
     expect(result.ok).toBe(false)
   })
 
-  test('5MB以内の画像を許可する', () => {
-    expect(validateImage(5 * 1024 * 1024, 'image/png')).toEqual({ ok: true })
+  test('10MB以内の画像を許可する', () => {
+    expect(validateImage(10 * 1024 * 1024, 'image/png')).toEqual({ ok: true })
   })
 
-  test('5MBを超える画像を拒否する', () => {
-    const result = validateImage(5 * 1024 * 1024 + 1, 'image/png')
+  test('10MBを超える画像を拒否する', () => {
+    const result = validateImage(10 * 1024 * 1024 + 1, 'image/png')
     expect(result.ok).toBe(false)
     if (!result.ok) {
-      expect(result.error).toContain('5MB')
+      expect(result.error).toContain('10MB')
     }
   })
 })

@@ -1,6 +1,6 @@
 import type { R2Bucket } from '@cloudflare/workers-types/latest'
 
-const MAX_SIZE = 5 * 1024 * 1024
+const MAX_SIZE = 10 * 1024 * 1024
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 
 const EXT_MAP: Record<string, string> = {
@@ -18,7 +18,7 @@ export function validateImage(
     return { ok: false, error: 'JPEG, PNG, WebP, GIF のみアップロードできます' }
   }
   if (size > MAX_SIZE) {
-    return { ok: false, error: '画像は5MB以内にしてください' }
+    return { ok: false, error: '画像は10MB以内にしてください' }
   }
   return { ok: true }
 }
