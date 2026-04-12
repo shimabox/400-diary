@@ -63,6 +63,7 @@ export default function VerticalEditor({
 }: Props) {
   const [body, setBody] = useState(initialBody)
   const [date, setDate] = useState(initialDate)
+  const [bgColor, setBgColor] = useState(initialColor)
   const [imageLayout, setImageLayout] = useState(initialImageLayout)
   const [mood, setMood] = useState<MoodKey | null>(
     (initialMood as MoodKey) ?? null,
@@ -162,7 +163,7 @@ export default function VerticalEditor({
         body: JSON.stringify({
           body,
           diary_date: date,
-          background_color: initialColor,
+          background_color: bgColor,
           image_layout: imageLayout,
           mood,
         }),
@@ -182,7 +183,7 @@ export default function VerticalEditor({
       setError('保存に失敗しました')
       setSaving(false)
     }
-  }, [body, date, initialColor, imageLayout, mood, diaryId, savedId])
+  }, [body, date, bgColor, imageLayout, mood, diaryId, savedId])
 
   const handlePublish = useCallback(async () => {
     const currentDiaryId = diaryId || savedId
@@ -305,26 +306,42 @@ export default function VerticalEditor({
         }}
       >
         {title && <h1 style={{ fontSize: '1.2rem', margin: 0 }}>{title}</h1>}
-        <input
-          type="date"
-          value={date}
-          onInput={(e) => setDate((e.target as HTMLInputElement).value)}
-          style={{
-            fontFamily: 'inherit',
-            fontSize: '0.95rem',
-            padding: '0.4rem 0.6rem',
-            border: '1px solid #ccc',
-            borderRadius: '4px',
-            background: '#fff',
-          }}
-        />
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <input
+            type="date"
+            value={date}
+            onInput={(e) => setDate((e.target as HTMLInputElement).value)}
+            style={{
+              fontFamily: 'inherit',
+              fontSize: '0.95rem',
+              padding: '0.4rem 0.6rem',
+              border: '1px solid #ccc',
+              borderRadius: '4px',
+              background: '#fff',
+            }}
+          />
+          <input
+            type="color"
+            value={bgColor}
+            onInput={(e) => setBgColor((e.target as HTMLInputElement).value)}
+            title="背景色"
+            style={{
+              width: '2rem',
+              height: '2rem',
+              padding: '0',
+              border: '1px solid #ccc',
+              borderRadius: '4px',
+              cursor: 'pointer',
+            }}
+          />
+        </div>
       </div>
 
       {showPreview ? (
         <div
           style={{
             position: 'relative',
-            background: initialColor,
+            background: bgColor,
             backgroundImage: 'url(/images/background.png)',
             backgroundRepeat: 'repeat',
             backgroundBlendMode: 'luminosity',
@@ -357,7 +374,7 @@ export default function VerticalEditor({
           class="editor-grid"
           style={{
             position: 'relative',
-            background: initialColor,
+            background: bgColor,
             borderRadius: '8px',
             padding: '1.5rem',
             overflow: 'hidden',
