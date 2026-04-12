@@ -14,6 +14,8 @@ erDiagram
         TEXT body "本文 (max 400字)"
         TEXT image_key "R2オブジェクトキー"
         TEXT image_layout "left / right"
+        REAL image_x "画像X座標 (nullable)"
+        REAL image_y "画像Y座標 (nullable)"
         TEXT background_color "HEX (#FFE4E1等)"
         TEXT mood "happy/calm/sad/angry/anxious/fun"
         TEXT diary_date "YYYY-MM-DD"
@@ -27,6 +29,8 @@ erDiagram
         TEXT body
         TEXT image_key
         TEXT image_layout
+        REAL image_x
+        REAL image_y
         TEXT background_color
         TEXT mood
         TEXT published_at

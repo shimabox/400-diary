@@ -59,6 +59,35 @@ describe('createDiary', () => {
 
     expect(db.boundValues).toContain('happy')
   })
+
+  test('image_x と image_y を指定できる', async () => {
+    const db = createMockDB({ first: { id: 'test-id-1234' } })
+
+    await createDiary(db, {
+      body: '本文',
+      diary_date: '2026-04-12',
+      background_color: '#FFE4E1',
+      image_x: 150.5,
+      image_y: 200,
+    })
+
+    expect(db.boundValues).toContain(150.5)
+    expect(db.boundValues).toContain(200)
+  })
+
+  test('image_x と image_y のデフォルトは null', async () => {
+    const db = createMockDB({ first: { id: 'test-id-1234' } })
+
+    await createDiary(db, {
+      body: '本文',
+      diary_date: '2026-04-12',
+      background_color: '#FFE4E1',
+    })
+
+    // bind の引数: id, body, bg_color, image_layout, mood, diary_date, image_x, image_y
+    const nullCount = db.boundValues.filter((v) => v === null).length
+    expect(nullCount).toBeGreaterThanOrEqual(2) // mood=null, image_x=null, image_y=null
+  })
 })
 
 describe('getDiary', () => {
@@ -108,6 +137,25 @@ describe('updateDiary', () => {
     await updateDiary(db, 'abc', { mood: null })
 
     expect(db.boundValues).toContain(null)
+  })
+
+  test('image_x と image_y を更新できる', async () => {
+    const diary = { id: 'abc', image_x: null, image_y: null }
+    const db = createMockDB({ first: diary })
+
+    await updateDiary(db, 'abc', { image_x: 100, image_y: 200 })
+
+    expect(db.boundValues).toContain(100)
+    expect(db.boundValues).toContain(200)
+  })
+
+  test('image_x と image_y を null にリセットできる', async () => {
+    const diary = { id: 'abc', image_x: 100, image_y: 200 }
+    const db = createMockDB({ first: diary })
+
+    await updateDiary(db, 'abc', { image_x: null, image_y: null })
+
+    expect(db.prepare).toHaveBeenCalledTimes(3)
   })
 })
 

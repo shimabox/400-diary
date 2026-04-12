@@ -75,55 +75,64 @@ flowchart LR
 - `prepareWithSegments(text, font, { whiteSpace: 'pre-wrap' })` — テキストをフォントメトリクスで解析
 - `layoutNextLine(prepared, cursor, maxWidth)` — 次の列のテキストを取得（CJK禁則処理対応）
 
-### 列計算アルゴリズム
+### 列計算アルゴリズム（computeSlots）
+
+画像を障害物（obstacleRect）として扱い、各列の空きスペース（スロット）を計算する。障害物と重なる列は上下に分割される。
 
 ```mermaid
 flowchart TD
     A[containerWidth から totalCols を算出] --> B[列 i = 0 から順にループ]
-    B --> C{画像と重なる?}
-    C -->|Yes| D[imgOccupiedHeight を計算]
-    C -->|No| E[0]
-    B --> F{日付と重なる?}
-    F -->|Yes| G[dateOccupiedHeight を計算]
-    F -->|No| H[0]
-    D --> I[yOffset = max of img, date]
-    E --> I
-    G --> I
-    H --> I
-    I --> J[availableHeight = containerHeight - yOffset]
-    J --> K[layoutNextLine で列のテキストを取得]
-    K --> L[columns 配列に追加]
-    L --> B
+    B --> C{障害物と重なる?}
+    C -->|Yes| D[列を上下に分割]
+    D --> E{上部に1文字分以上の空き?}
+    E -->|Yes| F[上部スロットを追加]
+    E -->|No| G[スキップ]
+    D --> H{下部に1文字分以上の空き?}
+    H -->|Yes| I[下部スロットを追加]
+    H -->|No| J[スキップ]
+    C -->|No| K[全高スロットを追加]
+    F --> L[adjustSlotsForDate で日付領域を補正]
+    I --> L
+    K --> L
+    L --> M[各スロットに layoutNextLine でテキストを流し込む]
 ```
 
-### 画像・日付の回り込み
+- `computeSlots(containerSize, fontSize, lineHeight, obstacleRect)` — 障害物を避けたスロット配列を計算
+- `adjustSlotsForDate(slots, dateRect, colWidth, fontSize)` — 日付ラベル領域と重なるスロットの上部を削る
+
+### 画像の自由配置
+
+画像は `image_x`/`image_y` で任意の位置に配置できる。プレビュー画面ではドラッグで移動可能。
 
 ```
-画像が右、日付が左の場合:
+画像が中央付近にある場合（列が上下に分割される）:
 
-  日付         テキスト列          画像
-  ┌───┐  ┌─┐┌─┐┌─┐┌─┐┌─┐┌─┐  ┌──────┐
-  │4/11│  │あ││い││う││え││お││か│  │      │
-  │(金)│  │き││く││け││こ││さ││し│  │ 写真 │
-  └───┘  │す││せ││そ││た││ち││つ│  │      │
-         │て││と││な││に││ぬ││ね│  └──────┘
-         │の││は││ひ││ふ││へ││ほ│
-         │ま││み││む││め││も││や│
-         └─┘└─┘└─┘└─┘└─┘└─┘
+  日付    上部テキスト
+  ┌───┐  ┌─┐┌─┐┌─┐
+  │4/11│  │あ││い││う│
+  │(金)│  │え││お││か│  ┌──────┐
+  └───┘  └─┘└─┘└─┘  │      │
+                      │ 写真 │
+  ┌─┐┌─┐┌─┐┌─┐┌─┐  │      │
+  │き││く││け││こ││さ│  └──────┘
+  │し││す││せ││そ││た│
+  └─┘└─┘└─┘└─┘└─┘
+    下部テキスト
 
   ← 右から左に列が進む
-  ↓ 画像・日付がある列は上部の高さが制限される
+  ↕ 画像と重なる列は上下に分割される
 ```
 
-- 画像と日付は必ず反対側に配置
-- 各列で `availableHeight` を計算し、障害物がある列は短い列になる
-- テキストは短い列を回避するように自然に流れる
+- 画像はドラッグで自由に配置可能（`image_x`/`image_y` で座標を保存）
+- `image_x`/`image_y` が未設定の場合は `image_layout`（left/right）からデフォルト位置を導出
+- 日付ラベルは `image_layout` の反対側に配置
 
 ## 関連ファイル
 
 | ファイル | 役割 |
 |---------|------|
-| `app/islands/flow-text.tsx` | FlowText コンポーネント |
+| `app/lib/layout.ts` | `computeSlots` / `adjustSlotsForDate` レイアウト計算 |
+| `app/islands/flow-text.tsx` | FlowText コンポーネント（描画 + ドラッグ） |
 | `app/islands/vertical-editor.tsx` | エディタ (textarea + プレビュー) |
 | `app/lib/constants.ts` | `MAX_BODY_LENGTH = 400` |
 | `app/styles/global.css` | `.editor-grid` のレスポンシブ対応 |
