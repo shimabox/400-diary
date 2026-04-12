@@ -17,6 +17,10 @@ export const GET = createRoute(async (c) => {
     return c.json({ error: '日記が見つかりません' }, 404)
   }
 
+  if (!c.get('isAuthenticated') && !diary.published_snapshot_id) {
+    return c.json({ error: '日記が見つかりません' }, 404)
+  }
+
   return c.json(diary)
 })
 
