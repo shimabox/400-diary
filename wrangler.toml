@@ -6,13 +6,13 @@ pages_build_output_dir = "./dist"
 [[d1_databases]]
 binding = "DB"
 database_name = "400-diary-db"
-database_id = "TODO"
+database_id = "10653b09-9480-476f-8ed8-b75b8833d4de"
 
 [[r2_buckets]]
 binding = "BUCKET"
 bucket_name = "400-diary-images"
 
 [vars]
-CF_ACCESS_TEAM_DOMAIN = "YOUR_TEAM.cloudflareaccess.com"
-CF_ACCESS_AUD = "YOUR_APPLICATION_AUD_TAG"
+CF_ACCESS_TEAM_DOMAIN = "shimabox.cloudflareaccess.com"
+CF_ACCESS_AUD = "6ba31dd0c8b9e8bb56212a0a2515a38b79b21a4297cb686cd268cf2a3157a81e"
 APP_NAME = "しまぶ日記"
