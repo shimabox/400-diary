@@ -377,7 +377,6 @@ export default function VerticalEditor({
               imageLayout={imageLayout}
               imageSrc={imageSrc}
               containerHeight={416}
-              imageTop={0}
               dateLabel={date ? formatDiaryDate(date) : '----/--/--'}
             />
           </div>

@@ -172,7 +172,6 @@ export default createRoute(async (c) => {
             imageLayout={pubImageLayout}
             imageSrc={pubImageKey ? `/api/images/${pubImageKey}` : null}
             containerHeight={416}
-            imageTop={0}
             dateLabel={dateLabel}
           />
         </div>
