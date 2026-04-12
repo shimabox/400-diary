@@ -1,7 +1,10 @@
-import { jsxRenderer } from 'hono/jsx-renderer'
+import { jsxRenderer, useRequestContext } from 'hono/jsx-renderer'
 import { Script } from 'honox/server'
+import type { AppEnv } from '~/factory'
 
 export default jsxRenderer(({ children, title, description, ogImage }) => {
+  const c = useRequestContext<AppEnv>()
+  const cfWebAnalyticsToken = c.env.CF_WEB_ANALYTICS_TOKEN
   const pageTitle = title ?? '400字日記'
   return (
     <html lang="ja">
@@ -35,7 +38,16 @@ export default jsxRenderer(({ children, title, description, ogImage }) => {
         )}
         <Script src="/app/client.ts" async />
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        {cfWebAnalyticsToken && (
+          <script
+            defer
+            src="https://static.cloudflareinsights.com/beacon.min.js"
+            data-cf-beacon={`{"token": "${cfWebAnalyticsToken}"}`}
+          />
+        )}
+      </body>
     </html>
   )
 })

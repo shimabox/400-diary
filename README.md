@@ -73,6 +73,7 @@ pnpm run deploy
 | `CF_ACCESS_TEAM_DOMAIN` | 環境変数 | Cloudflare Access のチームドメイン |
 | `CF_ACCESS_AUD` | 環境変数 | Cloudflare Access の AUD タグ |
 | `APP_NAME` | 環境変数（任意） | アプリ表示名（デフォルト: 400字日記） |
+| `CF_WEB_ANALYTICS_TOKEN` | 環境変数（任意） | Cloudflare Web Analytics のトークン |
 
 ## アーキテクチャ
 

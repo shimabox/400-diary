@@ -7,6 +7,7 @@ const authMiddleware = createMiddleware<AppEnv>(async (c, next) => {
   // ローカル開発用バイパス
   if (c.env.DEV_AUTH_BYPASS === 'true') {
     c.set('isAuthenticated', true)
+
     return next()
   }
 
@@ -17,6 +18,7 @@ const authMiddleware = createMiddleware<AppEnv>(async (c, next) => {
 
   if (!teamDomain || !aud) {
     c.set('isAuthenticated', false)
+
     return next()
   }
 

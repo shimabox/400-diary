@@ -9,6 +9,7 @@ export type AppEnv = {
     CF_ACCESS_AUD: string
     DEV_AUTH_BYPASS?: string
     APP_NAME?: string
+    CF_WEB_ANALYTICS_TOKEN?: string
   }
   Variables: {
     isAuthenticated: boolean
