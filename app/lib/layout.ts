@@ -4,7 +4,7 @@ export type Slot = {
   height: number
 }
 
-type ObstacleRect = {
+export type ObstacleRect = {
   x: number
   y: number
   width: number
@@ -84,15 +84,11 @@ export function adjustSlotsForDate(
 
       if (!overlaps || slot.y >= dateBottom) return slot
 
-      // スロットが y=0 から始まる場合、上部を日付分だけ削る
-      if (slot.y < dateBottom) {
-        const newY = dateBottom
-        const newHeight = slot.height - (newY - slot.y)
-        if (newHeight <= fontSize) return null
-        return { x: slot.x, y: newY, height: newHeight }
-      }
-
-      return slot
+      // 上部を日付分だけ削る
+      const newY = dateBottom
+      const newHeight = slot.height - (newY - slot.y)
+      if (newHeight <= fontSize) return null
+      return { x: slot.x, y: newY, height: newHeight }
     })
     .filter((slot): slot is Slot => slot !== null)
 }

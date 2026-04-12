@@ -4,20 +4,18 @@ import {
   prepareWithSegments,
 } from '@chenglou/pretext'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'hono/jsx'
-import { adjustSlotsForDate, computeSlots, type Slot } from '../lib/layout'
+import {
+  adjustSlotsForDate,
+  computeSlots,
+  type ObstacleRect,
+  type Slot,
+} from '../lib/layout'
 
 type Segment = {
   text: string
 } & Slot
 
 type ImageSize = {
-  width: number
-  height: number
-}
-
-type ObstacleRect = {
-  x: number
-  y: number
   width: number
   height: number
 }

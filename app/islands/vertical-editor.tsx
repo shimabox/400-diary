@@ -107,6 +107,7 @@ export default function VerticalEditor({
   const [imageX, setImageX] = useState<number | null>(initialImageX)
   const [imageY, setImageY] = useState<number | null>(initialImageY)
 
+  const currentDiaryId = diaryId || savedId
   const imageSrc = imagePreview ?? (imageKey ? `/api/images/${imageKey}` : null)
 
   const handleSpeechResult = useCallback((text: string) => {
@@ -158,9 +159,10 @@ export default function VerticalEditor({
     setSaving(true)
     setError('')
 
-    const currentId = diaryId || savedId
-    const url = currentId ? `/api/diaries/${currentId}` : '/api/diaries'
-    const method = currentId ? 'PUT' : 'POST'
+    const url = currentDiaryId
+      ? `/api/diaries/${currentDiaryId}`
+      : '/api/diaries'
+    const method = currentDiaryId ? 'PUT' : 'POST'
 
     try {
       const res = await fetch(url, {
@@ -191,10 +193,9 @@ export default function VerticalEditor({
       setError('保存に失敗しました')
       setSaving(false)
     }
-  }, [body, date, bgColor, imageLayout, mood, imageX, imageY, diaryId, savedId])
+  }, [body, date, bgColor, imageLayout, mood, imageX, imageY, currentDiaryId])
 
   const handlePublish = useCallback(async () => {
-    const currentDiaryId = diaryId || savedId
     if (!currentDiaryId) return
 
     setPublishing(true)
@@ -214,11 +215,10 @@ export default function VerticalEditor({
     } finally {
       setPublishing(false)
     }
-  }, [diaryId, savedId])
+  }, [currentDiaryId])
 
   const handleImageChange = useCallback(
     async (e: Event) => {
-      const currentDiaryId = diaryId || savedId
       if (!currentDiaryId) {
         setImageError('先に日記を保存してください')
         return
@@ -265,11 +265,10 @@ export default function VerticalEditor({
         if (imageInputRef.current) imageInputRef.current.value = ''
       }
     },
-    [diaryId, savedId],
+    [currentDiaryId],
   )
 
   const handleImageDelete = useCallback(async () => {
-    const currentDiaryId = diaryId || savedId
     if (!currentDiaryId) return
     if (!confirm('画像を削除しますか？')) return
 
@@ -287,7 +286,7 @@ export default function VerticalEditor({
     } catch {
       setImageError('削除に失敗しました')
     }
-  }, [diaryId, savedId])
+  }, [currentDiaryId])
 
   return (
     <div style={{ padding: '1rem 0', maxWidth: '100%' }}>

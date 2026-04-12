@@ -105,7 +105,15 @@ export async function listDiaries(
 ): Promise<DiaryWithPublished[]> {
   const { results } = await db
     .prepare(
-      `SELECT d.*, s.published_at, s.body AS snapshot_body, s.background_color AS snapshot_background_color, s.image_key AS snapshot_image_key, s.image_layout AS snapshot_image_layout, s.image_x AS snapshot_image_x, s.image_y AS snapshot_image_y, s.mood AS snapshot_mood
+      `SELECT d.*,
+              s.published_at,
+              s.body AS snapshot_body,
+              s.background_color AS snapshot_background_color,
+              s.image_key AS snapshot_image_key,
+              s.image_layout AS snapshot_image_layout,
+              s.image_x AS snapshot_image_x,
+              s.image_y AS snapshot_image_y,
+              s.mood AS snapshot_mood
        FROM diaries d
        LEFT JOIN diary_snapshots s ON d.published_snapshot_id = s.id
        ORDER BY d.diary_date DESC`,
@@ -225,7 +233,15 @@ export async function getDiaryWithPublished(
 ): Promise<DiaryWithPublished | null> {
   return await db
     .prepare(
-      `SELECT d.*, s.published_at, s.body AS snapshot_body, s.background_color AS snapshot_background_color, s.image_key AS snapshot_image_key, s.image_layout AS snapshot_image_layout, s.image_x AS snapshot_image_x, s.image_y AS snapshot_image_y, s.mood AS snapshot_mood
+      `SELECT d.*,
+              s.published_at,
+              s.body AS snapshot_body,
+              s.background_color AS snapshot_background_color,
+              s.image_key AS snapshot_image_key,
+              s.image_layout AS snapshot_image_layout,
+              s.image_x AS snapshot_image_x,
+              s.image_y AS snapshot_image_y,
+              s.mood AS snapshot_mood
        FROM diaries d
        LEFT JOIN diary_snapshots s ON d.published_snapshot_id = s.id
        WHERE d.id = ?`,
