@@ -19,11 +19,16 @@ export default defineConfig(({ mode }) => {
       ...common,
       build: {
         rollupOptions: {
-          input: ['/app/client.ts'],
+          input: ['/app/client.ts', '/app/styles/global.css'],
           output: {
             entryFileNames: 'static/client.js',
             chunkFileNames: 'static/assets/[name]-[hash].js',
-            assetFileNames: 'static/assets/[name]-[hash].[ext]',
+            assetFileNames: (assetInfo) => {
+              if (assetInfo.names?.some((n) => n === 'global.css')) {
+                return 'static/assets/global.css'
+              }
+              return 'static/assets/[name]-[hash].[ext]'
+            },
           },
         },
         emptyOutDir: false,
