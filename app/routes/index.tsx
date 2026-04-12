@@ -214,6 +214,33 @@ export default createRoute(async (c) => {
           transform: translateY(-4px);
         }
       `}</style>
+
+        <footer
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            gap: '1.5rem',
+            padding: '2rem 0 0',
+            fontSize: '0.85rem',
+          }}
+        >
+          <a
+            href="https://x.com/shimabox"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: '#888' }}
+          >
+            X
+          </a>
+          <a
+            href="https://github.com/shimabox/400-diary"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: '#888' }}
+          >
+            GitHub
+          </a>
+        </footer>
       </div>
     </div>,
     {
