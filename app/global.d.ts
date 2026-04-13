@@ -46,6 +46,7 @@ type Head = {
   title?: string
   description?: string
   ogImage?: string
+  preloadImage?: string
 }
 
 declare module 'hono' {
