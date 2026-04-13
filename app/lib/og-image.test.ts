@@ -12,10 +12,6 @@ vi.mock('@resvg/resvg-wasm', () => ({
   }),
 }))
 
-vi.mock('@resvg/resvg-wasm/index_bg.wasm', () => ({
-  default: 'mock-wasm-module',
-}))
-
 vi.mock('resvg-wasm-module', () => ({
   default: 'mock-wasm-module',
 }))
