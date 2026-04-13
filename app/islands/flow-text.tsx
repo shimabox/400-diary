@@ -51,6 +51,7 @@ export default function FlowText({
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const dateRef = useRef<HTMLDivElement>(null)
+  const imgRef = useRef<HTMLImageElement>(null)
   const [imageSize, setImageSize] = useState<ImageSize | null>(null)
   const [dateSize, setDateSize] = useState<{
     width: number
@@ -62,6 +63,14 @@ export default function FlowText({
   const handleImageLoad = useCallback((e: Event) => {
     const img = e.target as HTMLImageElement
     setImageSize({ width: img.offsetWidth, height: img.offsetHeight })
+  }, [])
+
+  // ハイドレーション前に画像が読み込み済みならサイズを即取得
+  useEffect(() => {
+    const img = imgRef.current
+    if (img?.complete && img.naturalWidth > 0 && !imageSize) {
+      setImageSize({ width: img.offsetWidth, height: img.offsetHeight })
+    }
   }, [])
 
   // 日付サイズを計測
@@ -247,6 +256,7 @@ export default function FlowText({
           }}
         >
           <img
+            ref={imgRef}
             src={imageSrc}
             alt="日記の写真"
             onLoad={handleImageLoad}
