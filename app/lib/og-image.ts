@@ -6,13 +6,24 @@ let fontLoadPromise: Promise<Uint8Array[]> | null = null
 
 const FONT_R2_KEYS = ['fonts/klee-one-400.ttf', 'fonts/klee-one-600.ttf']
 
-function ensureWasmInitialized(assets: Fetcher): Promise<void> {
+async function loadWasmBuffer(assets?: Fetcher): Promise<ArrayBuffer> {
+  if (assets) {
+    const res = await assets.fetch('https://dummy/static/resvg_bg.wasm')
+    return res.arrayBuffer()
+  }
+  // ローカル dev 環境: ASSETS バインディングがないため fs で読み込む
+  // @ts-expect-error -- Node.js API (nodejs_compat) は型定義なしで使用
+  const { readFile } = await import('node:fs/promises')
+  // @ts-expect-error -- Node.js API (nodejs_compat) は型定義なしで使用
+  const { resolve } = await import('node:path')
+  const buf: Uint8Array = await readFile(resolve('public/static/resvg_bg.wasm'))
+  return new Uint8Array(buf).buffer as ArrayBuffer
+}
+
+function ensureWasmInitialized(assets?: Fetcher): Promise<void> {
   if (!wasmInitPromise) {
     wasmInitPromise = (async () => {
-      const wasmResponse = await assets.fetch(
-        'https://dummy/static/resvg_bg.wasm',
-      )
-      const wasmBuffer = await wasmResponse.arrayBuffer()
+      const wasmBuffer = await loadWasmBuffer(assets)
       await initWasm(wasmBuffer)
     })().catch((e) => {
       wasmInitPromise = null
@@ -40,7 +51,7 @@ function loadFonts(bucket: R2Bucket): Promise<Uint8Array[]> {
 
 export async function svgToPng(
   svg: string,
-  assets: Fetcher,
+  assets: Fetcher | undefined,
   bucket: R2Bucket,
 ): Promise<Uint8Array> {
   await ensureWasmInitialized(assets)

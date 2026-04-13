@@ -58,7 +58,8 @@ export default createRoute(async (c) => {
         headers: PNG_HEADERS,
       },
     )
-  } catch {
+  } catch (e) {
+    console.error('[OGP] PNG generation failed:', e)
     return new Response(svg, {
       headers: {
         'Content-Type': 'image/svg+xml',
