@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'hono/jsx'
-import { getMoodByKey } from '../lib/mood'
+import { getMoodByKey, MOODS } from '../lib/mood'
 
 type Entry = {
   id: string
@@ -46,7 +46,7 @@ function getCellColor(entry: Entry | undefined): string {
   if (!entry) return '#ebedf0'
   const mood = getMoodByKey(entry.mood)
   if (mood) return mood.color
-  return '#c6e48b'
+  return '#bdbdbd'
 }
 
 export default function CalendarView({
@@ -311,6 +311,84 @@ function HeatmapView({
           })}
         </div>
       </div>
+
+      {/* Mood legend */}
+      <MoodLegend />
+    </div>
+  )
+}
+
+function MoodLegend() {
+  const [activeKey, setActiveKey] = useState<string | null>(null)
+  const items = MOODS.map((m) => ({
+    key: m.key,
+    color: m.color,
+    label: m.label,
+  }))
+
+  useEffect(() => {
+    if (!activeKey) return
+    const dismiss = () => setActiveKey(null)
+    document.addEventListener('click', dismiss)
+    const timer = setTimeout(dismiss, 1000)
+    return () => {
+      document.removeEventListener('click', dismiss)
+      clearTimeout(timer)
+    }
+  }, [activeKey])
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: '16px',
+        marginTop: '0.75rem',
+      }}
+    >
+      {items.map((item) => (
+        <button
+          type="button"
+          key={item.key}
+          class="mood-legend-item"
+          onClick={(e) => {
+            e.stopPropagation()
+            setActiveKey((prev) => (prev === item.key ? null : item.key))
+          }}
+          style={{
+            position: 'relative',
+            width: '12px',
+            height: '12px',
+            borderRadius: '2px',
+            background: item.color,
+            border: 'none',
+            padding: 0,
+            cursor: 'pointer',
+            WebkitTapHighlightColor: 'transparent',
+          }}
+        >
+          <span
+            class={`mood-legend-label${activeKey === item.key ? ' is-active' : ''}`}
+            style={{
+              position: 'absolute',
+              bottom: '100%',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              marginBottom: '4px',
+              padding: '2px 6px',
+              background: '#333',
+              color: '#fff',
+              borderRadius: '3px',
+              fontSize: '0.7rem',
+              whiteSpace: 'nowrap',
+              pointerEvents: 'none',
+            }}
+          >
+            {item.label}
+          </span>
+        </button>
+      ))}
     </div>
   )
 }
