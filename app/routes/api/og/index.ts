@@ -35,12 +35,15 @@ export default createRoute(async (c) => {
 
   try {
     const png = await svgToPng(svg, c.env.ASSETS, c.env.BUCKET)
-    return new Response(png.buffer as ArrayBuffer, {
-      headers: {
-        'Content-Type': 'image/png',
-        'Cache-Control': 'public, max-age=86400',
+    return new Response(
+      new Blob([new Uint8Array(png)], { type: 'image/png' }),
+      {
+        headers: {
+          'Content-Type': 'image/png',
+          'Cache-Control': 'public, max-age=86400',
+        },
       },
-    })
+    )
   } catch {
     return new Response(svg, {
       headers: {

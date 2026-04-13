@@ -1,7 +1,7 @@
 import { createRoute } from '~/factory'
+import { getDiaryWithSnapshot } from '~/lib/db'
+import { formatDiaryDate } from '~/lib/format'
 import { svgToPng } from '~/lib/og-image'
-import { getDiaryWithSnapshot } from '../../../lib/db'
-import { formatDiaryDate } from '../../../lib/format'
 
 const WIDTH = 1200
 const HEIGHT = 630
@@ -53,12 +53,15 @@ export default createRoute(async (c) => {
 
   try {
     const png = await svgToPng(svg, c.env.ASSETS, c.env.BUCKET)
-    return new Response(png.buffer as ArrayBuffer, {
-      headers: {
-        'Content-Type': 'image/png',
-        'Cache-Control': 'public, max-age=86400',
+    return new Response(
+      new Blob([new Uint8Array(png)], { type: 'image/png' }),
+      {
+        headers: {
+          'Content-Type': 'image/png',
+          'Cache-Control': 'public, max-age=86400',
+        },
       },
-    })
+    )
   } catch {
     return new Response(svg, {
       headers: {
