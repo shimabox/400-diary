@@ -50,6 +50,23 @@ button {
   }
 }
 
+.mood-legend-item .mood-legend-label {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.mood-legend-item .mood-legend-label.is-active {
+  opacity: 1;
+  visibility: visible;
+}
+
+@media (hover: hover) {
+  .mood-legend-item:hover .mood-legend-label {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
 @keyframes pulse {
   0%,
   100% {
