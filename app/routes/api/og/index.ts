@@ -1,4 +1,5 @@
 import { createRoute } from '~/factory'
+import { svgToPng } from '~/lib/og-image'
 
 const WIDTH = 1200
 const HEIGHT = 630
@@ -28,14 +29,42 @@ function generateTopOgSvg(appName: string): string {
 </svg>`
 }
 
+const PNG_HEADERS = {
+  'Content-Type': 'image/png',
+  'Cache-Control': 'public, max-age=86400',
+}
+
+const CACHE_KEY = 'og/top.png'
+
 export default createRoute(async (c) => {
+  const bucket = c.env.BUCKET
+
+  const cached = await bucket.get(CACHE_KEY)
+  if (cached) {
+    return new Response(await cached.arrayBuffer(), { headers: PNG_HEADERS })
+  }
+
   const appName = c.env.APP_NAME || '400字日記'
   const svg = generateTopOgSvg(appName)
 
-  return new Response(svg, {
-    headers: {
-      'Content-Type': 'image/svg+xml',
-      'Cache-Control': 'public, max-age=86400',
-    },
-  })
+  try {
+    const png = await svgToPng(svg, c.env.ASSETS, bucket)
+    await bucket.put(CACHE_KEY, png, {
+      httpMetadata: { contentType: 'image/png' },
+    })
+    return new Response(
+      new Blob([new Uint8Array(png)], { type: 'image/png' }),
+      {
+        headers: PNG_HEADERS,
+      },
+    )
+  } catch (e) {
+    console.error('[OGP] PNG generation failed:', e)
+    return new Response(svg, {
+      headers: {
+        'Content-Type': 'image/svg+xml',
+        'Cache-Control': 'public, max-age=86400',
+      },
+    })
+  }
 })

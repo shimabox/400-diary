@@ -133,6 +133,21 @@ export default createRoute(async (c) => {
             )}
             {isAuthenticated && (
               <a
+                href={`/api/og/${diary.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  padding: '0.3rem 0.8rem',
+                  border: '1px solid #333',
+                  borderRadius: '4px',
+                  fontSize: '0.85rem',
+                }}
+              >
+                OGP確認
+              </a>
+            )}
+            {isAuthenticated && (
+              <a
                 href={`/edit/${diary.id}`}
                 style={{
                   padding: '0.3rem 0.8rem',
