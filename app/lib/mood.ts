@@ -13,7 +13,7 @@ export const MOODS: Mood[] = [
   { key: 'sad', label: '悲しい', emoji: '😢', color: '#6495ED' },
   { key: 'angry', label: '怒り', emoji: '😠', color: '#FF6347' },
   { key: 'anxious', label: '不安', emoji: '😟', color: '#DDA0DD' },
-  { key: 'fun', label: '楽しい', emoji: '😆', color: '#FFA500' },
+  { key: 'fun', label: '楽しい', emoji: '😆', color: '#c6e48b' },
 ]
 
 export function getMoodByKey(key: string | null): Mood | undefined {
