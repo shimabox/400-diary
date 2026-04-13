@@ -8,9 +8,10 @@
    - `CF_WEB_ANALYTICS_TOKEN` は設定しなければ Analytics のスクリプトが出力されないだけなので、不要なら削除またはコメントアウトで大丈夫です。利用する場合は Cloudflare ダッシュボードの Web 分析 からサイトを追加し、JS スニペット内の token の値を設定してください
    ![Web Analytics のトークン確認](web-analytics.png)
 2. Cloudflare に D1 データベースと R2 バケットを作成する
-3. Cloudflare Pages にデプロイする
-4. Cloudflare Access で認証を設定する
-5. 再デプロイして動作確認する
+3. OGP画像用フォントを R2 にアップロードする
+4. Cloudflare Pages にデプロイする
+5. Cloudflare Access で認証を設定する
+6. 再デプロイして動作確認する
 
 ## 免責事項
 
