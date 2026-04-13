@@ -116,7 +116,7 @@ flowchart LR
 5. props を JSON パースし、`createElement` + `render` でマウント
 6. `data-hono-hydrated` を設定して二重ハイドレーションを防止
 
-### 島コンポーネント一覧
+### Islands コンポーネント一覧
 
 | コンポーネント | 役割 | 状態 |
 |--------------|------|------|
@@ -141,7 +141,7 @@ flowchart TD
     F --> H[document.body.innerHTML を差し替え]
     G & H --> I[history.pushState]
     I --> J[script タグを再活性化]
-    J --> K[hydrateIslands で島をハイドレーション]
+    J --> K[hydrateIslands で Islands をハイドレーション]
     K --> L[scrollTo 0, 0]
 ```
 
