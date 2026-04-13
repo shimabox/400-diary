@@ -243,6 +243,7 @@ export default function FlowText({
             WebkitTapHighlightColor: 'transparent',
             outline: 'none',
             touchAction: draggable ? 'none' : 'auto',
+            visibility: imageSize ? 'visible' : 'hidden',
           }}
         >
           <img
