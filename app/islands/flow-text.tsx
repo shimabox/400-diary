@@ -251,7 +251,7 @@ export default function FlowText({
             onLoad={handleImageLoad}
             style={{
               maxWidth: '100%',
-              maxHeight: `${containerHeight}px`,
+              maxHeight: '256px',
               objectFit: 'cover',
               borderRadius: '12px',
               display: 'block',
