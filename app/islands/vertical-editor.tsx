@@ -2,13 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'hono/jsx'
 import { PASTEL_COLORS } from '../lib/colors'
 import { MAX_BODY_LENGTH, MAX_IMAGE_SIZE } from '../lib/constants'
 import { formatDiaryDate } from '../lib/format'
+import { COLS, ROWS, trimToGrid } from '../lib/grid'
 import { MOODS, type MoodKey } from '../lib/mood'
 import { useSpeech } from '../lib/use-speech'
+import ConfirmDialog from './confirm-dialog'
 import FlowText from './flow-text'
 
-const MAX_LENGTH = MAX_BODY_LENGTH
-const COLS = Math.sqrt(MAX_LENGTH)
-const ROWS = COLS
 const CELL = 2.0 // em – 1マスのサイズ（正方形）
 
 const IMAGE_MAX_SIZE = MAX_IMAGE_SIZE
@@ -18,26 +17,6 @@ const IMAGE_ALLOWED_TYPES = [
   'image/webp',
   'image/gif',
 ]
-
-/** テキストが使う列数を計算する（改行で列が進む） */
-function countColumns(text: string): number {
-  if (text.length === 0) return 0
-  return text
-    .split('\n')
-    .reduce(
-      (cols, line) => cols + Math.max(1, Math.ceil(line.length / ROWS)),
-      0,
-    )
-}
-
-/** 文字数と列数の両方をグリッドに収まるよう切り詰める */
-function trimToGrid(text: string): string {
-  let trimmed = text.slice(0, MAX_LENGTH)
-  while (trimmed.length > 0 && countColumns(trimmed) > COLS) {
-    trimmed = trimmed.slice(0, -1)
-  }
-  return trimmed
-}
 
 type Props = {
   title?: string
@@ -106,6 +85,7 @@ export default function VerticalEditor({
   const imageInputRef = useRef<HTMLInputElement>(null)
   const [imageX, setImageX] = useState<number | null>(initialImageX)
   const [imageY, setImageY] = useState<number | null>(initialImageY)
+  const [showImageDeleteConfirm, setShowImageDeleteConfirm] = useState(false)
 
   const currentDiaryId = diaryId || savedId
   const imageSrc = imagePreview ?? (imageKey ? `/api/images/${imageKey}` : null)
@@ -115,7 +95,7 @@ export default function VerticalEditor({
   }, [])
 
   const charCount = body.length
-  const isOver = charCount > MAX_LENGTH
+  const isOver = charCount > MAX_BODY_LENGTH
 
   const handleInput = useCallback((e: Event) => {
     const target = e.target as HTMLTextAreaElement
@@ -151,8 +131,8 @@ export default function VerticalEditor({
       setError('日付を入力してください')
       return
     }
-    if (body.length > MAX_LENGTH) {
-      setError(`本文は${MAX_LENGTH}文字以内で入力してください`)
+    if (body.length > MAX_BODY_LENGTH) {
+      setError(`本文は${MAX_BODY_LENGTH}文字以内で入力してください`)
       return
     }
 
@@ -271,8 +251,8 @@ export default function VerticalEditor({
   )
 
   const handleImageDelete = useCallback(async () => {
+    setShowImageDeleteConfirm(false)
     if (!currentDiaryId) return
-    if (!confirm('画像を削除しますか？')) return
 
     setImageError('')
     try {
@@ -294,6 +274,7 @@ export default function VerticalEditor({
     <div style={{ padding: '1rem 0', maxWidth: '100%' }}>
       {error && (
         <p
+          role="alert"
           style={{
             color: '#c0392b',
             marginBottom: '0.75rem',
@@ -325,6 +306,7 @@ export default function VerticalEditor({
         >
           <input
             type="date"
+            aria-label="日付"
             value={date}
             onInput={(e) => setDate((e.target as HTMLInputElement).value)}
             style={{
@@ -343,6 +325,8 @@ export default function VerticalEditor({
                 type="button"
                 onClick={() => setBgColor(color)}
                 title={color}
+                aria-label={`背景色 ${color}`}
+                aria-pressed={bgColor === color}
                 style={{
                   width: '1.5rem',
                   height: '1.5rem',
@@ -426,6 +410,7 @@ export default function VerticalEditor({
               }}
             />
             <textarea
+              aria-label="日記の本文"
               value={body}
               onInput={handleInput}
               onCompositionStart={handleCompositionStart}
@@ -471,6 +456,8 @@ export default function VerticalEditor({
               type="button"
               onClick={() => setMood(mood === m.key ? null : m.key)}
               title={m.label}
+              aria-label={m.label}
+              aria-pressed={mood === m.key}
               style={{
                 padding: '0.2rem 0.4rem',
                 border: `2px solid ${mood === m.key ? m.color : 'transparent'}`,
@@ -535,7 +522,7 @@ export default function VerticalEditor({
             fontWeight: isOver ? 'bold' : 'normal',
           }}
         >
-          {charCount} / {MAX_LENGTH}
+          {charCount} / {MAX_BODY_LENGTH}
         </span>
         <div style={{ display: 'flex', gap: '0.25rem', fontSize: '0.85rem' }}>
           <button
@@ -599,7 +586,7 @@ export default function VerticalEditor({
           {imageKey && (
             <button
               type="button"
-              onClick={handleImageDelete}
+              onClick={() => setShowImageDeleteConfirm(true)}
               style={{
                 padding: '0.2rem 0.5rem',
                 background: 'transparent',
@@ -691,6 +678,7 @@ export default function VerticalEditor({
 
       {imageError && (
         <p
+          role="alert"
           style={{
             color: '#c0392b',
             fontSize: '0.85rem',
@@ -700,6 +688,12 @@ export default function VerticalEditor({
           {imageError}
         </p>
       )}
+      <ConfirmDialog
+        open={showImageDeleteConfirm}
+        message="画像を削除しますか？"
+        onConfirm={handleImageDelete}
+        onCancel={() => setShowImageDeleteConfirm(false)}
+      />
     </div>
   )
 }
