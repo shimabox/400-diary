@@ -1,4 +1,5 @@
 import type { R2Bucket } from '@cloudflare/workers-types/latest'
+import { nanoid } from 'nanoid'
 import { MAX_IMAGE_SIZE } from './constants'
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
@@ -28,7 +29,7 @@ export function validateImage(
 
 export function generateImageKey(diaryId: string, mime: string): string {
   const ext = EXT_MAP[mime] ?? 'bin'
-  return `diaries/${diaryId}/${Date.now()}.${ext}`
+  return `diaries/${diaryId}/${Date.now()}-${nanoid(8)}.${ext}`
 }
 
 export async function uploadImage(

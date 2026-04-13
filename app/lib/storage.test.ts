@@ -47,7 +47,7 @@ describe('validateImage', () => {
 describe('generateImageKey', () => {
   test('diary IDとMIMEタイプからキーを生成する', () => {
     const key = generateImageKey('abc123', 'image/png')
-    expect(key).toMatch(/^diaries\/abc123\/\d+\.png$/)
+    expect(key).toMatch(/^diaries\/abc123\/\d+-[a-zA-Z0-9_-]{8}\.png$/)
   })
 
   test('JPEGの拡張子はjpg', () => {
@@ -68,5 +68,11 @@ describe('generateImageKey', () => {
   test('未知のMIMEタイプはbinになる', () => {
     const key = generateImageKey('id1', 'application/octet-stream')
     expect(key).toMatch(/\.bin$/)
+  })
+
+  test('同じ引数でも異なるキーを生成する', () => {
+    const key1 = generateImageKey('abc', 'image/png')
+    const key2 = generateImageKey('abc', 'image/png')
+    expect(key1).not.toBe(key2)
   })
 })
