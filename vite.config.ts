@@ -6,13 +6,32 @@ import type { Plugin } from 'vite'
 import { defineConfig } from 'vite'
 import fullReload from 'vite-plugin-full-reload'
 
-// resvg-wasm の WASM バイナリを wrangler が処理できる形式で外部化する
+// resvg-wasm の WASM バイナリを環境に応じて処理する
+// - build: wrangler が WebAssembly.Module としてコンパイルできるよう外部化
+// - dev: Node.js で WASM を読み込みコンパイルする仮想モジュールを提供
 function resvgWasmPlugin(): Plugin {
+  let isBuild = false
   return {
     name: 'resvg-wasm-resolve',
+    configResolved(config) {
+      isBuild = config.command === 'build'
+    },
     resolveId(source) {
       if (source === 'resvg-wasm-module') {
-        return { id: './static/resvg_bg.wasm', external: true }
+        if (isBuild) {
+          return { id: './static/resvg_bg.wasm', external: true }
+        }
+        return '\0resvg-wasm-module'
+      }
+    },
+    load(id) {
+      if (id === '\0resvg-wasm-module') {
+        return [
+          "import { readFileSync } from 'node:fs';",
+          "import { resolve } from 'node:path';",
+          "const wasmBuffer = readFileSync(resolve(process.cwd(), 'public/static/resvg_bg.wasm'));",
+          'export default new WebAssembly.Module(wasmBuffer);',
+        ].join('\n')
       }
     },
   }
