@@ -71,6 +71,7 @@ pnpm run dev
 - [データベース](docs/architecture/database.md) — スキーマと公開フロー
 - [縦書きテキスト](docs/architecture/vertical-text.md) — 20×20 グリッドレイアウト
 - [画像アップロード](docs/architecture/image-upload.md) — R2 ストレージ管理
+- [OGP画像](docs/architecture/ogp-image.md) — SVG → PNG 動的生成
 - [カレンダー](docs/architecture/calendar.md) — ヒートマップと気分システム
 - [音声入力](docs/architecture/speech-input.md) — Web Speech API 連携
 
