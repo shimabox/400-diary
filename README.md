@@ -40,6 +40,9 @@ cp .dev.vars.example .dev.vars
 # ローカル D1 にスキーマを適用
 pnpm run db:migrate:local
 
+# OGP画像用フォントをローカル R2 にアップロード（初回のみ）
+bash scripts/upload-fonts.sh --local
+
 # 開発サーバーを起動（http://localhost:5173）
 pnpm run dev
 ```
