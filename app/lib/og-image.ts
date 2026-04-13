@@ -5,8 +5,8 @@ let wasmInitialized = false
 let fontDataCache: Uint8Array[] | null = null
 
 const FONT_FILES = [
-  '/static/klee-one-400-ogp-subset.woff2',
-  '/static/klee-one-600-ogp-subset.woff2',
+  '/static/klee-one-400-ogp-subset.ttf',
+  '/static/klee-one-600-ogp-subset.ttf',
 ]
 
 async function ensureWasmInitialized(assets: Fetcher): Promise<void> {

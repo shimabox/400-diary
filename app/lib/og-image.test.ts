@@ -69,10 +69,10 @@ describe('svgToPng', () => {
     await svgToPng('<svg></svg>', assets as never)
 
     expect(assets.fetch).toHaveBeenCalledWith(
-      'https://dummy/static/klee-one-400-ogp-subset.woff2',
+      'https://dummy/static/klee-one-400-ogp-subset.ttf',
     )
     expect(assets.fetch).toHaveBeenCalledWith(
-      'https://dummy/static/klee-one-600-ogp-subset.woff2',
+      'https://dummy/static/klee-one-600-ogp-subset.ttf',
     )
   })
 

@@ -103,8 +103,10 @@ OGP で使用する文字のみのサブセットフォントをバンドルし�
 
 | ファイル | サイズ | 内容 |
 |---------|-------|------|
-| `klee-one-400-ogp-subset.woff2` | 140KB | Regular (サブタイトル・アプリ名) |
-| `klee-one-600-ogp-subset.woff2` | 144KB | SemiBold (タイトル・日付) |
+| `klee-one-400-ogp-subset.ttf` | 332KB | Regular (サブタイトル・アプリ名) |
+| `klee-one-600-ogp-subset.ttf` | 337KB | SemiBold (タイトル・日付) |
+
+TTF 形式を使用している。resvg-wasm の `fontBuffers` で確実に読み込める（woff2 は resvg のビルド構成によっては非対応の場合がある）。
 
 サブセットに含まれる文字:
 
@@ -145,7 +147,7 @@ X では SVG は表示されないが、他のプラットフォームでは表�
 | ファイル | git 管理 | 生成方法 |
 |---------|---------|---------|
 | `public/static/resvg_bg.wasm` | `.gitignore` で除外 | `prebuild` スクリプトで `node_modules` から自動コピー |
-| `public/static/klee-one-*-ogp-subset.woff2` | git 管理 | `@fontsource/klee-one` + `fonttools` で生成 |
+| `public/static/klee-one-*-ogp-subset.ttf` | git 管理 | `@fontsource/klee-one` + `fonttools` で生成 |
 
 `prebuild` スクリプト (`package.json`):
 
@@ -171,8 +173,8 @@ for weight in [400, 600]:
     files = [f'{base}/klee-one-{s}-{weight}-normal.woff2' for s in subsets]
     merger = Merger()
     font = merger.merge(files)
-    font.flavor = 'woff2'
-    font.save(f'public/static/klee-one-{weight}-ogp-subset.woff2')
+    font.flavor = None  # TTF として保存（resvg-wasm との互換性を保証）
+    font.save(f'public/static/klee-one-{weight}-ogp-subset.ttf')
 ```
 
 必要なサブセット番号は `node_modules/@fontsource/klee-one/unicode.json` から、対象文字の Unicode コードポイントを照合して特定する。
@@ -187,4 +189,4 @@ for weight in [400, 600]:
 | `app/routes/_renderer.tsx` | OGP メタタグ出力 |
 | `app/factory.ts` | `ASSETS: Fetcher` バインディング型定義 |
 | `public/static/resvg_bg.wasm` | resvg WASM バイナリ (prebuild で生成) |
-| `public/static/klee-one-*-ogp-subset.woff2` | Klee One サブセットフォント |
+| `public/static/klee-one-*-ogp-subset.ttf` | Klee One サブセットフォント (TTF) |
