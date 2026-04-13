@@ -259,6 +259,7 @@ export default function FlowText({
             ref={imgCallbackRef}
             src={imageSrc}
             alt="日記の写真"
+            fetchpriority="high"
             onLoad={handleImageLoad}
             style={{
               maxWidth: '100%',
