@@ -11,9 +11,9 @@ BASE_URL="https://github.com/fontworks-fonts/Klee/raw/master/fonts/ttf"
 TMP_DIR=$(mktemp -d)
 R2_BUCKET="400-diary-images"
 
-LOCAL_FLAG=""
+WRANGLER_ARGS=()
 if [[ "${1:-}" == "--local" ]]; then
-  LOCAL_FLAG="--local"
+  WRANGLER_ARGS+=(--local)
   echo "=== ローカル R2 モード ==="
 else
   echo "=== リモート R2 モード ==="
@@ -38,7 +38,7 @@ for weight in 400 600; do
   wrangler r2 object put "${R2_BUCKET}/fonts/klee-one-${weight}.ttf" \
     --file "${TMP_DIR}/klee-one-${weight}.ttf" \
     --content-type "font/ttf" \
-    ${LOCAL_FLAG}
+    "${WRANGLER_ARGS[@]}"
 done
 
 echo ""
