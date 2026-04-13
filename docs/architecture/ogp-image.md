@@ -149,7 +149,10 @@ OGP 画像で使用する Klee One フォントを R2 にアップロードす�
 # 前提: fonttools と brotli がインストール済みであること
 pip install fonttools brotli
 
-# フォント生成 + R2 アップロード
+# ローカル開発用
+bash scripts/upload-fonts.sh --local
+
+# リモート (本番) 用
 bash scripts/upload-fonts.sh
 ```
 

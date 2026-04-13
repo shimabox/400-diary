@@ -3,6 +3,10 @@ set -euo pipefail
 
 # Klee One フルフォント (TTF) を生成して R2 にアップロードする
 #
+# 使い方:
+#   bash scripts/upload-fonts.sh           # リモート R2 にアップロード
+#   bash scripts/upload-fonts.sh --local   # ローカル R2 にアップロード
+#
 # 前提:
 #   pip install fonttools brotli
 #   pnpm install (@fontsource/klee-one が必要)
@@ -11,8 +15,17 @@ FONTSOURCE_DIR="node_modules/@fontsource/klee-one/files"
 TMP_DIR=$(mktemp -d)
 R2_BUCKET="400-diary-images"
 
+LOCAL_FLAG=""
+if [[ "${1:-}" == "--local" ]]; then
+  LOCAL_FLAG="--local"
+  echo "=== ローカル R2 モード ==="
+else
+  echo "=== リモート R2 モード ==="
+fi
+
 trap 'rm -rf "$TMP_DIR"' EXIT
 
+echo ""
 echo "=== Klee One フルフォント生成 ==="
 
 for weight in 400 600; do
@@ -39,7 +52,8 @@ for weight in 400 600; do
   echo "Uploading fonts/klee-one-${weight}.ttf ..."
   wrangler r2 object put "${R2_BUCKET}/fonts/klee-one-${weight}.ttf" \
     --file "${TMP_DIR}/klee-one-${weight}.ttf" \
-    --content-type "font/ttf"
+    --content-type "font/ttf" \
+    ${LOCAL_FLAG}
 done
 
 echo ""
