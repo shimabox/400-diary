@@ -35,7 +35,7 @@ echo "=== R2 にアップロード ==="
 
 for weight in 400 600; do
   echo "Uploading fonts/klee-one-${weight}.ttf ..."
-  wrangler r2 object put "${R2_BUCKET}/fonts/klee-one-${weight}.ttf" \
+  npx wrangler r2 object put "${R2_BUCKET}/fonts/klee-one-${weight}.ttf" \
     --file "${TMP_DIR}/klee-one-${weight}.ttf" \
     --content-type "font/ttf" \
     "${WRANGLER_ARGS[@]}"
