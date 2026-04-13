@@ -1,4 +1,5 @@
 import { createRoute } from '~/factory'
+import { svgToPng } from '~/lib/og-image'
 import { getDiaryWithSnapshot } from '../../../lib/db'
 import { formatDiaryDate } from '../../../lib/format'
 
@@ -49,10 +50,11 @@ export default createRoute(async (c) => {
   const bgColor = snapshot.background_color
 
   const svg = generateOgSvg(dateLabel, appName, bgColor)
+  const png = await svgToPng(svg, c.env.ASSETS)
 
-  return new Response(svg, {
+  return new Response(png.buffer as ArrayBuffer, {
     headers: {
-      'Content-Type': 'image/svg+xml',
+      'Content-Type': 'image/png',
       'Cache-Control': 'public, max-age=86400',
     },
   })

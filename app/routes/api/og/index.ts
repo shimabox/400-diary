@@ -1,4 +1,5 @@
 import { createRoute } from '~/factory'
+import { svgToPng } from '~/lib/og-image'
 
 const WIDTH = 1200
 const HEIGHT = 630
@@ -31,10 +32,11 @@ function generateTopOgSvg(appName: string): string {
 export default createRoute(async (c) => {
   const appName = c.env.APP_NAME || '400字日記'
   const svg = generateTopOgSvg(appName)
+  const png = await svgToPng(svg, c.env.ASSETS)
 
-  return new Response(svg, {
+  return new Response(png.buffer as ArrayBuffer, {
     headers: {
-      'Content-Type': 'image/svg+xml',
+      'Content-Type': 'image/png',
       'Cache-Control': 'public, max-age=86400',
     },
   })
