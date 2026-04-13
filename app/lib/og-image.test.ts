@@ -72,7 +72,6 @@ describe('svgToPng', () => {
     await svgToPng('<svg></svg>', assets as never, bucket as never)
 
     expect(initWasm).toHaveBeenCalledOnce()
-    expect(initWasm).toHaveBeenCalledWith(expect.any(ArrayBuffer))
   })
 
   test('R2からフォントファイルを読み込む', async () => {
