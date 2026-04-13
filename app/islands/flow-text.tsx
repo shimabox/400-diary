@@ -65,10 +65,10 @@ export default function FlowText({
     setImageSize({ width: img.offsetWidth, height: img.offsetHeight })
   }, [])
 
-  // ハイドレーション前に画像が読み込み済みならサイズを即取得
-  useEffect(() => {
-    const img = imgRef.current
-    if (img?.complete && img.naturalWidth > 0 && !imageSize) {
+  // ref callback: ハイドレーション時に画像が読み込み済みならサイズを即取得
+  const imgCallbackRef = useCallback((img: HTMLImageElement | null) => {
+    imgRef.current = img
+    if (img?.complete && img.naturalWidth > 0) {
       setImageSize({ width: img.offsetWidth, height: img.offsetHeight })
     }
   }, [])
@@ -256,7 +256,7 @@ export default function FlowText({
           }}
         >
           <img
-            ref={imgRef}
+            ref={imgCallbackRef}
             src={imageSrc}
             alt="日記の写真"
             onLoad={handleImageLoad}
