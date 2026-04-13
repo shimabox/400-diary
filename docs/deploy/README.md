@@ -71,6 +71,17 @@ pnpm run db:migrate:remote
 
 確認が求められるので `yes` を入力する。
 
+### OGP画像用フォントをR2にアップロード
+
+OGP画像の生成に使用する Klee One フォントを R2 バケットにアップロードする。
+
+```
+bash scripts/upload-fonts.sh
+```
+
+> [!NOTE]
+> フォントは [fontworks-fonts/Klee](https://github.com/fontworks-fonts/Klee) (SIL Open Font License) から取得されます。このステップは初回のみ必要で、以降のデプロイでは不要です。
+
 ## デプロイ
 
 Cloudflare Access の設定の前に行う。URLを取得してからAccessの設定を行うため。
