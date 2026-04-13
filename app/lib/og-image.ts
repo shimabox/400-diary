@@ -14,7 +14,10 @@ function ensureWasmInitialized(assets: Fetcher): Promise<void> {
       )
       const wasmBuffer = await wasmResponse.arrayBuffer()
       await initWasm(wasmBuffer)
-    })()
+    })().catch((e) => {
+      wasmInitPromise = null
+      throw e
+    })
   }
   return wasmInitPromise
 }
@@ -27,7 +30,10 @@ function loadFonts(bucket: R2Bucket): Promise<Uint8Array[]> {
         if (!obj) throw new Error(`Font not found in R2: ${key}`)
         return new Uint8Array(await obj.arrayBuffer())
       }),
-    )
+    ).catch((e) => {
+      fontLoadPromise = null
+      throw e
+    })
   }
   return fontLoadPromise
 }

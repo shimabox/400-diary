@@ -127,4 +127,52 @@ describe('svgToPng', () => {
     // R2フォント取得は1回ずつ = 2回だけ
     expect(bucket.get).toHaveBeenCalledTimes(2)
   })
+
+  test('WASM初期化失敗後に次のリクエストでリトライできる', async () => {
+    const { svgToPng } = await import('./og-image')
+    const bucket = createMockBucket()
+
+    const failingAssets = {
+      fetch: vi.fn(() => Promise.reject(new Error('network error'))),
+    }
+
+    await expect(
+      svgToPng('<svg></svg>', failingAssets as never, bucket as never),
+    ).rejects.toThrow('network error')
+
+    // リトライ: 正常なassetsを渡す
+    const workingAssets = createMockAssets()
+    const result = await svgToPng(
+      '<svg></svg>',
+      workingAssets as never,
+      bucket as never,
+    )
+
+    expect(result).toEqual(mockPngData)
+    expect(workingAssets.fetch).toHaveBeenCalledTimes(1)
+  })
+
+  test('フォント読み込み失敗後に次のリクエストでリトライできる', async () => {
+    const { svgToPng } = await import('./og-image')
+    const assets = createMockAssets()
+
+    const failingBucket = {
+      get: vi.fn(() => Promise.resolve(null)),
+    }
+
+    await expect(
+      svgToPng('<svg></svg>', assets as never, failingBucket as never),
+    ).rejects.toThrow('Font not found in R2')
+
+    // リトライ: 正常なbucketを渡す
+    const workingBucket = createMockBucket()
+    const result = await svgToPng(
+      '<svg></svg>',
+      assets as never,
+      workingBucket as never,
+    )
+
+    expect(result).toEqual(mockPngData)
+    expect(workingBucket.get).toHaveBeenCalledTimes(2)
+  })
 })
