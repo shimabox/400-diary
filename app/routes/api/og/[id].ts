@@ -65,7 +65,7 @@ export default createRoute(async (c) => {
   const svg = generateOgSvg(dateLabel, appName, bgColor)
 
   try {
-    const png = await svgToPng(svg, c.env.ASSETS, bucket)
+    const png = await svgToPng(svg, bucket)
     await bucket.put(cacheKey, png, {
       httpMetadata: { contentType: 'image/png' },
     })

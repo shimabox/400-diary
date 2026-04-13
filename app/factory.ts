@@ -1,13 +1,8 @@
-import type {
-  D1Database,
-  Fetcher,
-  R2Bucket,
-} from '@cloudflare/workers-types/latest'
+import type { D1Database, R2Bucket } from '@cloudflare/workers-types/latest'
 import { createFactory } from 'hono/factory'
 
 export type AppEnv = {
   Bindings: {
-    ASSETS: Fetcher
     DB: D1Database
     BUCKET: R2Bucket
     CF_ACCESS_TEAM_DOMAIN: string
