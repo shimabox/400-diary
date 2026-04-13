@@ -1,6 +1,7 @@
 import { createRoute } from '~/factory'
 import { getDiary, updateDiary } from '../../../../lib/db'
 import {
+  deleteImage,
   generateImageKey,
   uploadImage,
   validateImage,
@@ -53,6 +54,11 @@ export const DELETE = createRoute(async (c) => {
   }
 
   if (diary.image_key) {
+    try {
+      await deleteImage(c.env.BUCKET, diary.image_key)
+    } catch (e) {
+      console.error('Failed to delete image from R2:', e)
+    }
     await updateDiary(db, id, { image_key: null })
   }
 

@@ -1,4 +1,5 @@
 import { createRoute } from '~/factory'
+import DeleteDiaryButton from '../../islands/delete-diary-button'
 import VerticalEditor from '../../islands/vertical-editor'
 import { getDiaryWithPublished } from '../../lib/db'
 
@@ -67,32 +68,7 @@ export default createRoute(async (c) => {
           publishedAt={diary.published_at}
         />
         <div style={{ padding: '0 1rem 2rem', textAlign: 'right' }}>
-          <button
-            type="button"
-            id="delete-btn"
-            style={{
-              padding: '0.4rem 1rem',
-              background: 'transparent',
-              color: '#c0392b',
-              border: '1px solid #c0392b',
-              borderRadius: '4px',
-              fontSize: '0.85rem',
-            }}
-          >
-            この日記を削除
-          </button>
-          <script
-            dangerouslySetInnerHTML={{
-              __html: `
-              document.getElementById('delete-btn').addEventListener('click', async function() {
-                if (!confirm('この日記を削除しますか？')) return;
-                const res = await fetch('/api/diaries/${diary.id}', { method: 'DELETE' });
-                if (res.ok) window.location.href = '/';
-                else alert('削除に失敗しました');
-              });
-            `,
-            }}
-          />
+          <DeleteDiaryButton diaryId={diary.id} />
         </div>
       </div>
     </div>,

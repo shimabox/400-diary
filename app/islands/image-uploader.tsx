@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'hono/jsx'
 import { MAX_IMAGE_SIZE } from '../lib/constants'
+import ConfirmDialog from './confirm-dialog'
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 
@@ -13,6 +14,7 @@ export default function ImageUploader({ diaryId, initialImageKey }: Props) {
   const [preview, setPreview] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const imageSrc = preview ?? (imageKey ? `/api/images/${imageKey}` : null)
@@ -66,8 +68,7 @@ export default function ImageUploader({ diaryId, initialImageKey }: Props) {
   )
 
   const handleDelete = useCallback(async () => {
-    if (!confirm('画像を削除しますか？')) return
-
+    setShowDeleteConfirm(false)
     setError('')
     try {
       const res = await fetch(`/api/diaries/${diaryId}/image`, {
@@ -92,6 +93,7 @@ export default function ImageUploader({ diaryId, initialImageKey }: Props) {
 
       {error && (
         <p
+          role="alert"
           style={{
             color: '#c0392b',
             fontSize: '0.85rem',
@@ -162,7 +164,7 @@ export default function ImageUploader({ diaryId, initialImageKey }: Props) {
         {imageKey && (
           <button
             type="button"
-            onClick={handleDelete}
+            onClick={() => setShowDeleteConfirm(true)}
             style={{
               padding: '0.3rem 0.8rem',
               background: 'transparent',
@@ -177,6 +179,12 @@ export default function ImageUploader({ diaryId, initialImageKey }: Props) {
           </button>
         )}
       </div>
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        message="画像を削除しますか？"
+        onConfirm={handleDelete}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
     </div>
   )
 }
