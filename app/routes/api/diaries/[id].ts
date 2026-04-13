@@ -75,11 +75,18 @@ export const DELETE = createRoute(async (c) => {
     return c.json({ error: '日記が見つかりません' }, 404)
   }
 
-  // 下書きの画像 + snapshot の画像を R2 から削除
+  // 下書きの画像 + snapshot の画像を R2 から best-effort で削除
   const snapshotKeys = await listSnapshotImageKeys(db, id)
   const allKeys = new Set(snapshotKeys)
   if (diary.image_key) allKeys.add(diary.image_key)
-  await Promise.all([...allKeys].map((key) => deleteImage(c.env.BUCKET, key)))
+  const results = await Promise.allSettled(
+    [...allKeys].map((key) => deleteImage(c.env.BUCKET, key)),
+  )
+  for (const result of results) {
+    if (result.status === 'rejected') {
+      console.error('Failed to delete image from R2:', result.reason)
+    }
+  }
 
   await deleteDiary(db, id)
 
