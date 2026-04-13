@@ -48,14 +48,23 @@ function createApp() {
     const bgColor = snapshot.background_color
 
     const svg = `<svg><rect fill="${bgColor}"/><text>${dateLabel}の日記</text><text>${appName}</text></svg>`
-    const png = await svgToPng(svg, c.env.ASSETS)
 
-    return new Response(png.buffer as ArrayBuffer, {
-      headers: {
-        'Content-Type': 'image/png',
-        'Cache-Control': 'public, max-age=86400',
-      },
-    })
+    try {
+      const png = await svgToPng(svg, c.env.ASSETS)
+      return new Response(png.buffer as ArrayBuffer, {
+        headers: {
+          'Content-Type': 'image/png',
+          'Cache-Control': 'public, max-age=86400',
+        },
+      })
+    } catch {
+      return new Response(svg, {
+        headers: {
+          'Content-Type': 'image/svg+xml',
+          'Cache-Control': 'public, max-age=86400',
+        },
+      })
+    }
   })
 
   return app
@@ -107,6 +116,21 @@ describe('GET /api/og/:id', () => {
       expect.stringContaining('#FFE4E1'),
       expect.anything(),
     )
+  })
+
+  test('PNG変換失敗時はSVGにフォールバックする', async () => {
+    const { getDiaryWithSnapshot } = await import('~/lib/db')
+    const { svgToPng } = await import('~/lib/og-image')
+    vi.mocked(getDiaryWithSnapshot).mockResolvedValueOnce(mockDiary as never)
+    vi.mocked(svgToPng).mockRejectedValueOnce(new Error('WASM init failed'))
+
+    const app = createApp()
+    const res = await app.request('/api/og/diary-1')
+
+    expect(res.status).toBe(200)
+    expect(res.headers.get('Content-Type')).toBe('image/svg+xml')
+    const body = await res.text()
+    expect(body).toContain('#FFE4E1')
   })
 
   test('存在しない日記は404を返す', async () => {

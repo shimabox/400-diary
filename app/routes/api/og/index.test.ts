@@ -24,14 +24,23 @@ function createApp(appName?: string) {
     const { svgToPng } = await import('~/lib/og-image')
     const name = c.env.APP_NAME || '400字日記'
     const svg = `<svg><text>${name}</text></svg>`
-    const png = await svgToPng(svg, c.env.ASSETS)
 
-    return new Response(png.buffer as ArrayBuffer, {
-      headers: {
-        'Content-Type': 'image/png',
-        'Cache-Control': 'public, max-age=86400',
-      },
-    })
+    try {
+      const png = await svgToPng(svg, c.env.ASSETS)
+      return new Response(png.buffer as ArrayBuffer, {
+        headers: {
+          'Content-Type': 'image/png',
+          'Cache-Control': 'public, max-age=86400',
+        },
+      })
+    } catch {
+      return new Response(svg, {
+        headers: {
+          'Content-Type': 'image/svg+xml',
+          'Cache-Control': 'public, max-age=86400',
+        },
+      })
+    }
   })
 
   return app
@@ -77,5 +86,18 @@ describe('GET /api/og', () => {
       expect.stringContaining('400字日記'),
       expect.anything(),
     )
+  })
+
+  test('PNG変換失敗時はSVGにフォールバックする', async () => {
+    const { svgToPng } = await import('~/lib/og-image')
+    vi.mocked(svgToPng).mockRejectedValueOnce(new Error('WASM init failed'))
+
+    const app = createApp('テスト日記')
+    const res = await app.request('/api/og')
+
+    expect(res.status).toBe(200)
+    expect(res.headers.get('Content-Type')).toBe('image/svg+xml')
+    const body = await res.text()
+    expect(body).toContain('<svg>')
   })
 })

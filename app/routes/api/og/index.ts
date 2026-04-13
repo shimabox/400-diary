@@ -32,12 +32,21 @@ function generateTopOgSvg(appName: string): string {
 export default createRoute(async (c) => {
   const appName = c.env.APP_NAME || '400字日記'
   const svg = generateTopOgSvg(appName)
-  const png = await svgToPng(svg, c.env.ASSETS)
 
-  return new Response(png.buffer as ArrayBuffer, {
-    headers: {
-      'Content-Type': 'image/png',
-      'Cache-Control': 'public, max-age=86400',
-    },
-  })
+  try {
+    const png = await svgToPng(svg, c.env.ASSETS)
+    return new Response(png.buffer as ArrayBuffer, {
+      headers: {
+        'Content-Type': 'image/png',
+        'Cache-Control': 'public, max-age=86400',
+      },
+    })
+  } catch {
+    return new Response(svg, {
+      headers: {
+        'Content-Type': 'image/svg+xml',
+        'Cache-Control': 'public, max-age=86400',
+      },
+    })
+  }
 })

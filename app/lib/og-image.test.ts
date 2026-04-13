@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import { beforeEach, describe, expect, test, vi } from 'vitest'
 
 const mockPngData = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10])
 
@@ -23,29 +23,9 @@ function createMockAssets() {
 }
 
 describe('svgToPng', () => {
-  const originalFetch = globalThis.fetch
-
   beforeEach(() => {
     vi.resetModules()
     vi.clearAllMocks()
-    globalThis.fetch = vi.fn((input: RequestInfo | URL) => {
-      const url = typeof input === 'string' ? input : input.toString()
-      if (url.includes('fonts.googleapis.com')) {
-        return Promise.resolve(
-          new Response(
-            '@font-face { src: url(https://fonts.gstatic.com/s/kleeone/v7/test.ttf); }',
-          ),
-        )
-      }
-      if (url.includes('fonts.gstatic.com')) {
-        return Promise.resolve(new Response(new ArrayBuffer(500)))
-      }
-      return Promise.reject(new Error(`Unexpected fetch: ${url}`))
-    }) as typeof fetch
-  })
-
-  afterEach(() => {
-    globalThis.fetch = originalFetch
   })
 
   test('SVGをPNG (Uint8Array) に変換する', async () => {
@@ -82,28 +62,17 @@ describe('svgToPng', () => {
     expect(initWasm).toHaveBeenCalledWith(expect.any(ArrayBuffer))
   })
 
-  test('Google FontsからKlee Oneフォントを取得する', async () => {
+  test('ASSETSからフォントファイルを読み込む', async () => {
     const { svgToPng } = await import('./og-image')
     const assets = createMockAssets()
 
     await svgToPng('<svg></svg>', assets as never)
 
-    expect(globalThis.fetch).toHaveBeenCalledWith(
-      'https://fonts.googleapis.com/css2?family=Klee+One:wght@400;600',
-      expect.objectContaining({
-        headers: expect.objectContaining({ 'User-Agent': expect.any(String) }),
-      }),
+    expect(assets.fetch).toHaveBeenCalledWith(
+      'https://dummy/static/klee-one-400-ogp-subset.woff2',
     )
-  })
-
-  test('CSS内のフォントURLからフォントファイルを取得する', async () => {
-    const { svgToPng } = await import('./og-image')
-    const assets = createMockAssets()
-
-    await svgToPng('<svg></svg>', assets as never)
-
-    expect(globalThis.fetch).toHaveBeenCalledWith(
-      'https://fonts.gstatic.com/s/kleeone/v7/test.ttf',
+    expect(assets.fetch).toHaveBeenCalledWith(
+      'https://dummy/static/klee-one-600-ogp-subset.woff2',
     )
   })
 
@@ -116,7 +85,7 @@ describe('svgToPng', () => {
 
     expect(Resvg).toHaveBeenCalledWith('<svg></svg>', {
       font: {
-        fontBuffers: [expect.any(Uint8Array)],
+        fontBuffers: [expect.any(Uint8Array), expect.any(Uint8Array)],
         defaultFontFamily: 'Klee One',
       },
     })
@@ -129,9 +98,7 @@ describe('svgToPng', () => {
     await svgToPng('<svg>1</svg>', assets as never)
     await svgToPng('<svg>2</svg>', assets as never)
 
-    // WASM初期化は1回だけ
-    expect(assets.fetch).toHaveBeenCalledTimes(1)
-    // Google Fonts CSS取得 + フォントファイル取得 = 2回だけ
-    expect(globalThis.fetch).toHaveBeenCalledTimes(2)
+    // WASM(1回) + フォント(2回) = 初回3回、2回目は0回
+    expect(assets.fetch).toHaveBeenCalledTimes(3)
   })
 })
