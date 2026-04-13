@@ -11,9 +11,9 @@ BASE_URL="https://github.com/fontworks-fonts/Klee/raw/master/fonts/ttf"
 TMP_DIR=$(mktemp -d)
 R2_BUCKET="400-diary-images"
 
-WRANGLER_ARGS=()
+WRANGLER_ARGS=(--remote)
 if [[ "${1:-}" == "--local" ]]; then
-  WRANGLER_ARGS+=(--local)
+  WRANGLER_ARGS=(--local)
   echo "=== ローカル R2 モード ==="
 else
   echo "=== リモート R2 モード ==="
