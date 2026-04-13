@@ -1,17 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Klee One フルフォント (TTF) を生成して R2 にアップロードする
+# Klee One フォント (TTF) を GitHub からダウンロードして R2 にアップロードする
 #
 # 使い方:
 #   bash scripts/upload-fonts.sh           # リモート R2 にアップロード
 #   bash scripts/upload-fonts.sh --local   # ローカル R2 にアップロード
-#
-# 前提:
-#   pip install fonttools brotli
-#   pnpm install (@fontsource/klee-one が必要)
 
-FONTSOURCE_DIR="node_modules/@fontsource/klee-one/files"
+BASE_URL="https://github.com/fontworks-fonts/Klee/raw/master/fonts/ttf"
 TMP_DIR=$(mktemp -d)
 R2_BUCKET="400-diary-images"
 
@@ -26,24 +22,13 @@ fi
 trap 'rm -rf "$TMP_DIR"' EXIT
 
 echo ""
-echo "=== Klee One フルフォント生成 ==="
+echo "=== Klee One フォントダウンロード ==="
 
-for weight in 400 600; do
-  echo "Weight ${weight}: merging subsets..."
-  python3 -c "
-from fontTools.merge import Merger
-import glob
+curl -fSL -o "${TMP_DIR}/klee-one-400.ttf" "${BASE_URL}/KleeOne-Regular.ttf"
+echo "  -> KleeOne-Regular.ttf"
 
-files = sorted(glob.glob('${FONTSOURCE_DIR}/klee-one-*-${weight}-normal.woff2'))
-print(f'  {len(files)} subsets found')
-merger = Merger()
-font = merger.merge(files)
-font.flavor = None
-font.save('${TMP_DIR}/klee-one-${weight}.ttf')
-"
-  SIZE=$(stat -c%s "${TMP_DIR}/klee-one-${weight}.ttf")
-  echo "  -> klee-one-${weight}.ttf ($(( SIZE / 1024 )) KB)"
-done
+curl -fSL -o "${TMP_DIR}/klee-one-600.ttf" "${BASE_URL}/KleeOne-SemiBold.ttf"
+echo "  -> KleeOne-SemiBold.ttf"
 
 echo ""
 echo "=== R2 にアップロード ==="

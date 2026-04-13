@@ -30,9 +30,6 @@ importers:
       '@cloudflare/workers-types':
         specifier: ^4.20260214.0
         version: 4.20260405.1
-      '@fontsource/klee-one':
-        specifier: ^5.2.8
-        version: 5.2.8
       '@hono/vite-cloudflare-pages':
         specifier: ^0.4.0
         version: 0.4.3(hono@4.12.12)
@@ -524,9 +521,6 @@ packages:
     engines: {node: '>=18'}
     cpu: [x64]
     os: [win32]
-
-  '@fontsource/klee-one@5.2.8':
-    resolution: {integrity: sha512-DBJgwhCH1RLtwwqGtcQFa97KZikjYPWyotJaAZzgJTP/7VnARPsMMT4iQhHZzzdrT0fR9vKY55R+DkocRC6Uhw==}
 
   '@hono/node-server@1.19.13':
     resolution: {integrity: sha512-TsQLe4i2gvoTtrHje625ngThGBySOgSK3Xo2XRYOdqGN1teR8+I7vchQC46uLJi8OF62YTYA3AhSpumtkhsaKQ==}
@@ -1735,8 +1729,6 @@ snapshots:
 
   '@esbuild/win32-x64@0.27.3':
     optional: true
-
-  '@fontsource/klee-one@5.2.8': {}
 
   '@hono/node-server@1.19.13(hono@4.12.12)':
     dependencies:

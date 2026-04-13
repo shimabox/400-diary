@@ -146,9 +146,6 @@ X では SVG は表示されないが、他のプラットフォームでは表�
 OGP 画像で使用する Klee One フォントを R2 にアップロードする。**初回のみ必要**。
 
 ```bash
-# 前提: fonttools と brotli がインストール済みであること
-pip install fonttools brotli
-
 # ローカル開発用
 bash scripts/upload-fonts.sh --local
 
@@ -158,9 +155,8 @@ bash scripts/upload-fonts.sh
 
 スクリプトの処理内容:
 
-1. `@fontsource/klee-one` の全サブセット woff2 を `fonttools` でマージ
-2. TTF 形式で出力
-3. `wrangler r2 object put` で R2 バケットにアップロード
+1. GitHub ([fontworks-fonts/Klee](https://github.com/fontworks-fonts/Klee)) から TTF をダウンロード
+2. `wrangler r2 object put` で R2 バケットにアップロード
 
 アップロード後の R2 キー:
 
