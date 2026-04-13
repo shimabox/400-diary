@@ -10,12 +10,14 @@ vi.mock('~/lib/og-image', () => ({
 
 function createApp(appName?: string) {
   const mockAssets = { fetch: vi.fn() }
+  const mockBucket = { get: vi.fn() }
   const app = new Hono<AppEnv>()
 
   app.use('*', async (c, next) => {
     c.env = {
       APP_NAME: appName,
       ASSETS: mockAssets,
+      BUCKET: mockBucket,
     } as unknown as AppEnv['Bindings']
     await next()
   })
@@ -26,7 +28,7 @@ function createApp(appName?: string) {
     const svg = `<svg><text>${name}</text></svg>`
 
     try {
-      const png = await svgToPng(svg, c.env.ASSETS)
+      const png = await svgToPng(svg, c.env.ASSETS, c.env.BUCKET)
       return new Response(png.buffer as ArrayBuffer, {
         headers: {
           'Content-Type': 'image/png',
@@ -84,6 +86,7 @@ describe('GET /api/og', () => {
     const { svgToPng } = await import('~/lib/og-image')
     expect(svgToPng).toHaveBeenCalledWith(
       expect.stringContaining('400字日記'),
+      expect.anything(),
       expect.anything(),
     )
   })

@@ -1,13 +1,10 @@
-import type { Fetcher } from '@cloudflare/workers-types/latest'
+import type { Fetcher, R2Bucket } from '@cloudflare/workers-types/latest'
 import { initWasm, Resvg } from '@resvg/resvg-wasm'
 
 let wasmInitialized = false
 let fontDataCache: Uint8Array[] | null = null
 
-const FONT_FILES = [
-  '/static/klee-one-400-ogp-subset.ttf',
-  '/static/klee-one-600-ogp-subset.ttf',
-]
+const FONT_R2_KEYS = ['fonts/klee-one-400.ttf', 'fonts/klee-one-600.ttf']
 
 async function ensureWasmInitialized(assets: Fetcher): Promise<void> {
   if (wasmInitialized) return
@@ -17,13 +14,14 @@ async function ensureWasmInitialized(assets: Fetcher): Promise<void> {
   wasmInitialized = true
 }
 
-async function loadFonts(assets: Fetcher): Promise<Uint8Array[]> {
+async function loadFonts(bucket: R2Bucket): Promise<Uint8Array[]> {
   if (fontDataCache) return fontDataCache
 
   const fontBuffers = await Promise.all(
-    FONT_FILES.map(async (path) => {
-      const res = await assets.fetch(`https://dummy${path}`)
-      return new Uint8Array(await res.arrayBuffer())
+    FONT_R2_KEYS.map(async (key) => {
+      const obj = await bucket.get(key)
+      if (!obj) throw new Error(`Font not found in R2: ${key}`)
+      return new Uint8Array(await obj.arrayBuffer())
     }),
   )
 
@@ -34,9 +32,10 @@ async function loadFonts(assets: Fetcher): Promise<Uint8Array[]> {
 export async function svgToPng(
   svg: string,
   assets: Fetcher,
+  bucket: R2Bucket,
 ): Promise<Uint8Array> {
   await ensureWasmInitialized(assets)
-  const fonts = await loadFonts(assets)
+  const fonts = await loadFonts(bucket)
 
   const resvg = new Resvg(svg, {
     font: {

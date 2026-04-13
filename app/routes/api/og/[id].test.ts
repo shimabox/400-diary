@@ -16,6 +16,7 @@ vi.mock('~/lib/db', () => ({
 function createApp() {
   const db = createMockDB()
   const mockAssets = { fetch: vi.fn() }
+  const mockBucket = { get: vi.fn() }
   const app = new Hono<AppEnv>()
 
   app.use('*', async (c, next) => {
@@ -23,6 +24,7 @@ function createApp() {
       DB: db,
       APP_NAME: 'テスト日記',
       ASSETS: mockAssets,
+      BUCKET: mockBucket,
     } as unknown as AppEnv['Bindings']
     await next()
   })
@@ -50,7 +52,7 @@ function createApp() {
     const svg = `<svg><rect fill="${bgColor}"/><text>${dateLabel}の日記</text><text>${appName}</text></svg>`
 
     try {
-      const png = await svgToPng(svg, c.env.ASSETS)
+      const png = await svgToPng(svg, c.env.ASSETS, c.env.BUCKET)
       return new Response(png.buffer as ArrayBuffer, {
         headers: {
           'Content-Type': 'image/png',
@@ -114,6 +116,7 @@ describe('GET /api/og/:id', () => {
 
     expect(svgToPng).toHaveBeenCalledWith(
       expect.stringContaining('#FFE4E1'),
+      expect.anything(),
       expect.anything(),
     )
   })

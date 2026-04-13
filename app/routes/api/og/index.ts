@@ -34,7 +34,7 @@ export default createRoute(async (c) => {
   const svg = generateTopOgSvg(appName)
 
   try {
-    const png = await svgToPng(svg, c.env.ASSETS)
+    const png = await svgToPng(svg, c.env.ASSETS, c.env.BUCKET)
     return new Response(png.buffer as ArrayBuffer, {
       headers: {
         'Content-Type': 'image/png',

@@ -22,6 +22,16 @@ function createMockAssets() {
   }
 }
 
+function createMockBucket() {
+  return {
+    get: vi.fn(() =>
+      Promise.resolve({
+        arrayBuffer: () => Promise.resolve(new ArrayBuffer(500)),
+      }),
+    ),
+  }
+}
+
 describe('svgToPng', () => {
   beforeEach(() => {
     vi.resetModules()
@@ -31,10 +41,11 @@ describe('svgToPng', () => {
   test('SVGをPNG (Uint8Array) に変換する', async () => {
     const { svgToPng } = await import('./og-image')
     const assets = createMockAssets()
+    const bucket = createMockBucket()
 
     const svg =
       '<svg xmlns="http://www.w3.org/2000/svg"><text>test</text></svg>'
-    const result = await svgToPng(svg, assets as never)
+    const result = await svgToPng(svg, assets as never, bucket as never)
 
     expect(result).toBeInstanceOf(Uint8Array)
     expect(result).toEqual(mockPngData)
@@ -43,8 +54,9 @@ describe('svgToPng', () => {
   test('ASSETSバインディング経由でWASMバイナリを読み込む', async () => {
     const { svgToPng } = await import('./og-image')
     const assets = createMockAssets()
+    const bucket = createMockBucket()
 
-    await svgToPng('<svg></svg>', assets as never)
+    await svgToPng('<svg></svg>', assets as never, bucket as never)
 
     expect(assets.fetch).toHaveBeenCalledWith(
       'https://dummy/static/resvg_bg.wasm',
@@ -55,33 +67,44 @@ describe('svgToPng', () => {
     const { svgToPng } = await import('./og-image')
     const { initWasm } = await import('@resvg/resvg-wasm')
     const assets = createMockAssets()
+    const bucket = createMockBucket()
 
-    await svgToPng('<svg></svg>', assets as never)
+    await svgToPng('<svg></svg>', assets as never, bucket as never)
 
     expect(initWasm).toHaveBeenCalledOnce()
     expect(initWasm).toHaveBeenCalledWith(expect.any(ArrayBuffer))
   })
 
-  test('ASSETSからフォントファイルを読み込む', async () => {
+  test('R2からフォントファイルを読み込む', async () => {
     const { svgToPng } = await import('./og-image')
     const assets = createMockAssets()
+    const bucket = createMockBucket()
 
-    await svgToPng('<svg></svg>', assets as never)
+    await svgToPng('<svg></svg>', assets as never, bucket as never)
 
-    expect(assets.fetch).toHaveBeenCalledWith(
-      'https://dummy/static/klee-one-400-ogp-subset.ttf',
-    )
-    expect(assets.fetch).toHaveBeenCalledWith(
-      'https://dummy/static/klee-one-600-ogp-subset.ttf',
-    )
+    expect(bucket.get).toHaveBeenCalledWith('fonts/klee-one-400.ttf')
+    expect(bucket.get).toHaveBeenCalledWith('fonts/klee-one-600.ttf')
+  })
+
+  test('R2にフォントが存在しない場合エラーを投げる', async () => {
+    const { svgToPng } = await import('./og-image')
+    const assets = createMockAssets()
+    const bucket = {
+      get: vi.fn(() => Promise.resolve(null)),
+    }
+
+    await expect(
+      svgToPng('<svg></svg>', assets as never, bucket as never),
+    ).rejects.toThrow('Font not found in R2')
   })
 
   test('ResvgにfontBuffersとdefaultFontFamilyを渡す', async () => {
     const { svgToPng } = await import('./og-image')
     const { Resvg } = await import('@resvg/resvg-wasm')
     const assets = createMockAssets()
+    const bucket = createMockBucket()
 
-    await svgToPng('<svg></svg>', assets as never)
+    await svgToPng('<svg></svg>', assets as never, bucket as never)
 
     expect(Resvg).toHaveBeenCalledWith('<svg></svg>', {
       font: {
@@ -94,11 +117,14 @@ describe('svgToPng', () => {
   test('WASMとフォントの初期化は2回目以降キャッシュされる', async () => {
     const { svgToPng } = await import('./og-image')
     const assets = createMockAssets()
+    const bucket = createMockBucket()
 
-    await svgToPng('<svg>1</svg>', assets as never)
-    await svgToPng('<svg>2</svg>', assets as never)
+    await svgToPng('<svg>1</svg>', assets as never, bucket as never)
+    await svgToPng('<svg>2</svg>', assets as never, bucket as never)
 
-    // WASM(1回) + フォント(2回) = 初回3回、2回目は0回
-    expect(assets.fetch).toHaveBeenCalledTimes(3)
+    // WASM初期化は1回だけ
+    expect(assets.fetch).toHaveBeenCalledTimes(1)
+    // R2フォント取得は1回ずつ = 2回だけ
+    expect(bucket.get).toHaveBeenCalledTimes(2)
   })
 })
