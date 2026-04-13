@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'hono/jsx'
+import { MAX_IMAGE_SIZE } from '../lib/constants'
 
-const MAX_SIZE = 5 * 1024 * 1024
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 
 type Props = {
@@ -28,8 +28,8 @@ export default function ImageUploader({ diaryId, initialImageKey }: Props) {
         setError('JPEG, PNG, WebP, GIF のみアップロードできます')
         return
       }
-      if (file.size > MAX_SIZE) {
-        setError('画像は5MB以内にしてください')
+      if (file.size > MAX_IMAGE_SIZE) {
+        setError(`画像は${MAX_IMAGE_SIZE / (1024 * 1024)}MB以内にしてください`)
         return
       }
 

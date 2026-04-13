@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'hono/jsx'
 import { PASTEL_COLORS } from '../lib/colors'
-import { MAX_BODY_LENGTH } from '../lib/constants'
+import { MAX_BODY_LENGTH, MAX_IMAGE_SIZE } from '../lib/constants'
 import { formatDiaryDate } from '../lib/format'
 import { MOODS, type MoodKey } from '../lib/mood'
 import { useSpeech } from '../lib/use-speech'
@@ -11,7 +11,7 @@ const COLS = Math.sqrt(MAX_LENGTH)
 const ROWS = COLS
 const CELL = 2.0 // em – 1マスのサイズ（正方形）
 
-const IMAGE_MAX_SIZE = 5 * 1024 * 1024
+const IMAGE_MAX_SIZE = MAX_IMAGE_SIZE
 const IMAGE_ALLOWED_TYPES = [
   'image/jpeg',
   'image/png',
@@ -234,7 +234,9 @@ export default function VerticalEditor({
         return
       }
       if (file.size > IMAGE_MAX_SIZE) {
-        setImageError('画像は5MB以内にしてください')
+        setImageError(
+          `画像は${MAX_IMAGE_SIZE / (1024 * 1024)}MB以内にしてください`,
+        )
         return
       }
 
