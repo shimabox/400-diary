@@ -2,6 +2,7 @@ import { createRoute } from '~/factory'
 import FlowText from '../../islands/flow-text'
 import { getDiaryWithSnapshot } from '../../lib/db'
 import { formatDiaryDate } from '../../lib/format'
+import { getMoodByKey } from '../../lib/mood'
 
 export default createRoute(async (c) => {
   const appName = c.env.APP_NAME || '400字日記'
@@ -49,6 +50,7 @@ export default createRoute(async (c) => {
   const pubMood = snapshot.mood
   const description = pubBody.slice(0, 80)
   const dateLabel = formatDiaryDate(diary.diary_date)
+  const moodInfo = getMoodByKey(pubMood)
 
   return c.render(
     <div
@@ -75,8 +77,30 @@ export default createRoute(async (c) => {
             padding: '0 0.5rem 1rem',
           }}
         >
-          <h1 style={{ fontSize: '1.3rem' }}>
+          <h1
+            style={{
+              fontSize: '1.3rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+            }}
+          >
             <a href="/">{appName}</a>
+            {moodInfo && (
+              <span
+                title={moodInfo.label}
+                style={{
+                  display: 'inline-block',
+                  width: '0.9em',
+                  height: '0.9em',
+                  background: moodInfo.color,
+                  borderRadius: '2px',
+                  verticalAlign: 'middle',
+                  position: 'relative',
+                  top: '0.1em',
+                }}
+              />
+            )}
           </h1>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             {isAuthenticated && (
