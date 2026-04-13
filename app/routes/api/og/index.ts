@@ -29,19 +29,33 @@ function generateTopOgSvg(appName: string): string {
 </svg>`
 }
 
+const PNG_HEADERS = {
+  'Content-Type': 'image/png',
+  'Cache-Control': 'public, max-age=86400',
+}
+
+const CACHE_KEY = 'og/top.png'
+
 export default createRoute(async (c) => {
+  const bucket = c.env.BUCKET
+
+  const cached = await bucket.get(CACHE_KEY)
+  if (cached) {
+    return new Response(await cached.arrayBuffer(), { headers: PNG_HEADERS })
+  }
+
   const appName = c.env.APP_NAME || '400字日記'
   const svg = generateTopOgSvg(appName)
 
   try {
-    const png = await svgToPng(svg, c.env.ASSETS, c.env.BUCKET)
+    const png = await svgToPng(svg, c.env.ASSETS, bucket)
+    await bucket.put(CACHE_KEY, png, {
+      httpMetadata: { contentType: 'image/png' },
+    })
     return new Response(
       new Blob([new Uint8Array(png)], { type: 'image/png' }),
       {
-        headers: {
-          'Content-Type': 'image/png',
-          'Cache-Control': 'public, max-age=86400',
-        },
+        headers: PNG_HEADERS,
       },
     )
   } catch {
