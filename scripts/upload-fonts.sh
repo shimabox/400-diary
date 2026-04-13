@@ -38,7 +38,7 @@ for weight in 400 600; do
   npx wrangler r2 object put "${R2_BUCKET}/fonts/klee-one-${weight}.ttf" \
     --file "${TMP_DIR}/klee-one-${weight}.ttf" \
     --content-type "font/ttf" \
-    "${WRANGLER_ARGS[@]}"
+    ${WRANGLER_ARGS[@]+"${WRANGLER_ARGS[@]}"}
 done
 
 echo ""
