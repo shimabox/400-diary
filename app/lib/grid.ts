@@ -22,3 +22,21 @@ export function trimToGrid(text: string): string {
   }
   return trimmed
 }
+
+/**
+ * 選択範囲へテキストを挿入し、グリッド制約で切り詰めた結果と
+ * 挿入直後に置くべきカーソル位置を返す。
+ */
+export function insertAtSelection(
+  prev: string,
+  insert: string,
+  start: number,
+  end: number,
+): { text: string; caret: number } {
+  const clampedStart = Math.max(0, Math.min(start, prev.length))
+  const clampedEnd = Math.max(clampedStart, Math.min(end, prev.length))
+  const combined = prev.slice(0, clampedStart) + insert + prev.slice(clampedEnd)
+  const trimmed = trimToGrid(combined)
+  const caret = Math.min(clampedStart + insert.length, trimmed.length)
+  return { text: trimmed, caret }
+}
