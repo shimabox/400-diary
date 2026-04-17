@@ -8,7 +8,7 @@
     "typecheck": "tsc --noEmit",
     "prebuild": "npm run copy:wasm",
     "build": "npm run typecheck && rm -rf dist && vite build --mode client && vite build",
-    "deploy": "npm run build && wrangler pages deploy dist",
+    "deploy": "npm run build && wrangler pages deploy dist --commit-message=\"$(git rev-parse --short HEAD)\"",
     "test": "vitest run",
     "lint": "biome check .",
     "lint:fix": "biome check --fix .",
