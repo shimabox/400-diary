@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'hono/jsx'
 import { PASTEL_COLORS } from '../lib/colors'
 import { MAX_BODY_LENGTH, MAX_IMAGE_SIZE } from '../lib/constants'
 import { formatDiaryDate } from '../lib/format'
-import { COLS, ROWS, trimToGrid } from '../lib/grid'
+import { COLS, insertAtSelection, ROWS, trimToGrid } from '../lib/grid'
 import { MOODS, type MoodKey } from '../lib/mood'
 import { useSpeech } from '../lib/use-speech'
 import ConfirmDialog from './confirm-dialog'
@@ -60,6 +60,7 @@ export default function VerticalEditor({
   const [error, setError] = useState('')
   const composingRef = useRef(false)
   const previewScrollRef = useRef<HTMLDivElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   // プレビュー表示時にスクロールを右端（文章の先頭）にセット
   useEffect(() => {
@@ -91,7 +92,25 @@ export default function VerticalEditor({
   const imageSrc = imagePreview ?? (imageKey ? `/api/images/${imageKey}` : null)
 
   const handleSpeechResult = useCallback((text: string) => {
-    setBody((prev) => trimToGrid(prev + text))
+    const el = textareaRef.current
+    if (!el) {
+      setBody((prev) => trimToGrid(prev + text))
+      return
+    }
+    const { text: next, caret } = insertAtSelection(
+      el.value,
+      text,
+      el.selectionStart,
+      el.selectionEnd,
+    )
+    setBody(next)
+    requestAnimationFrame(() => {
+      try {
+        el.setSelectionRange(caret, caret)
+      } catch {
+        // 一部ブラウザで失敗しても無視する
+      }
+    })
   }, [])
 
   const charCount = body.length
@@ -410,6 +429,7 @@ export default function VerticalEditor({
               }}
             />
             <textarea
+              ref={textareaRef}
               aria-label="日記の本文"
               value={body}
               onInput={handleInput}
