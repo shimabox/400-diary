@@ -38,8 +38,6 @@ export default function MoodMarker({ moodKey }: Props) {
         borderRadius: '2px',
         border: 'none',
         padding: 0,
-        verticalAlign: 'middle',
-        top: '0.1em',
         cursor: 'pointer',
         WebkitTapHighlightColor: 'transparent',
       }}
