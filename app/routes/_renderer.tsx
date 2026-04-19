@@ -56,7 +56,7 @@ export default jsxRenderer(
         </head>
         <body>
           {children}
-          {cfWebAnalyticsToken && (
+          {import.meta.env.PROD && cfWebAnalyticsToken && (
             <script
               defer
               src="https://static.cloudflareinsights.com/beacon.min.js"
