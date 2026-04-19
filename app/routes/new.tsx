@@ -1,6 +1,7 @@
 import { createRoute } from '~/factory'
 import VerticalEditor from '../islands/vertical-editor'
 import { randomPastelColor } from '../lib/colors'
+import { toLocalDateString } from '../lib/format'
 
 export default createRoute((c) => {
   const appName = c.env.APP_NAME || '400字日記'
@@ -8,7 +9,7 @@ export default createRoute((c) => {
     return c.redirect('/')
   }
 
-  const today = new Date().toISOString().split('T')[0]
+  const today = toLocalDateString()
   const color = randomPastelColor()
 
   return c.render(
