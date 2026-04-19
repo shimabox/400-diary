@@ -3,6 +3,7 @@ import { MAX_BODY_LENGTH } from '../../../lib/constants'
 import {
   deleteDiary,
   getDiary,
+  getDiaryWithSnapshot,
   listSnapshotImageKeys,
   updateDiary,
 } from '../../../lib/db'
@@ -11,13 +12,30 @@ import { deleteImage } from '../../../lib/storage'
 export const GET = createRoute(async (c) => {
   const id = c.req.param('id')!
   const db = c.env.DB
-  const diary = await getDiary(db, id)
 
-  if (!diary) {
-    return c.json({ error: '日記が見つかりません' }, 404)
+  if (!c.get('isAuthenticated')) {
+    const published = await getDiaryWithSnapshot(db, id)
+    if (!published) {
+      return c.json({ error: '日記が見つかりません' }, 404)
+    }
+
+    const { snapshot } = published
+    return c.json({
+      id: published.id,
+      diary_date: published.diary_date,
+      body: snapshot.body,
+      image_key: snapshot.image_key,
+      image_layout: snapshot.image_layout,
+      image_x: snapshot.image_x,
+      image_y: snapshot.image_y,
+      background_color: snapshot.background_color,
+      mood: snapshot.mood,
+      published_at: snapshot.published_at,
+    })
   }
 
-  if (!c.get('isAuthenticated') && !diary.published_snapshot_id) {
+  const diary = await getDiary(db, id)
+  if (!diary) {
     return c.json({ error: '日記が見つかりません' }, 404)
   }
 
