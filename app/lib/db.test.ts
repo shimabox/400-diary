@@ -1,5 +1,11 @@
 import { describe, expect, test, vi } from 'vitest'
-import { createDiary, deleteDiary, getDiary, updateDiary } from './db'
+import {
+  countSnapshotsWithImageKey,
+  createDiary,
+  deleteDiary,
+  getDiary,
+  updateDiary,
+} from './db'
 import { createMockDB } from './test-helpers'
 
 vi.mock('nanoid', () => ({
@@ -156,6 +162,33 @@ describe('updateDiary', () => {
     await updateDiary(db, 'abc', { image_x: null, image_y: null })
 
     expect(db.prepare).toHaveBeenCalledTimes(3)
+  })
+})
+
+describe('countSnapshotsWithImageKey', () => {
+  test('image_key を参照する snapshot 件数を返す', async () => {
+    const db = createMockDB({ first: { count: 2 } })
+
+    const result = await countSnapshotsWithImageKey(db, 'diaries/abc/old.jpg')
+
+    expect(result).toBe(2)
+    expect(db.boundValues).toContain('diaries/abc/old.jpg')
+  })
+
+  test('参照が無ければ 0 を返す', async () => {
+    const db = createMockDB({ first: { count: 0 } })
+
+    const result = await countSnapshotsWithImageKey(db, 'diaries/abc/x.jpg')
+
+    expect(result).toBe(0)
+  })
+
+  test('結果が無い場合も 0 を返す', async () => {
+    const db = createMockDB({ first: null })
+
+    const result = await countSnapshotsWithImageKey(db, 'diaries/abc/x.jpg')
+
+    expect(result).toBe(0)
   })
 })
 

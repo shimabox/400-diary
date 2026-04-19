@@ -300,6 +300,20 @@ export async function listPublishedCalendarEntries(
   return results
 }
 
+/** image_key を参照している snapshot 件数を返す（R2 孤児判定用） */
+export async function countSnapshotsWithImageKey(
+  db: D1Database,
+  imageKey: string,
+): Promise<number> {
+  const result = await db
+    .prepare(
+      'SELECT COUNT(*) AS count FROM diary_snapshots WHERE image_key = ?',
+    )
+    .bind(imageKey)
+    .first<{ count: number }>()
+  return result?.count ?? 0
+}
+
 /** diary に紐づく全 snapshot の image_key を取得（削除時に R2 からも消すため） */
 export async function listSnapshotImageKeys(
   db: D1Database,

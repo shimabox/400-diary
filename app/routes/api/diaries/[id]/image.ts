@@ -1,11 +1,31 @@
+import type { D1Database, R2Bucket } from '@cloudflare/workers-types/latest'
 import { createRoute } from '~/factory'
-import { getDiary, updateDiary } from '../../../../lib/db'
+import {
+  countSnapshotsWithImageKey,
+  getDiary,
+  updateDiary,
+} from '../../../../lib/db'
 import {
   deleteImage,
   generateImageKey,
   uploadImage,
   validateImage,
 } from '../../../../lib/storage'
+
+async function deleteIfOrphan(
+  bucket: R2Bucket,
+  db: D1Database,
+  key: string,
+): Promise<void> {
+  const refCount = await countSnapshotsWithImageKey(db, key)
+  if (refCount > 0) return
+
+  try {
+    await deleteImage(bucket, key)
+  } catch (e) {
+    console.error('Failed to delete image from R2:', e)
+  }
+}
 
 export const POST = createRoute(async (c) => {
   if (!c.get('isAuthenticated')) {
@@ -32,10 +52,15 @@ export const POST = createRoute(async (c) => {
     return c.json({ error: validation.error }, 400)
   }
 
+  const oldKey = diary.image_key
   const key = generateImageKey(id, file.type)
   const data = await file.arrayBuffer()
   await uploadImage(bucket, key, data, file.type)
   await updateDiary(db, id, { image_key: key })
+
+  if (oldKey && oldKey !== key) {
+    await deleteIfOrphan(bucket, db, oldKey)
+  }
 
   return c.json({ image_key: key }, 201)
 })
@@ -54,12 +79,12 @@ export const DELETE = createRoute(async (c) => {
   }
 
   if (diary.image_key) {
-    try {
-      await deleteImage(c.env.BUCKET, diary.image_key)
-    } catch (e) {
-      console.error('Failed to delete image from R2:', e)
-    }
+    // DB 更新を先に行い、失敗した場合でも R2 オブジェクトを誤って消さない。
+    // R2 delete 側は best-effort なので、失敗しても orphan が残るだけで
+    // 参照整合性は保たれる。
+    const oldKey = diary.image_key
     await updateDiary(db, id, { image_key: null })
+    await deleteIfOrphan(c.env.BUCKET, db, oldKey)
   }
 
   return c.body(null, 204)
