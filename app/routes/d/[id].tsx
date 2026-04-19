@@ -1,8 +1,8 @@
 import { createRoute } from '~/factory'
 import FlowText from '../../islands/flow-text'
+import MoodMarker from '../../islands/mood-marker'
 import { getDiaryWithSnapshot } from '../../lib/db'
 import { formatDiaryDate } from '../../lib/format'
-import { getMoodByKey } from '../../lib/mood'
 
 export default createRoute(async (c) => {
   const appName = c.env.APP_NAME || '400字日記'
@@ -50,7 +50,6 @@ export default createRoute(async (c) => {
   const pubMood = snapshot.mood
   const description = pubBody.slice(0, 80)
   const dateLabel = formatDiaryDate(diary.diary_date)
-  const moodInfo = getMoodByKey(pubMood)
 
   return c.render(
     <div
@@ -86,21 +85,7 @@ export default createRoute(async (c) => {
             }}
           >
             <a href="/">{appName}</a>
-            {moodInfo && (
-              <span
-                title={moodInfo.label}
-                style={{
-                  display: 'inline-block',
-                  width: '0.9em',
-                  height: '0.9em',
-                  background: moodInfo.color,
-                  borderRadius: '2px',
-                  verticalAlign: 'middle',
-                  position: 'relative',
-                  top: '0.1em',
-                }}
-              />
-            )}
+            <MoodMarker moodKey={pubMood} />
           </h1>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             {isAuthenticated && (
