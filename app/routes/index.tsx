@@ -99,6 +99,7 @@ export default createRoute(async (c) => {
         ) : (
           <div
             class="hide-scrollbar"
+            data-scroll-restore="diary-list"
             style={{
               height: '480px',
               overflowX: 'auto',
