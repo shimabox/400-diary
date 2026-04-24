@@ -15,8 +15,8 @@ vi.mock('../../../lib/storage', () => ({
   deleteImage: vi.fn(),
 }))
 
-vi.mock('../../../lib/og-image', () => ({
-  deleteOgCache: vi.fn(),
+vi.mock('../../../lib/og-cache', () => ({
+  deleteDiaryOgCache: vi.fn(),
 }))
 
 async function createApp(isAuthenticated: boolean) {
@@ -218,11 +218,11 @@ describe('DELETE /api/diaries/:id', () => {
     expect(res.status).toBe(404)
   })
 
-  test('削除時に OGP キャッシュも R2 から捨てる', async () => {
+  test('削除時に OGP キャッシュ(全スナップショット分)も R2 から捨てる', async () => {
     const { getDiary, listSnapshotImageKeys, deleteDiary } = await import(
       '../../../lib/db'
     )
-    const { deleteOgCache } = await import('../../../lib/og-image')
+    const { deleteDiaryOgCache } = await import('../../../lib/og-cache')
     vi.mocked(getDiary).mockResolvedValue(makeDiary({ image_key: null }))
     vi.mocked(listSnapshotImageKeys).mockResolvedValue([])
     vi.mocked(deleteDiary).mockResolvedValue(true)
@@ -231,6 +231,6 @@ describe('DELETE /api/diaries/:id', () => {
     const res = await app.request('/api/diaries/abc', { method: 'DELETE' })
 
     expect(res.status).toBe(204)
-    expect(deleteOgCache).toHaveBeenCalledWith(expect.anything(), 'abc')
+    expect(deleteDiaryOgCache).toHaveBeenCalledWith(expect.anything(), 'abc')
   })
 })

@@ -7,7 +7,7 @@ import {
   listSnapshotImageKeys,
   updateDiary,
 } from '../../../lib/db'
-import { deleteOgCache } from '../../../lib/og-image'
+import { deleteDiaryOgCache } from '../../../lib/og-cache'
 import { deleteImage } from '../../../lib/storage'
 
 export const GET = createRoute(async (c) => {
@@ -94,13 +94,14 @@ export const DELETE = createRoute(async (c) => {
     return c.json({ error: '日記が見つかりません' }, 404)
   }
 
-  // 下書きの画像 + snapshot の画像 + OGP キャッシュを R2 から best-effort で削除
+  // 下書きの画像 + snapshot の画像 + OGP キャッシュ（全スナップショット分）を
+  // R2 から best-effort で削除
   const snapshotKeys = await listSnapshotImageKeys(db, id)
   const allKeys = new Set(snapshotKeys)
   if (diary.image_key) allKeys.add(diary.image_key)
   const results = await Promise.allSettled([
     ...[...allKeys].map((key) => deleteImage(c.env.BUCKET, key)),
-    deleteOgCache(c.env.BUCKET, id),
+    deleteDiaryOgCache(c.env.BUCKET, id),
   ])
   for (const result of results) {
     if (result.status === 'rejected') {

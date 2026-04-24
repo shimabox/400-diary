@@ -1,6 +1,5 @@
 import { createRoute } from '~/factory'
 import { publishDiary } from '../../../../lib/db'
-import { deleteOgCache } from '../../../../lib/og-image'
 
 export const POST = createRoute(async (c) => {
   if (!c.get('isAuthenticated')) {
@@ -15,13 +14,9 @@ export const POST = createRoute(async (c) => {
     return c.json({ error: '日記が見つかりません' }, 404)
   }
 
-  // 再公開後も OGP が古い画像のままにならないよう、R2 キャッシュを捨てる。
-  // レスポンスは止めたくないので失敗してもログだけ残す。
-  try {
-    await deleteOgCache(c.env.BUCKET, id)
-  } catch (e) {
-    console.error('[OGP] failed to invalidate cache on publish:', e)
-  }
+  // OGP の R2 キャッシュキーには snapshot.id が含まれるため、再公開すれば
+  // 自動的に別キーになり、旧 PNG を取り違える心配がない。
+  // よってここでの明示的な無効化は不要。
 
   return c.json({ published_at: snapshot.published_at })
 })

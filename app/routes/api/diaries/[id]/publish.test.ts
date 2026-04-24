@@ -7,20 +7,14 @@ vi.mock('../../../../lib/db', () => ({
   publishDiary: vi.fn(),
 }))
 
-vi.mock('../../../../lib/og-image', () => ({
-  deleteOgCache: vi.fn(),
-}))
-
 async function createApp(isAuthenticated: boolean) {
   const { POST } = await import('./publish')
   const app = new Hono<AppEnv>()
-  const mockBucket = { delete: vi.fn() }
 
   app.use('*', async (c, next) => {
     c.set('isAuthenticated', isAuthenticated)
     c.env = {
       DB: {},
-      BUCKET: mockBucket,
     } as unknown as AppEnv['Bindings']
     await next()
   })
@@ -58,9 +52,8 @@ describe('POST /api/diaries/:id/publish', () => {
     expect(res.status).toBe(401)
   })
 
-  test('存在しない日記は404を返し、OGPキャッシュ削除は呼ばない', async () => {
+  test('存在しない日記は404を返す', async () => {
     const { publishDiary } = await import('../../../../lib/db')
-    const { deleteOgCache } = await import('../../../../lib/og-image')
     vi.mocked(publishDiary).mockResolvedValue(null)
 
     const app = await createApp(true)
@@ -69,28 +62,11 @@ describe('POST /api/diaries/:id/publish', () => {
     })
 
     expect(res.status).toBe(404)
-    expect(deleteOgCache).not.toHaveBeenCalled()
   })
 
-  test('公開成功時に OGP キャッシュを削除して次回リクエストで再生成させる', async () => {
+  test('公開成功時に published_at を返す', async () => {
     const { publishDiary } = await import('../../../../lib/db')
-    const { deleteOgCache } = await import('../../../../lib/og-image')
     vi.mocked(publishDiary).mockResolvedValue(makeSnapshot())
-
-    const app = await createApp(true)
-    const res = await app.request('/api/diaries/abc/publish', {
-      method: 'POST',
-    })
-
-    expect(res.status).toBe(200)
-    expect(deleteOgCache).toHaveBeenCalledWith(expect.anything(), 'abc')
-  })
-
-  test('OGP キャッシュ削除が失敗してもレスポンスは成功にする', async () => {
-    const { publishDiary } = await import('../../../../lib/db')
-    const { deleteOgCache } = await import('../../../../lib/og-image')
-    vi.mocked(publishDiary).mockResolvedValue(makeSnapshot())
-    vi.mocked(deleteOgCache).mockRejectedValueOnce(new Error('R2 down'))
 
     const app = await createApp(true)
     const res = await app.request('/api/diaries/abc/publish', {

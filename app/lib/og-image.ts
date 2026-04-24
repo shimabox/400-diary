@@ -34,22 +34,6 @@ function loadFonts(bucket: R2Bucket): Promise<Uint8Array[]> {
   return fontLoadPromise
 }
 
-/** 個別日記 OGP の R2 キャッシュキー。公開・削除時の無効化と参照箇所で共有する。 */
-export function ogCacheKey(diaryId: string): string {
-  return `og/${diaryId}.png`
-}
-
-/**
- * 個別日記 OGP の R2 キャッシュを削除する。
- * 再公開時に呼ぶことで、スナップショット更新後の OGP 再生成を保証する。
- */
-export async function deleteOgCache(
-  bucket: R2Bucket,
-  diaryId: string,
-): Promise<void> {
-  await bucket.delete(ogCacheKey(diaryId))
-}
-
 export async function svgToPng(
   svg: string,
   bucket: R2Bucket,

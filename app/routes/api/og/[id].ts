@@ -1,7 +1,8 @@
 import { createRoute } from '~/factory'
 import { getDiaryWithSnapshot } from '~/lib/db'
 import { formatDiaryDate } from '~/lib/format'
-import { ogCacheKey, svgToPng } from '~/lib/og-image'
+import { ogCacheKey } from '~/lib/og-cache'
+import { svgToPng } from '~/lib/og-image'
 
 const WIDTH = 1200
 const HEIGHT = 630
@@ -43,18 +44,20 @@ const PNG_HEADERS = {
 export default createRoute(async (c) => {
   const id = c.req.param('id')!
   const bucket = c.env.BUCKET
-  const cacheKey = ogCacheKey(id)
 
-  const cached = await bucket.get(cacheKey)
-  if (cached) {
-    return new Response(await cached.arrayBuffer(), { headers: PNG_HEADERS })
-  }
-
+  // スナップショット単位でキャッシュするため、先に DB を引いて snapshot.id を得る。
+  // これにより再公開のたびにキーが自動で変わり、旧画像を取り違える余地がなくなる。
   const db = c.env.DB
   const result = await getDiaryWithSnapshot(db, id)
 
   if (!result) {
     return c.notFound()
+  }
+
+  const cacheKey = ogCacheKey(id, result.snapshot.id)
+  const cached = await bucket.get(cacheKey)
+  if (cached) {
+    return new Response(await cached.arrayBuffer(), { headers: PNG_HEADERS })
   }
 
   const appName = c.env.APP_NAME || '400字日記'
