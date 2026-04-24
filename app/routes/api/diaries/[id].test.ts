@@ -15,17 +15,26 @@ vi.mock('../../../lib/storage', () => ({
   deleteImage: vi.fn(),
 }))
 
+vi.mock('../../../lib/og-cache', () => ({
+  deleteDiaryOgCache: vi.fn(),
+}))
+
 async function createApp(isAuthenticated: boolean) {
-  const { GET } = await import('./[id]')
+  const { GET, DELETE } = await import('./[id]')
   const app = new Hono<AppEnv>()
+  const mockBucket = { delete: vi.fn() }
 
   app.use('*', async (c, next) => {
     c.set('isAuthenticated', isAuthenticated)
-    c.env = { DB: {} } as unknown as AppEnv['Bindings']
+    c.env = {
+      DB: {},
+      BUCKET: mockBucket,
+    } as unknown as AppEnv['Bindings']
     await next()
   })
 
   app.get('/api/diaries/:id', ...GET)
+  app.delete('/api/diaries/:id', ...DELETE)
 
   return app
 }
@@ -186,5 +195,42 @@ describe('GET /api/diaries/:id 公開チェック', () => {
     const res = await app.request('/api/diaries/not-found')
 
     expect(res.status).toBe(404)
+  })
+})
+
+describe('DELETE /api/diaries/:id', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  test('未認証は401を返す', async () => {
+    const app = await createApp(false)
+    const res = await app.request('/api/diaries/abc', { method: 'DELETE' })
+    expect(res.status).toBe(401)
+  })
+
+  test('存在しない日記は404を返す', async () => {
+    const { getDiary } = await import('../../../lib/db')
+    vi.mocked(getDiary).mockResolvedValue(null)
+
+    const app = await createApp(true)
+    const res = await app.request('/api/diaries/unknown', { method: 'DELETE' })
+    expect(res.status).toBe(404)
+  })
+
+  test('削除時に OGP キャッシュ(全スナップショット分)も R2 から捨てる', async () => {
+    const { getDiary, listSnapshotImageKeys, deleteDiary } = await import(
+      '../../../lib/db'
+    )
+    const { deleteDiaryOgCache } = await import('../../../lib/og-cache')
+    vi.mocked(getDiary).mockResolvedValue(makeDiary({ image_key: null }))
+    vi.mocked(listSnapshotImageKeys).mockResolvedValue([])
+    vi.mocked(deleteDiary).mockResolvedValue(true)
+
+    const app = await createApp(true)
+    const res = await app.request('/api/diaries/abc', { method: 'DELETE' })
+
+    expect(res.status).toBe(204)
+    expect(deleteDiaryOgCache).toHaveBeenCalledWith(expect.anything(), 'abc')
   })
 })
