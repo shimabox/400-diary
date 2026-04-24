@@ -1,7 +1,7 @@
 import { createRoute } from '~/factory'
 import { getDiaryWithSnapshot } from '~/lib/db'
 import { formatDiaryDate } from '~/lib/format'
-import { svgToPng } from '~/lib/og-image'
+import { ogCacheKey, svgToPng } from '~/lib/og-image'
 
 const WIDTH = 1200
 const HEIGHT = 630
@@ -43,7 +43,7 @@ const PNG_HEADERS = {
 export default createRoute(async (c) => {
   const id = c.req.param('id')!
   const bucket = c.env.BUCKET
-  const cacheKey = `og/${id}.png`
+  const cacheKey = ogCacheKey(id)
 
   const cached = await bucket.get(cacheKey)
   if (cached) {
