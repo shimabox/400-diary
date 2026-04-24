@@ -50,6 +50,9 @@ export default createRoute(async (c) => {
   const pubMood = snapshot.mood
   const description = pubBody.slice(0, 80)
   const dateLabel = formatDiaryDate(diary.diary_date)
+  // スナップショット ID をクエリに載せることで、再公開時に og:image URL 自体が
+  // 変わり、ブラウザや SNS のキャッシュが自動で迂回される。
+  const ogImageUrl = `/api/og/${diary.id}?v=${snapshot.id}`
 
   return c.render(
     <div
@@ -142,7 +145,7 @@ export default createRoute(async (c) => {
             )}
             {isAuthenticated && (
               <a
-                href={`/api/og/${diary.id}`}
+                href={ogImageUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
@@ -221,7 +224,7 @@ export default createRoute(async (c) => {
     {
       title: `${dateLabel}の日記 — ${appName}`,
       description,
-      ogImage: `/api/og/${diary.id}`,
+      ogImage: ogImageUrl,
       preloadImage: pubImageKey ? `/api/images/${pubImageKey}` : undefined,
     },
   )
