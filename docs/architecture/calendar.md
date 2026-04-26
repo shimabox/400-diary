@@ -154,6 +154,8 @@ flowchart TD
   - 未来年: 左端（1月、`scrollLeft = 0`）
 - 現在年・現在月は `toLocalDateString()`（JST）で判定
 - スクロール位置決定ロジックは純粋関数として `app/lib/heatmap-scroll.ts` に切り出してテスト
+- 初期 scrollLeft はヒートマップ scroll コンテナの直下に置いたインライン `<script>` でハイドレーション前に確定させ、左端からのジャンプを抑える。同じ計算は Island の `useEffect` でも行い、年ナビゲーション後の再調整やインラインスクリプト失敗時のフェイルセーフとする
+- インラインスクリプトの計算式は TS 側の純粋関数 `computeInlineScrollLeft` と等価であり、`heatmap-scroll.test.ts` で `computeInitialScrollLeft` との結果一致を assert してズレを検知する
 
 ## 関連ファイル
 
