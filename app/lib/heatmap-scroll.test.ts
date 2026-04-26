@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import {
   computeInitialScrollLeft,
+  computeInlineScrollLeft,
   decideScrollTarget,
   HEATMAP_COLUMN_PITCH_PX,
   HEATMAP_SCROLL_BUFFER_PX,
@@ -79,4 +80,43 @@ describe('computeInitialScrollLeft', () => {
       }),
     ).toBe(9 * 10)
   })
+})
+
+describe('computeInlineScrollLeft', () => {
+  // インラインスクリプトと TS 側 (decideScrollTarget + computeInitialScrollLeft) で
+  // 計算結果がズレないことを担保する等価性テスト。
+  const monthStartCols = [0, 5, 9, 13, 17, 22, 26, 31, 35, 39, 44, 48]
+  const scrollWidth = 1234
+
+  const cases: Array<{
+    name: string
+    year: number
+    currentYear: number
+    currentMonth: number
+  }> = [
+    { name: '同年・1月', year: 2026, currentYear: 2026, currentMonth: 0 },
+    { name: '同年・5月', year: 2026, currentYear: 2026, currentMonth: 4 },
+    { name: '同年・12月', year: 2026, currentYear: 2026, currentMonth: 11 },
+    { name: '過去年', year: 2024, currentYear: 2026, currentMonth: 6 },
+    { name: '未来年', year: 2027, currentYear: 2026, currentMonth: 6 },
+  ]
+
+  for (const c of cases) {
+    test(`${c.name}: TS 側 computeInitialScrollLeft と一致する`, () => {
+      const inline = computeInlineScrollLeft(
+        c.year,
+        c.currentYear,
+        c.currentMonth,
+        monthStartCols,
+        scrollWidth,
+      )
+      const ts = computeInitialScrollLeft({
+        target: decideScrollTarget(c.year, c.currentYear),
+        currentMonth: c.currentMonth,
+        monthStartCols,
+        scrollWidth,
+      })
+      expect(inline).toBe(ts)
+    })
+  }
 })
