@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'hono/jsx'
+import { useEffect, useRef, useState } from 'hono/jsx'
 import { toLocalDateString } from '../lib/format'
 import {
   computeInitialScrollLeft,
@@ -149,8 +149,7 @@ function HeatmapView({
     dayIndex += daysInMonth
   }
 
-  // ペイント前に scrollLeft を確定させてちらつきを防ぐ
-  useLayoutEffect(() => {
+  useEffect(() => {
     const el = scrollRef.current
     if (!el) return
     // PC（横スクロール余地が無い）では何もしない
