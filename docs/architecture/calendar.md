@@ -30,7 +30,7 @@ stateDiagram-v2
 │  │  │  │  │  │  │  │  │  │  │                 │ 金
 │  │  │  │  │  │  │  │  │  │  │                 │ 土
 └──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴─────────────────┘
-← 横スクロール可能 (自動で右端にスクロール)
+← 横スクロール可能 (初期スクロール位置は表示年で決まる)
 ```
 
 ### CSS Grid レイアウト
@@ -147,13 +147,20 @@ flowchart TD
 
 - ヒートマップは横スクロール可能（`overflowX: auto`）
 - `hide-scrollbar` クラスでスクロールバーを非表示
-- 初期表示時に自動で右端（現在の週付近）にスクロール（`useEffect` + `scrollLeft = scrollWidth`）
+- PC（横スクロール余地が無い幅）ではヒートマップ全体がそのまま見えるため、初期スクロール処理は何もしない
+- モバイル（横スクロール余地がある幅）では表示中の year に応じて初期スクロール位置を決める
+  - 現在年: 現在月の列付近（`monthStartCols[currentMonth] * 14 - 4`px）
+  - 過去年: 右端（12月、`scrollLeft = scrollWidth`）
+  - 未来年: 左端（1月、`scrollLeft = 0`）
+- 現在年・現在月は `toLocalDateString()`（JST）で判定
+- スクロール位置決定ロジックは純粋関数として `app/lib/heatmap-scroll.ts` に切り出してテスト
 
 ## 関連ファイル
 
 | ファイル | 役割 |
 |---------|------|
 | `app/islands/calendar-view.tsx` | CalendarView, HeatmapView, MonthView コンポーネント |
+| `app/lib/heatmap-scroll.ts` | ヒートマップ初期スクロール位置を決める純粋関数 |
 | `app/lib/mood.ts` | Mood 定義 (`MOODS`, `getMoodByKey`) |
 | `app/lib/db.ts` | `listDiaryCalendarEntries`, `listPublishedCalendarEntries` |
 | `app/routes/index.tsx` | カレンダーデータの取得とレンダリング |
