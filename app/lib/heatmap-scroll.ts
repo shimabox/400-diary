@@ -35,3 +35,26 @@ export function computeInitialScrollLeft(params: {
   const col = monthStartCols[currentMonth] ?? 0
   return Math.max(0, col * columnPitchPx - bufferPx)
 }
+
+/**
+ * ヒートマップ scroll コンテナ直下に埋めるインラインスクリプトと等価な計算。
+ * インラインスクリプトはバンドル外の JS 文字列なので、ここで TS の純粋関数と
+ * 等価性テストすることで、両者の式がズレた場合にテストで気づけるようにする。
+ */
+export function computeInlineScrollLeft(
+  year: number,
+  currentYear: number,
+  currentMonth: number,
+  monthStartCols: number[],
+  scrollWidth: number,
+): number {
+  if (year < currentYear) return scrollWidth
+  if (year === currentYear) {
+    return Math.max(
+      0,
+      (monthStartCols[currentMonth] ?? 0) * HEATMAP_COLUMN_PITCH_PX -
+        HEATMAP_SCROLL_BUFFER_PX,
+    )
+  }
+  return 0
+}
