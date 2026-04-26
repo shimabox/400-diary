@@ -118,6 +118,7 @@ function HeatmapView({
   onMonthClick: (month: number) => void
 }) {
   const scrollRef = useRef<HTMLDivElement>(null)
+  const [ready, setReady] = useState(false)
 
   const startDate = new Date(year, 0, 1)
   const endDate = new Date(year, 11, 31)
@@ -151,29 +152,33 @@ function HeatmapView({
 
   useEffect(() => {
     const el = scrollRef.current
-    if (!el) return
-    // PC（横スクロール余地が無い）では何もしない
-    if (el.scrollWidth <= el.clientWidth) return
-
-    const today = toLocalDateString()
-    const currentYear = Number(today.slice(0, 4))
-    const currentMonth = Number(today.slice(5, 7)) - 1
-
-    // monthPositions を依存に入れず year 変化時のみ再計算する
-    const cols: number[] = []
-    let acc = 0
-    const dow = new Date(year, 0, 1).getDay()
-    for (let m = 0; m < 12; m++) {
-      cols.push(Math.floor((acc + dow) / 7))
-      acc += getDaysInMonth(year, m)
+    if (!el) {
+      setReady(true)
+      return
     }
+    // PC（横スクロール余地が無い）でも fade in だけは走らせる
+    if (el.scrollWidth > el.clientWidth) {
+      const today = toLocalDateString()
+      const currentYear = Number(today.slice(0, 4))
+      const currentMonth = Number(today.slice(5, 7)) - 1
 
-    el.scrollLeft = computeInitialScrollLeft({
-      target: decideScrollTarget(year, currentYear),
-      currentMonth,
-      monthStartCols: cols,
-      scrollWidth: el.scrollWidth,
-    })
+      // monthPositions を依存に入れず year 変化時のみ再計算する
+      const cols: number[] = []
+      let acc = 0
+      const dow = new Date(year, 0, 1).getDay()
+      for (let m = 0; m < 12; m++) {
+        cols.push(Math.floor((acc + dow) / 7))
+        acc += getDaysInMonth(year, m)
+      }
+
+      el.scrollLeft = computeInitialScrollLeft({
+        target: decideScrollTarget(year, currentYear),
+        currentMonth,
+        monthStartCols: cols,
+        scrollWidth: el.scrollWidth,
+      })
+    }
+    setReady(true)
   }, [year])
 
   return (
@@ -227,7 +232,12 @@ function HeatmapView({
       <div
         ref={scrollRef}
         class="hide-scrollbar"
-        style={{ overflowX: 'auto', padding: '0 0.5rem' }}
+        style={{
+          overflowX: 'auto',
+          padding: '0 0.5rem',
+          opacity: ready ? 1 : 0,
+          transition: 'opacity 0.2s ease-in',
+        }}
       >
         <div
           style={{
