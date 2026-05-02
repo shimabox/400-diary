@@ -37,7 +37,7 @@ export default createRoute(async (c) => {
         minHeight: '100dvh',
         display: 'flex',
         justifyContent: 'center',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         padding: '2rem 1rem',
       }}
     >
