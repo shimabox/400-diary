@@ -139,7 +139,7 @@ export default createRoute(async (c) => {
                     flexShrink: 0,
                     width: '168px',
                     background: cardColor,
-                    backgroundImage: 'url(/images/background.png)',
+                    backgroundImage: 'url(/images/background.webp)',
                     backgroundRepeat: 'repeat',
                     backgroundBlendMode: 'luminosity',
                     borderRadius: '8px',
