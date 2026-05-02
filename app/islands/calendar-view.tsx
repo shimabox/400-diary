@@ -258,7 +258,9 @@ function HeatmapView({
                 color: '#666',
                 background: 'none',
                 border: 'none',
-                padding: '0 0 4px',
+                padding: '4px 6px 8px',
+                minWidth: '24px',
+                minHeight: '24px',
                 textAlign: 'left',
                 whiteSpace: 'nowrap',
                 cursor: 'pointer',
@@ -390,6 +392,7 @@ function MoodLegend() {
           type="button"
           key={item.key}
           class="mood-legend-item"
+          aria-label={item.label}
           onClick={(e) => {
             e.stopPropagation()
             setActiveKey((prev) => (prev === item.key ? null : item.key))

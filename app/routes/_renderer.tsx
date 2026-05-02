@@ -1,6 +1,7 @@
 import { jsxRenderer, useRequestContext } from 'hono/jsx-renderer'
 import { Script } from 'honox/server'
 import type { AppEnv } from '~/factory'
+import globalCss from '~/styles/global.css?inline'
 
 export default jsxRenderer(
   ({ children, title, description, ogImage, preloadImage }) => {
@@ -40,22 +41,32 @@ export default jsxRenderer(
             href="https://fonts.gstatic.com"
             crossorigin=""
           />
+          {/* Google Fonts CSS を render-blocking から外す。
+              media="print" で initial paint には適用させず、ロード後に media="all" に
+              切り替えて適用する。Google 側の dynamic subsetting (unicode-range 分割)
+              はそのまま活かせるため、自前ホスト+サブセットより総転送量で有利。 */}
           <link
             href="https://fonts.googleapis.com/css2?family=Klee+One:wght@400;600&display=swap"
             rel="stylesheet"
+            media="print"
+            onload="this.media='all'"
           />
-          {import.meta.env.PROD ? (
-            <link rel="stylesheet" href="/static/assets/global.css" />
-          ) : (
-            <link rel="stylesheet" href="/app/styles/global.css" />
-          )}
+          <noscript>
+            <link
+              href="https://fonts.googleapis.com/css2?family=Klee+One:wght@400;600&display=swap"
+              rel="stylesheet"
+            />
+          </noscript>
+          {/* global.css は 1KB 程度なので別リクエストにせず head へインライン化する。
+              これで /static/assets/global.css の render-blocking リクエストを回避。 */}
+          <style dangerouslySetInnerHTML={{ __html: globalCss }} />
           {preloadImage && (
             <link rel="preload" as="image" href={preloadImage} />
           )}
           <Script src="/app/client.ts" async />
         </head>
         <body>
-          {children}
+          <main>{children}</main>
           {import.meta.env.PROD && cfWebAnalyticsToken && (
             <script
               defer

@@ -50,21 +50,36 @@ button {
   }
 }
 
-.mood-legend-item .mood-legend-label {
+.mood-legend-item .mood-legend-label,
+.mood-marker .mood-legend-label {
   opacity: 0;
   visibility: hidden;
 }
 
-.mood-legend-item .mood-legend-label.is-active {
+.mood-legend-item .mood-legend-label.is-active,
+.mood-marker .mood-legend-label.is-active {
   opacity: 1;
   visibility: visible;
 }
 
 @media (hover: hover) {
-  .mood-legend-item:hover .mood-legend-label {
+  .mood-legend-item:hover .mood-legend-label,
+  .mood-marker:hover .mood-legend-label {
     opacity: 1;
     visibility: visible;
   }
+}
+
+/* MoodLegend のボタンは 12px のドットだが、24px の透明タップ領域で覆って
+   タップしやすさを確保する。並びの gap は 16px あるため隣接要素との競合は無い。
+   見た目は変えない。 */
+.mood-legend-item::before {
+  content: "";
+  position: absolute;
+  inset: 50% auto auto 50%;
+  width: 24px;
+  height: 24px;
+  transform: translate(-50%, -50%);
 }
 
 @keyframes pulse {

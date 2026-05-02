@@ -37,7 +37,7 @@ export default createRoute(async (c) => {
         minHeight: '100dvh',
         display: 'flex',
         justifyContent: 'center',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         padding: '2rem 1rem',
       }}
     >
@@ -139,7 +139,7 @@ export default createRoute(async (c) => {
                     flexShrink: 0,
                     width: '168px',
                     background: cardColor,
-                    backgroundImage: 'url(/images/background.png)',
+                    backgroundImage: 'url(/images/background.webp)',
                     backgroundRepeat: 'repeat',
                     backgroundBlendMode: 'luminosity',
                     borderRadius: '8px',
@@ -235,7 +235,7 @@ export default createRoute(async (c) => {
             href="https://x.com/shimabox"
             target="_blank"
             rel="noopener noreferrer"
-            style={{ color: '#888' }}
+            style={{ color: '#595959' }}
           >
             X
           </a>
@@ -243,7 +243,7 @@ export default createRoute(async (c) => {
             href="https://github.com/shimabox/400-diary"
             target="_blank"
             rel="noopener noreferrer"
-            style={{ color: '#888' }}
+            style={{ color: '#595959' }}
           >
             GitHub
           </a>

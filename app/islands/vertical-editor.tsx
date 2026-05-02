@@ -367,7 +367,7 @@ export default function VerticalEditor({
           style={{
             position: 'relative',
             background: bgColor,
-            backgroundImage: 'url(/images/background.png)',
+            backgroundImage: 'url(/images/background.webp)',
             backgroundRepeat: 'repeat',
             backgroundBlendMode: 'luminosity',
             borderRadius: '12px',

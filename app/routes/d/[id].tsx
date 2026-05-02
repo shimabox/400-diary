@@ -179,7 +179,7 @@ export default createRoute(async (c) => {
         style={{
           position: 'relative',
           background: pubBgColor,
-          backgroundImage: 'url(/images/background.png)',
+          backgroundImage: 'url(/images/background.webp)',
           backgroundRepeat: 'repeat',
           backgroundBlendMode: 'luminosity',
           borderRadius: '12px',

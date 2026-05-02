@@ -5,3 +5,4 @@ dist/
 .wrangler/
 .dev.vars
 public/static/resvg_bg.wasm
+.playwright-mcp/

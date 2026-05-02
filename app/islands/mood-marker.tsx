@@ -25,7 +25,8 @@ export default function MoodMarker({ moodKey }: Props) {
   return (
     <button
       type="button"
-      class="mood-legend-item"
+      class="mood-marker"
+      aria-label={moodInfo.label}
       onClick={(e) => {
         e.stopPropagation()
         setActive((prev) => !prev)
