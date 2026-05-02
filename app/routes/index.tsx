@@ -235,7 +235,7 @@ export default createRoute(async (c) => {
             href="https://x.com/shimabox"
             target="_blank"
             rel="noopener noreferrer"
-            style={{ color: '#888' }}
+            style={{ color: '#595959' }}
           >
             X
           </a>
@@ -243,7 +243,7 @@ export default createRoute(async (c) => {
             href="https://github.com/shimabox/400-diary"
             target="_blank"
             rel="noopener noreferrer"
-            style={{ color: '#888' }}
+            style={{ color: '#595959' }}
           >
             GitHub
           </a>
