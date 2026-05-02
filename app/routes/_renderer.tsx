@@ -40,10 +40,22 @@ export default jsxRenderer(
             href="https://fonts.gstatic.com"
             crossorigin=""
           />
+          {/* Google Fonts CSS を render-blocking から外す。
+              media="print" で initial paint には適用させず、ロード後に media="all" に
+              切り替えて適用する。Google 側の dynamic subsetting (unicode-range 分割)
+              はそのまま活かせるため、自前ホスト+サブセットより総転送量で有利。 */}
           <link
             href="https://fonts.googleapis.com/css2?family=Klee+One:wght@400;600&display=swap"
             rel="stylesheet"
+            media="print"
+            onload="this.media='all'"
           />
+          <noscript>
+            <link
+              href="https://fonts.googleapis.com/css2?family=Klee+One:wght@400;600&display=swap"
+              rel="stylesheet"
+            />
+          </noscript>
           {import.meta.env.PROD ? (
             <link rel="stylesheet" href="/static/assets/global.css" />
           ) : (
