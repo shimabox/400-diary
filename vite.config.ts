@@ -52,16 +52,15 @@ export default defineConfig(({ mode }) => {
       build: {
         manifest: true,
         rollupOptions: {
-          input: ['/app/client.ts', '/app/styles/global.css'],
+          // global.css は SSR 側で ?inline 取り込みして head にインライン化しているため、
+          // クライアントビルドの input には含めない (dist/static/assets/global.css の
+          // 不要なオーファン出力を防ぎ、static/assets/ をハッシュ付きアセット専用に
+          // することで _headers のキャッシュ規則を単純化できる)。
+          input: ['/app/client.ts'],
           output: {
             entryFileNames: 'static/client.js',
             chunkFileNames: 'static/assets/[name]-[hash].js',
-            assetFileNames: (assetInfo) => {
-              if (assetInfo.names?.some((n) => n === 'global.css')) {
-                return 'static/assets/global.css'
-              }
-              return 'static/assets/[name]-[hash].[ext]'
-            },
+            assetFileNames: 'static/assets/[name]-[hash].[ext]',
           },
         },
         emptyOutDir: false,
