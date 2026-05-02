@@ -1,0 +1,26 @@
+# Cloudflare Pages の HTTP レスポンスヘッダ設定
+#
+# vite.config.ts の出力規則に合わせてキャッシュ戦略を分けている。
+# - ハッシュ付きで出力されるアセットだけ immutable + 1 年キャッシュ
+# - 固定名で出力される client.js / global.css は短い TTL で must-revalidate
+
+/static/assets/*-*.js
+  Cache-Control: public, max-age=31536000, immutable
+
+/static/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/static/assets/global.css
+  Cache-Control: public, max-age=300, must-revalidate
+
+/static/client.js
+  Cache-Control: public, max-age=300, must-revalidate
+
+/static/resvg_bg.wasm
+  Cache-Control: public, max-age=86400
+
+/images/*
+  Cache-Control: public, max-age=2592000
+
+/favicon.ico
+  Cache-Control: public, max-age=86400
