@@ -55,7 +55,7 @@ export default jsxRenderer(
           <Script src="/app/client.ts" async />
         </head>
         <body>
-          {children}
+          <main>{children}</main>
           {import.meta.env.PROD && cfWebAnalyticsToken && (
             <script
               defer
