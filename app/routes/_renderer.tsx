@@ -46,14 +46,14 @@ export default jsxRenderer(
               切り替えて適用する。Google 側の dynamic subsetting (unicode-range 分割)
               はそのまま活かせるため、自前ホスト+サブセットより総転送量で有利。 */}
           <link
-            href="https://fonts.googleapis.com/css2?family=Klee+One:wght@400;600&display=optional"
+            href="https://fonts.googleapis.com/css2?family=Klee+One:wght@400;600&display=swap"
             rel="stylesheet"
             media="print"
             onload="this.media='all'"
           />
           <noscript>
             <link
-              href="https://fonts.googleapis.com/css2?family=Klee+One:wght@400;600&display=optional"
+              href="https://fonts.googleapis.com/css2?family=Klee+One:wght@400;600&display=swap"
               rel="stylesheet"
             />
           </noscript>
