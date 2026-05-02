@@ -1,22 +1,24 @@
 # Cloudflare Pages の HTTP レスポンスヘッダ設定
 #
 # Cloudflare Pages の _headers パターンマッチでは splat (*) は URL の末尾でのみ
-# 機能する。`/static/assets/*-*.js` のような中間ワイルドカードは効かないため、
-# パスのプレフィックスごとにルールを分ける。
+# 機能する。中間ワイルドカードや exact path ルールは適用されない事象があるため、
+# 末尾 splat に統一する。
 #
 # global.css は SSR 側でインライン化済 (vite.config.ts でクライアント入力から除外)
 # のため /static/assets/ はハッシュ付きアセット専用となり、丸ごと immutable で
 # 安全に長期キャッシュできる。
-# /static/client.js は固定名なのでデプロイで上書きされる前提で短い TTL に留める。
+#
+# 固定名で出力される /static/client.js は本来短い TTL を当てたかったが、
+# exact path のルールが Cloudflare 側で適用されない事象があったため指定を諦め、
+# デフォルト (max-age=14400, must-revalidate) を許容する。
+# Cloudflare Pages は旧デプロイのアセットも残るため、cache 内のクライアントが
+# 旧 hash チャンクを参照できなくなる事故は起きない。
 
 /static/assets/*
   Cache-Control: public, max-age=31536000, immutable
 
 /static/fonts/*
   Cache-Control: public, max-age=31536000, immutable
-
-/static/client.js
-  Cache-Control: public, max-age=300, must-revalidate
 
 /static/resvg_bg.wasm
   Cache-Control: public, max-age=86400
