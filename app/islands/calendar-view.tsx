@@ -472,41 +472,47 @@ function MonthView({
           marginBottom: '1.5rem',
         }}
       >
-        <button
-          type="button"
-          onClick={onPrevMonth}
-          disabled={month === 0}
-          style={{
-            padding: '0.3rem 0.8rem',
-            border: '1px solid #ccc',
-            borderRadius: '4px',
-            fontSize: '0.9rem',
-            color: month === 0 ? '#ccc' : '#666',
-            background: 'none',
-            cursor: month === 0 ? 'default' : 'pointer',
-          }}
-        >
-          {month > 0 ? MONTH_LABELS[month - 1] : ''}
-        </button>
+        {month > 0 ? (
+          <button
+            type="button"
+            onClick={onPrevMonth}
+            style={{
+              padding: '0.3rem 0.8rem',
+              border: '1px solid #ccc',
+              borderRadius: '4px',
+              fontSize: '0.9rem',
+              color: '#666',
+              background: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            {MONTH_LABELS[month - 1]}
+          </button>
+        ) : (
+          <span style={{ width: '4rem' }} />
+        )}
         <span style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>
           {MONTH_LABELS[month]}
         </span>
-        <button
-          type="button"
-          onClick={onNextMonth}
-          disabled={month === 11}
-          style={{
-            padding: '0.3rem 0.8rem',
-            border: '1px solid #ccc',
-            borderRadius: '4px',
-            fontSize: '0.9rem',
-            color: month === 11 ? '#ccc' : '#666',
-            background: 'none',
-            cursor: month === 11 ? 'default' : 'pointer',
-          }}
-        >
-          {month < 11 ? MONTH_LABELS[month + 1] : ''}
-        </button>
+        {month < 11 ? (
+          <button
+            type="button"
+            onClick={onNextMonth}
+            style={{
+              padding: '0.3rem 0.8rem',
+              border: '1px solid #ccc',
+              borderRadius: '4px',
+              fontSize: '0.9rem',
+              color: '#666',
+              background: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            {MONTH_LABELS[month + 1]}
+          </button>
+        ) : (
+          <span style={{ width: '4rem' }} />
+        )}
       </div>
 
       {/* Calendar grid */}
