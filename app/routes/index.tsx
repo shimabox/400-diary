@@ -45,6 +45,21 @@ export default createRoute(async (c) => {
         style={{
           maxWidth: '960px',
           width: '100%',
+          /*
+           * SSR の HTML が大きく (~98KB) ブラウザが段階的にパースするため、
+           * 何も指定しないと「header だけ」→「+ heatmap」→「+ cards」と
+           * inner の高さが 70 → 263 → 755px と段階的に伸び、外側の
+           * align-items: center で中央位置が再計算されて CLS が積み重なる
+           * (実測 0.27)。
+           *
+           * 固定 min-height で予約しておくと、パース中も inner サイズが
+           * 安定し中央位置が動かない。値は実測の総コンテンツ高さ
+           * (header 46 + heatmap 230 + diary-list 480 + footer 52 ≈ 810px)
+           * を基準に、ヘッドルームを少し持たせている。
+           *
+           * ★ 注意: セクションの追加・削除や heatmap の高さ変更時は再計測する。
+           */
+          minHeight: '810px',
         }}
       >
         <div
