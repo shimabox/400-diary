@@ -9,19 +9,6 @@
 html {
   font-family: "Klee One", "游明朝", "YuMincho", serif;
   font-size: 16px;
-  /*
-   * Klee One (Web フォント) の `line-height: normal` 実測値 (23/16 = 1.4375) に
-   * 合わせて行高を固定する。これにより、Klee One が swap で適用される瞬間に
-   * 行の高さが変わらず、天地中央寄せのコンテンツが上下にシフトしない (CLS 防止)。
-   *
-   * @font-face + ascent/descent-override 案も検証したが、macOS では
-   * `local("YuMincho")` が一致せず override が効かなかったため、フォントに
-   * 依存しない line-height 直接指定を採用した。
-   *
-   * ★ 注意: フォントを Klee One 以外に差し替える場合は、差し替え後の
-   *   `line-height: normal` の実測値に合わせて再調整すること。
-   */
-  line-height: 1.4375;
   color: #333;
   background-color: #faf9f6;
 }
