@@ -7,6 +7,13 @@ export default jsxRenderer(
   ({ children, title, description, ogImage, preloadImage }) => {
     const c = useRequestContext<AppEnv>()
     const cfWebAnalyticsToken = c.env.CF_WEB_ANALYTICS_TOKEN
+    const requestUrl = new URL(c.req.url)
+    const isLocalhost =
+      requestUrl.hostname === 'localhost' ||
+      requestUrl.hostname === '127.0.0.1' ||
+      requestUrl.hostname === '[::1]'
+    const shouldLoadCfAnalytics =
+      import.meta.env.PROD && cfWebAnalyticsToken && !isLocalhost
     const pageTitle = title ?? '400字日記'
     return (
       <html lang="ja">
@@ -28,7 +35,7 @@ export default jsxRenderer(
             <>
               <meta
                 property="og:image"
-                content={`${new URL(c.req.url).origin}${ogImage}`}
+                content={`${requestUrl.origin}${ogImage}`}
               />
               <meta name="twitter:card" content="summary_large_image" />
             </>
@@ -67,7 +74,7 @@ export default jsxRenderer(
         </head>
         <body>
           <main>{children}</main>
-          {import.meta.env.PROD && cfWebAnalyticsToken && (
+          {shouldLoadCfAnalytics && (
             <script
               defer
               src="https://static.cloudflareinsights.com/beacon.min.js"

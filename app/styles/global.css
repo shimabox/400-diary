@@ -30,6 +30,30 @@ body {
   min-height: 100dvh;
 }
 
+.home-shell {
+  align-items: center;
+}
+
+/*
+ * TOP ページは SSR の HTML が大きく、ブラウザが inner コンテンツを段階的に
+ * パースする間に高さが伸びていく。モバイルでは天地中央寄せがその伸びを
+ * 上下シフトに変えて CLS が悪化するため、最初のビューポートは上端に固定する。
+ * デスクトップは元のとおり天地中央寄せのレイアウトを維持する。
+ */
+.home-content {
+  min-height: 810px;
+}
+
+@media (max-width: 600px) {
+  .home-shell {
+    align-items: flex-start;
+  }
+
+  .home-content {
+    min-height: 0;
+  }
+}
+
 a {
   color: inherit;
   text-decoration: none;
