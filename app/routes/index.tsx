@@ -197,6 +197,7 @@ export default createRoute(async (c) => {
                   <div
                     style={{
                       flex: 1,
+                      minHeight: 0,
                       writingMode: 'vertical-rl',
                       fontSize: '1.25rem',
                       lineHeight: '1.8',
