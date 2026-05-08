@@ -139,6 +139,54 @@ try {
 
 X では SVG は表示されないが、他のプラットフォームでは表示可能なものもあるため、完全にエラーを返すより良い。
 
+## ローカル R2 の OGP キャッシュ削除
+
+OGP 画像の文言やレイアウトを変更したあと、ローカル開発環境で古い画像が表示され続ける場合は、ローカル R2 に保存された PNG キャッシュを削除する。
+
+トップページ用 OGP は固定キー `og/top.png` に保存される。
+
+```bash
+pnpm wrangler r2 object delete 400-diary-images/og/top.png --local
+```
+
+日記個別 OGP はスナップショット単位で `og/{diaryId}/{snapshotId}.png` に保存される。`snapshotId` が不明な場合は、ローカル D1 から公開中スナップショット ID を確認する。
+
+```bash
+pnpm wrangler d1 execute 400-diary-db --local --command "SELECT id, diary_date, published_snapshot_id FROM diaries WHERE published_snapshot_id IS NOT NULL ORDER BY diary_date DESC;"
+```
+
+対象の日記 ID と `published_snapshot_id` を使って削除する。
+
+```bash
+pnpm wrangler r2 object delete 400-diary-images/og/<diaryId>/<snapshotId>.png --local
+```
+
+削除後に `/api/og` または `/api/og/<diaryId>` へアクセスすると、現在のコードで PNG が再生成される。ブラウザ側のキャッシュが残っている場合はハードリロードする。
+
+## 本番 R2 の OGP キャッシュ削除
+
+本番環境で同じ確認をする場合は `--remote` を明示する。`--local` を外すだけでも remote 扱いになることがあるが、誤操作を避けるため本番操作では `--remote` を付ける。
+
+トップページ用 OGP:
+
+```bash
+pnpm wrangler r2 object delete 400-diary-images/og/top.png --remote
+```
+
+日記個別 OGP の `snapshotId` を本番 D1 から確認する。
+
+```bash
+pnpm wrangler d1 execute 400-diary-db --remote --command "SELECT id, diary_date, published_snapshot_id FROM diaries WHERE published_snapshot_id IS NOT NULL ORDER BY diary_date DESC;"
+```
+
+対象の日記 ID と `published_snapshot_id` を使って削除する。
+
+```bash
+pnpm wrangler r2 object delete 400-diary-images/og/<diaryId>/<snapshotId>.png --remote
+```
+
+削除後に本番 URL の `/api/og` または `/api/og/<diaryId>` へアクセスすると、現在デプロイされているコードで PNG が再生成される。SNS 側のカードキャッシュは別途残る場合がある。
+
 ## デプロイ手順
 
 ### 初回セットアップ（フォントを R2 にアップロード）

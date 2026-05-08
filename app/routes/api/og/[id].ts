@@ -23,7 +23,7 @@ function generateOgSvg(
     font-size="52"
     font-weight="600"
     fill="#333"
-  >${dateLabel}の日記</text>
+  >${dateLabel} の日記</text>
   <text
     x="${WIDTH / 2}"
     y="${HEIGHT / 2 + 60}"
