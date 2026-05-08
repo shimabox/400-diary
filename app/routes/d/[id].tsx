@@ -155,7 +155,7 @@ export default createRoute(async (c) => {
       </div>
     </div>,
     {
-      title: `${dateLabel}の日記 — ${appName}`,
+      title: `${dateLabel} の日記 — ${appName}`,
       description,
       ogImage: ogImageUrl,
       preloadImage: pubImageKey ? `/api/images/${pubImageKey}` : undefined,
