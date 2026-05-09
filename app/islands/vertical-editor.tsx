@@ -185,18 +185,18 @@ export default function VerticalEditor({
     setBody(target.value)
   }, [])
 
-  const handleSave = useCallback(async () => {
+  const saveDraft = useCallback(async (): Promise<string | null> => {
     if (!body.trim()) {
       setError('本文を入力してください')
-      return
+      return null
     }
     if (!date) {
       setError('日付を入力してください')
-      return
+      return null
     }
     if (body.length > MAX_BODY_LENGTH) {
       setError(`本文は${MAX_BODY_LENGTH}文字以内で入力してください`)
-      return
+      return null
     }
 
     setSaving(true)
@@ -226,25 +226,32 @@ export default function VerticalEditor({
         const data = (await res.json()) as { error?: string }
         setError(data.error || '保存に失敗しました')
         setSaving(false)
-        return
+        return null
       }
 
       const data = (await res.json()) as { id: string }
       setSavedId(data.id)
       setSaving(false)
+      return data.id
     } catch {
       setError('保存に失敗しました')
       setSaving(false)
+      return null
     }
   }, [body, date, bgColor, imageLayout, mood, imageX, imageY, currentDiaryId])
 
-  const handlePublish = useCallback(async () => {
-    if (!currentDiaryId) return
+  const handleSave = useCallback(async () => {
+    await saveDraft()
+  }, [saveDraft])
 
+  const handlePublish = useCallback(async () => {
     setPublishing(true)
     setError('')
     try {
-      const res = await fetch(`/api/diaries/${currentDiaryId}/publish`, {
+      const savedDiaryId = await saveDraft()
+      if (!savedDiaryId) return
+
+      const res = await fetch(`/api/diaries/${savedDiaryId}/publish`, {
         method: 'POST',
       })
       if (!res.ok) {
@@ -258,7 +265,7 @@ export default function VerticalEditor({
     } finally {
       setPublishing(false)
     }
-  }, [currentDiaryId])
+  }, [saveDraft])
 
   const handleImageChange = useCallback(
     async (e: Event) => {
