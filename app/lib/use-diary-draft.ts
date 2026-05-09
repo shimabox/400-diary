@@ -14,7 +14,13 @@ export type DiaryDraft = {
 type Options = {
   diaryId?: string
   publishedAt?: string | null
-  draft: DiaryDraft
+  body: string
+  date: string
+  backgroundColor: string
+  imageLayout: 'left' | 'right'
+  mood: string | null
+  imageX: number | null
+  imageY: number | null
 }
 
 export function validateDiaryDraft(draft: DiaryDraft): string | null {
@@ -33,7 +39,13 @@ export function validateDiaryDraft(draft: DiaryDraft): string | null {
 export function useDiaryDraft({
   diaryId,
   publishedAt: initialPublishedAt = null,
-  draft,
+  body,
+  date,
+  backgroundColor,
+  imageLayout,
+  mood,
+  imageX,
+  imageY,
 }: Options) {
   const [saving, setSaving] = useState(false)
   const [publishing, setPublishing] = useState(false)
@@ -44,6 +56,15 @@ export function useDiaryDraft({
   const currentDiaryId = diaryId || savedId
 
   const saveDraft = useCallback(async (): Promise<string | null> => {
+    const draft: DiaryDraft = {
+      body,
+      date,
+      backgroundColor,
+      imageLayout,
+      mood,
+      imageX,
+      imageY,
+    }
     const validationError = validateDiaryDraft(draft)
     if (validationError) {
       setError(validationError)
@@ -88,7 +109,16 @@ export function useDiaryDraft({
     } finally {
       setSaving(false)
     }
-  }, [draft, currentDiaryId])
+  }, [
+    body,
+    date,
+    backgroundColor,
+    imageLayout,
+    mood,
+    imageX,
+    imageY,
+    currentDiaryId,
+  ])
 
   const publishDraft = useCallback(async () => {
     setPublishing(true)

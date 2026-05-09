@@ -14,7 +14,7 @@ const AUDIO_ALLOWED_TYPES = [
 ]
 
 type Props = {
-  diaryId: string
+  diaryId: string | null
   audioKey: string | null
   onAudioKeyChange: (audioKey: string | null) => void
 }

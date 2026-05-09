@@ -100,15 +100,13 @@ export default function VerticalEditor({
   } = useDiaryDraft({
     diaryId,
     publishedAt: initialPublishedAt,
-    draft: {
-      body,
-      date,
-      backgroundColor: bgColor,
-      imageLayout,
-      mood,
-      imageX,
-      imageY,
-    },
+    body,
+    date,
+    backgroundColor: bgColor,
+    imageLayout,
+    mood,
+    imageX,
+    imageY,
   })
   const imageSrc = imagePreview ?? (imageKey ? `/api/images/${imageKey}` : null)
 
@@ -407,14 +405,14 @@ export default function VerticalEditor({
         </div>
 
         <ImageAttachmentEditor
-          diaryId={currentDiaryId}
+          diaryId={currentDiaryId || null}
           imageKey={imageKey}
           onImageKeyChange={setImageKey}
           onImagePreviewChange={setImagePreview}
         />
 
         <AudioAttachmentEditor
-          diaryId={currentDiaryId}
+          diaryId={currentDiaryId || null}
           audioKey={audioKey}
           onAudioKeyChange={setAudioKey}
         />

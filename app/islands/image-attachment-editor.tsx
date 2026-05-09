@@ -10,7 +10,7 @@ const IMAGE_ALLOWED_TYPES = [
 ]
 
 type Props = {
-  diaryId: string
+  diaryId: string | null
   imageKey: string | null
   onImageKeyChange: (imageKey: string | null) => void
   onImagePreviewChange: (preview: string | null) => void
