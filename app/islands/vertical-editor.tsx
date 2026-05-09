@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'hono/jsx'
+import { audioExtension, baseMimeType } from '../lib/audio-mime'
 import { PASTEL_COLORS } from '../lib/colors'
 import {
   MAX_AUDIO_SIZE,
@@ -35,10 +36,6 @@ const RECORDING_TYPES = [
   'audio/mp4',
   'audio/ogg;codecs=opus',
 ]
-
-function baseMimeType(type: string): string {
-  return type.split(';', 1)[0].trim().toLowerCase()
-}
 
 type Props = {
   title?: string
@@ -469,7 +466,9 @@ export default function VerticalEditor({
         }
 
         void uploadAudioFile(
-          new File([blob], `recording-${Date.now()}`, { type }),
+          new File([blob], `recording-${Date.now()}.${audioExtension(type)}`, {
+            type,
+          }),
         )
       }
 

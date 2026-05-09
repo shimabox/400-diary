@@ -1,5 +1,6 @@
 import type { R2Bucket } from '@cloudflare/workers-types/latest'
 import { nanoid } from 'nanoid'
+import { audioExtension, baseMimeType } from './audio-mime'
 import { MAX_AUDIO_SIZE, MAX_IMAGE_SIZE } from './constants'
 
 const IMAGE_ALLOWED_TYPES = [
@@ -22,19 +23,6 @@ const IMAGE_EXT_MAP: Record<string, string> = {
   'image/png': 'png',
   'image/webp': 'webp',
   'image/gif': 'gif',
-}
-
-const AUDIO_EXT_MAP: Record<string, string> = {
-  'audio/mpeg': 'mp3',
-  'audio/mp3': 'mp3',
-  'audio/webm': 'webm',
-  'audio/mp4': 'm4a',
-  'audio/wav': 'wav',
-  'audio/ogg': 'ogg',
-}
-
-function baseMimeType(type: string): string {
-  return type.split(';', 1)[0].trim().toLowerCase()
 }
 
 export function validateImage(
@@ -78,8 +66,7 @@ export function validateAudio(
 }
 
 export function generateAudioKey(diaryId: string, mime: string): string {
-  const ext = AUDIO_EXT_MAP[baseMimeType(mime)] ?? 'bin'
-  return `diaries/${diaryId}/audio/${Date.now()}-${nanoid(8)}.${ext}`
+  return `diaries/${diaryId}/audio/${Date.now()}-${nanoid(8)}.${audioExtension(mime)}`
 }
 
 export async function uploadImage(
