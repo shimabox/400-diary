@@ -1,6 +1,6 @@
 import type { R2Bucket } from '@cloudflare/workers-types/latest'
 import { nanoid } from 'nanoid'
-import { audioExtension, baseMimeType } from './audio-mime'
+import { audioExtension, isAllowedAudioType } from './audio-mime'
 import { MAX_AUDIO_SIZE, MAX_IMAGE_SIZE } from './constants'
 
 const IMAGE_ALLOWED_TYPES = [
@@ -9,15 +9,6 @@ const IMAGE_ALLOWED_TYPES = [
   'image/webp',
   'image/gif',
 ]
-const AUDIO_ALLOWED_TYPES = [
-  'audio/mpeg',
-  'audio/mp3',
-  'audio/webm',
-  'audio/mp4',
-  'audio/wav',
-  'audio/ogg',
-]
-
 const IMAGE_EXT_MAP: Record<string, string> = {
   'image/jpeg': 'jpg',
   'image/png': 'png',
@@ -50,7 +41,7 @@ export function validateAudio(
   size: number,
   type: string,
 ): { ok: true } | { ok: false; error: string } {
-  if (!AUDIO_ALLOWED_TYPES.includes(baseMimeType(type))) {
+  if (!isAllowedAudioType(type)) {
     return {
       ok: false,
       error: 'MP3, WebM, MP4, WAV, Ogg のみアップロードできます',

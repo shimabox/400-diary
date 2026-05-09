@@ -45,7 +45,7 @@ diary_snapshots.audio_key TEXT
 | ファイル形式 | MP3, WebM, MP4, WAV, Ogg | 「MP3, WebM, MP4, WAV, Ogg のみアップロードできます」 |
 | ファイルサイズ | 25MB以下 | 「音声は25MB以内にしてください」 |
 
-クライアント側とサーバー側の両方でバリデーションする。録音時の MIME type は `audio/webm;codecs=opus` のように codec パラメータを含む場合があるため、判定と拡張子決定では `;` より前のベース MIME type を使用する。MIME → 拡張子マップは `app/lib/audio-mime.ts` に集約し、サーバー (`storage.ts`) とクライアント (`audio-attachment-editor.tsx` / `use-audio-recorder.ts`) の両方から参照する。
+クライアント側とサーバー側の両方でバリデーションする。録音時の MIME type は `audio/webm;codecs=opus` のように codec パラメータを含む場合があるため、判定と拡張子決定では `;` より前のベース MIME type を使用する。許可 MIME type、file input の accept 文字列、MIME → 拡張子マップは `app/lib/audio-mime.ts` に集約し、サーバー (`storage.ts`) とクライアント (`audio-attachment-editor.tsx` / `use-audio-recorder.ts`) の両方から参照する。
 
 | MIME type | 拡張子 |
 |-----------|--------|
@@ -254,7 +254,7 @@ pnpm wrangler d1 execute 400-diary-db --remote --file=db/migrations/20260509_000
 | `db/schema.sql` | 新規DB向けのテーブル定義 |
 | `db/migrations/20260509_0001_add_audio_key.sql` | 既存DB向けの `audio_key` 追加 migration |
 | `app/lib/storage.ts` | R2 操作・音声バリデーション |
-| `app/lib/audio-mime.ts` | MIME ベース型抽出・MIME → 拡張子マップ（クライアント/サーバー共有） |
+| `app/lib/audio-mime.ts` | 許可 MIME type、accept 文字列、MIME ベース型抽出、MIME → 拡張子マップ（クライアント/サーバー共有） |
 | `app/lib/use-audio-recorder.ts` | ブラウザ録音、MIME type 選択、media track cleanup |
 | `app/lib/db.ts` | 音声キーの保存・公開コピー・参照確認 |
 | `app/routes/api/diaries/[id]/audio.ts` | 音声アップロード・削除 API |

@@ -1,17 +1,8 @@
 import { useCallback, useRef, useState } from 'hono/jsx'
-import { baseMimeType } from '../lib/audio-mime'
+import { AUDIO_ACCEPT, isAllowedAudioType } from '../lib/audio-mime'
 import { MAX_AUDIO_SIZE } from '../lib/constants'
 import { useAudioRecorder } from '../lib/use-audio-recorder'
 import ConfirmDialog from './confirm-dialog'
-
-const AUDIO_ALLOWED_TYPES = [
-  'audio/mpeg',
-  'audio/mp3',
-  'audio/webm',
-  'audio/mp4',
-  'audio/wav',
-  'audio/ogg',
-]
 
 type Props = {
   diaryId: string | null
@@ -41,7 +32,7 @@ export default function AudioAttachmentEditor({
 
       setAudioError('')
 
-      if (!AUDIO_ALLOWED_TYPES.includes(baseMimeType(file.type))) {
+      if (!isAllowedAudioType(file.type)) {
         setAudioError('MP3, WebM, MP4, WAV, Ogg のみアップロードできます')
         return
       }
@@ -160,7 +151,7 @@ export default function AudioAttachmentEditor({
           <input
             ref={audioInputRef}
             type="file"
-            accept="audio/mpeg,audio/mp3,audio/webm,audio/mp4,audio/wav,audio/ogg"
+            accept={AUDIO_ACCEPT}
             onChange={handleAudioChange}
             disabled={audioUploading || isRecording}
             style={{ display: 'none' }}
