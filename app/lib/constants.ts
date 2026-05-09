@@ -3,3 +3,6 @@ export const MAX_BODY_LENGTH = 400
 
 /** 画像の最大サイズ (bytes) */
 export const MAX_IMAGE_SIZE = 10 * 1024 * 1024
+
+/** 音声の最大サイズ (bytes) */
+export const MAX_AUDIO_SIZE = 25 * 1024 * 1024

@@ -4,11 +4,12 @@ import {
   deleteDiary,
   getDiary,
   getDiaryWithSnapshot,
+  listSnapshotAudioKeys,
   listSnapshotImageKeys,
   updateDiary,
 } from '../../../lib/db'
 import { deleteDiaryOgCache } from '../../../lib/og-cache'
-import { deleteImage } from '../../../lib/storage'
+import { deleteAudio, deleteImage } from '../../../lib/storage'
 
 export const GET = createRoute(async (c) => {
   const id = c.req.param('id')!
@@ -26,6 +27,7 @@ export const GET = createRoute(async (c) => {
       diary_date: published.diary_date,
       body: snapshot.body,
       image_key: snapshot.image_key,
+      audio_key: snapshot.audio_key,
       image_layout: snapshot.image_layout,
       image_x: snapshot.image_x,
       image_y: snapshot.image_y,
@@ -94,13 +96,17 @@ export const DELETE = createRoute(async (c) => {
     return c.json({ error: '日記が見つかりません' }, 404)
   }
 
-  // 下書きの画像 + snapshot の画像 + OGP キャッシュ（全スナップショット分）を
+  // 下書きの画像/音声 + snapshot の画像/音声 + OGP キャッシュ（全スナップショット分）を
   // R2 から best-effort で削除
   const snapshotKeys = await listSnapshotImageKeys(db, id)
-  const allKeys = new Set(snapshotKeys)
-  if (diary.image_key) allKeys.add(diary.image_key)
+  const snapshotAudioKeys = await listSnapshotAudioKeys(db, id)
+  const allImageKeys = new Set(snapshotKeys)
+  const allAudioKeys = new Set(snapshotAudioKeys)
+  if (diary.image_key) allImageKeys.add(diary.image_key)
+  if (diary.audio_key) allAudioKeys.add(diary.audio_key)
   const results = await Promise.allSettled([
-    ...[...allKeys].map((key) => deleteImage(c.env.BUCKET, key)),
+    ...[...allImageKeys].map((key) => deleteImage(c.env.BUCKET, key)),
+    ...[...allAudioKeys].map((key) => deleteAudio(c.env.BUCKET, key)),
     deleteDiaryOgCache(c.env.BUCKET, id),
   ])
   for (const result of results) {

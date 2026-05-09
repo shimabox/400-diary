@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS diaries (
   id TEXT PRIMARY KEY,                -- nanoid(12)
   body TEXT NOT NULL,                  -- 本文 (最大400文字)
   image_key TEXT,                      -- R2オブジェクトキー (nullable)
+  audio_key TEXT,                      -- 音声R2オブジェクトキー (nullable)
   image_layout TEXT NOT NULL DEFAULT 'left', -- 画像配置 (left / right)
   image_x REAL,                        -- 画像X座標 (nullable: 未設定時はimage_layoutから導出)
   image_y REAL,                        -- 画像Y座標
@@ -22,6 +23,7 @@ CREATE TABLE IF NOT EXISTS diary_snapshots (
   diary_id TEXT NOT NULL REFERENCES diaries(id) ON DELETE CASCADE,
   body TEXT NOT NULL,
   image_key TEXT,
+  audio_key TEXT,
   image_layout TEXT NOT NULL DEFAULT 'left',
   image_x REAL,
   image_y REAL,

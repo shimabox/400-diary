@@ -1,9 +1,12 @@
 import { describe, expect, test, vi } from 'vitest'
 import {
+  countSnapshotsWithAudioKey,
   countSnapshotsWithImageKey,
   createDiary,
   deleteDiary,
   getDiary,
+  listSnapshotAudioKeys,
+  publishDiary,
   updateDiary,
 } from './db'
 import { createMockDB } from './test-helpers'
@@ -20,6 +23,7 @@ describe('createDiary', () => {
       diary_date: '2026-04-12',
       background_color: '#FFE4E1',
       image_key: null,
+      audio_key: null,
       image_layout: 'left' as const,
       mood: null,
       published_snapshot_id: null,
@@ -163,6 +167,38 @@ describe('updateDiary', () => {
 
     expect(db.prepare).toHaveBeenCalledTimes(3)
   })
+
+  test('audio_key を更新できる', async () => {
+    const diary = { id: 'abc', audio_key: null }
+    const db = createMockDB({ first: diary })
+
+    await updateDiary(db, 'abc', {
+      audio_key: 'diaries/abc/audio/123.webm',
+    })
+
+    expect(db.boundValues).toContain('diaries/abc/audio/123.webm')
+  })
+})
+
+describe('publishDiary', () => {
+  test('公開スナップショットに audio_key をコピーする', async () => {
+    const diary = {
+      id: 'abc',
+      body: '本文',
+      image_key: null,
+      audio_key: 'diaries/abc/audio/voice.webm',
+      image_layout: 'left' as const,
+      image_x: null,
+      image_y: null,
+      background_color: '#FFE4E1',
+      mood: null,
+    }
+    const db = createMockDB({ first: diary })
+
+    await publishDiary(db, 'abc')
+
+    expect(db.boundValues).toContain('diaries/abc/audio/voice.webm')
+  })
 })
 
 describe('countSnapshotsWithImageKey', () => {
@@ -189,6 +225,53 @@ describe('countSnapshotsWithImageKey', () => {
     const result = await countSnapshotsWithImageKey(db, 'diaries/abc/x.jpg')
 
     expect(result).toBe(0)
+  })
+})
+
+describe('countSnapshotsWithAudioKey', () => {
+  test('audio_key を参照する snapshot 件数を返す', async () => {
+    const db = createMockDB({ first: { count: 2 } })
+
+    const result = await countSnapshotsWithAudioKey(
+      db,
+      'diaries/abc/audio/old.webm',
+    )
+
+    expect(result).toBe(2)
+    expect(db.boundValues).toContain('diaries/abc/audio/old.webm')
+  })
+
+  test('結果が無い場合も 0 を返す', async () => {
+    const db = createMockDB({ first: null })
+
+    const result = await countSnapshotsWithAudioKey(
+      db,
+      'diaries/abc/audio/x.webm',
+    )
+
+    expect(result).toBe(0)
+  })
+})
+
+describe('listSnapshotAudioKeys', () => {
+  test('diary に紐づく snapshot の audio_key 一覧を返す', async () => {
+    const db = createMockDB({
+      all: {
+        results: [
+          { audio_key: 'diaries/abc/audio/a.webm' },
+          { audio_key: 'diaries/abc/audio/b.mp3' },
+        ],
+        meta: { changes: 0 },
+      },
+    })
+
+    const result = await listSnapshotAudioKeys(db, 'abc')
+
+    expect(result).toEqual([
+      'diaries/abc/audio/a.webm',
+      'diaries/abc/audio/b.mp3',
+    ])
+    expect(db.boundValues).toContain('abc')
   })
 })
 

@@ -30,6 +30,7 @@ function makeSnapshot(): DiarySnapshot {
     diary_id: 'abc',
     body: '本文',
     image_key: null,
+    audio_key: null,
     image_layout: 'left',
     image_x: null,
     image_y: null,
