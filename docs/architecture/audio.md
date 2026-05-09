@@ -45,7 +45,7 @@ diary_snapshots.audio_key TEXT
 | ファイル形式 | MP3, WebM, MP4, WAV, Ogg | 「MP3, WebM, MP4, WAV, Ogg のみアップロードできます」 |
 | ファイルサイズ | 25MB以下 | 「音声は25MB以内にしてください」 |
 
-クライアント側とサーバー側の両方でバリデーションする。録音時の MIME type は `audio/webm;codecs=opus` のように codec パラメータを含む場合があるため、判定と拡張子決定では `;` より前のベース MIME type を使用する。MIME → 拡張子マップは `app/lib/audio-mime.ts` に集約し、サーバー (`storage.ts`) とクライアント (`vertical-editor.tsx`) の両方から参照する。
+クライアント側とサーバー側の両方でバリデーションする。録音時の MIME type は `audio/webm;codecs=opus` のように codec パラメータを含む場合があるため、判定と拡張子決定では `;` より前のベース MIME type を使用する。MIME → 拡張子マップは `app/lib/audio-mime.ts` に集約し、サーバー (`storage.ts`) とクライアント (`audio-attachment-editor.tsx` / `use-audio-recorder.ts`) の両方から参照する。
 
 | MIME type | 拡張子 |
 |-----------|--------|
@@ -65,21 +65,21 @@ diary_snapshots.audio_key TEXT
 ```mermaid
 sequenceDiagram
     actor User
-    participant Editor as VerticalEditor
+    participant AudioEditor as AudioAttachmentEditor
     participant API as /api/diaries/:id/audio
     participant R2 as Cloudflare R2
     participant DB as D1
 
-    User->>Editor: 音声ファイルを選択
-    Editor->>Editor: クライアント側バリデーション
-    Editor->>API: POST FormData { file }
+    User->>AudioEditor: 音声ファイルを選択
+    AudioEditor->>AudioEditor: クライアント側バリデーション
+    AudioEditor->>API: POST FormData { file }
     API->>API: サーバー側バリデーション
     API->>R2: bucket.put(key, data, contentType)
     API->>DB: UPDATE diaries SET audio_key = key
     API->>API: 旧音声が snapshot 参照中か確認
     API->>R2: 参照されていなければ旧音声を削除
-    API-->>Editor: { audio_key: key } (201)
-    Editor->>Editor: プレビュー再生を更新
+    API-->>AudioEditor: { audio_key: key } (201)
+    AudioEditor->>AudioEditor: プレビュー再生を更新
 ```
 
 DB 更新は R2 アップロード後に行う。旧音声の R2 削除は best-effort で、削除に失敗してもレスポンスは成功のまま返す。
@@ -89,18 +89,22 @@ DB 更新は R2 アップロード後に行う。旧音声の R2 削除は best-
 ```mermaid
 sequenceDiagram
     actor User
-    participant Editor as VerticalEditor
+    participant AudioEditor as AudioAttachmentEditor
+    participant Recorder as useAudioRecorder
     participant MR as MediaRecorder
     participant API as /api/diaries/:id/audio
 
-    User->>Editor: 「録音」ボタン
-    Editor->>Editor: getUserMedia({ audio: true })
-    Editor->>MR: MediaRecorder.start()
-    MR-->>Editor: dataavailable chunks
-    User->>Editor: 「録音停止」ボタン
-    Editor->>MR: MediaRecorder.stop()
-    Editor->>Editor: chunks から Blob / File を生成
-    Editor->>API: POST FormData { file }
+    User->>AudioEditor: 「録音」ボタン
+    AudioEditor->>Recorder: startRecording
+    Recorder->>Recorder: getUserMedia({ audio: true })
+    Recorder->>MR: MediaRecorder.start()
+    MR-->>Recorder: dataavailable chunks
+    User->>AudioEditor: 「録音停止」ボタン
+    AudioEditor->>Recorder: stopRecording
+    Recorder->>MR: MediaRecorder.stop()
+    Recorder->>Recorder: chunks から Blob / File を生成
+    Recorder->>AudioEditor: File
+    AudioEditor->>API: POST FormData { file }
 ```
 
 録音 MIME type はブラウザ対応状況に応じて選ぶ。
@@ -251,10 +255,12 @@ pnpm wrangler d1 execute 400-diary-db --remote --file=db/migrations/20260509_000
 | `db/migrations/20260509_0001_add_audio_key.sql` | 既存DB向けの `audio_key` 追加 migration |
 | `app/lib/storage.ts` | R2 操作・音声バリデーション |
 | `app/lib/audio-mime.ts` | MIME ベース型抽出・MIME → 拡張子マップ（クライアント/サーバー共有） |
+| `app/lib/use-audio-recorder.ts` | ブラウザ録音、MIME type 選択、media track cleanup |
 | `app/lib/db.ts` | 音声キーの保存・公開コピー・参照確認 |
 | `app/routes/api/diaries/[id]/audio.ts` | 音声アップロード・削除 API |
 | `app/routes/api/audio/[...key].ts` | 音声配信エンドポイント |
 | `app/routes/api/diaries/[id].ts` | 日記削除時の音声 R2 クリーンアップ |
-| `app/islands/vertical-editor.tsx` | アップロード・録音・削除 UI |
+| `app/islands/audio-attachment-editor.tsx` | アップロード・録音・削除 UI |
+| `app/islands/vertical-editor.tsx` | 編集画面での音声 state の保持と子コンポーネントへの受け渡し |
 | `app/islands/audio-player.tsx` | 公開ページの再生ボタン |
 | `app/routes/d/[id].tsx` | 公開スナップショット音声の表示 |

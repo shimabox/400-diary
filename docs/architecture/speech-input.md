@@ -18,14 +18,14 @@ flowchart TD
     D --> E[start 呼び出し]
     E --> F[SpeechRecognition インスタンス生成]
     F --> G["lang = 'ja-JP'"]
-    F --> H["continuous = true"]
+    F --> H["continuous = false"]
     F --> I["interimResults = true"]
     G & H & I --> J[recognition.start]
     J --> K{onresult イベント}
     K -->|isFinal = false| L[interim transcript を更新]
     K -->|isFinal = true| M[onResult コールバック実行]
-    M --> N["setBody(prev + text)"]
-    N --> O[trimToGrid で文字数制限]
+    M --> N["insertAtSelection で選択範囲を置換"]
+    N --> O["trimToGrid + caret 復元"]
     L -->|リアルタイム表示| P[UI に中間結果を表示]
 ```
 
@@ -56,7 +56,7 @@ stateDiagram-v2
 | パラメータ | 値 | 理由 |
 |-----------|-----|------|
 | `lang` | `ja-JP` | 日本語認識 |
-| `continuous` | `true` | 一度の発話で止まらず継続認識 |
+| `continuous` | `false` | 1回の認識を短く区切り、継続が必要なら `onend` で再開する |
 | `interimResults` | `true` | 確定前のテキストもリアルタイム表示 |
 
 ## 認識結果の処理フロー
@@ -75,22 +75,25 @@ sequenceDiagram
     Hook->>Editor: transcript = "きょうはいい" (中間表示)
     SR->>Hook: onresult (isFinal=true, "今日はいい天気")
     Hook->>Editor: onResult("今日はいい天気")
-    Editor->>Editor: setBody(prev + "今日はいい天気")
-    Editor->>Editor: trimToGrid(body)
+    Editor->>Editor: insertAtSelection で選択範囲を置換
+    Editor->>Editor: trimToGrid(body) + caret 復元
     Hook->>Editor: transcript = "" (クリア)
 ```
 
 ## エディタとの統合
 
-音声入力で得たテキストは `trimToGrid` を通してグリッド制約（最大400文字・最大20列）を守る。
+音声入力で得たテキストは `useVerticalTextInput` が現在の選択範囲へ挿入し、`trimToGrid` を通してグリッド制約（最大400文字・最大20列）を守る。
 
 ```
 handleSpeechResult(text) {
-  setBody(prev => trimToGrid(prev + text))
+  const { text: next, caret } = insertAtSelection(...)
+  setBody(next)
+  requestAnimationFrame(() => textarea.setSelectionRange(caret, caret))
 }
 ```
 
-- 既存テキストの末尾に追加
+- 現在の選択範囲を置換
+- caret は挿入テキストの直後へ戻す
 - 400文字を超えた分は切り捨て
 - 列数が20を超えた分も切り捨て
 
@@ -128,6 +131,8 @@ handleSpeechResult(text) {
 | ファイル | 役割 |
 |---------|------|
 | `app/lib/use-speech.ts` | useSpeech Hook |
+| `app/lib/use-vertical-text-input.ts` | 認識結果の挿入、グリッド制約、caret 復元 |
+| `app/lib/grid.ts` | `trimToGrid` / `insertAtSelection` |
 | `app/global.d.ts` | Web Speech API の型定義 |
 | `app/islands/vertical-editor.tsx` | Hook の利用・UI |
 | `app/styles/global.css` | pulse アニメーション |
