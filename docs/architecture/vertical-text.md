@@ -132,7 +132,9 @@ flowchart TD
 | ファイル | 役割 |
 |---------|------|
 | `app/lib/layout.ts` | `computeSlots` / `adjustSlotsForDate` レイアウト計算 |
+| `app/lib/grid.ts` | 400字グリッド制約、選択範囲への挿入 |
+| `app/lib/use-vertical-text-input.ts` | textarea 入力、IME composition、音声入力結果の挿入 |
 | `app/islands/flow-text.tsx` | FlowText コンポーネント（描画 + ドラッグ） |
-| `app/islands/vertical-editor.tsx` | エディタ (textarea + プレビュー) |
+| `app/islands/vertical-editor.tsx` | エディタ全体の組み立て、textarea とプレビューの表示 |
 | `app/lib/constants.ts` | `MAX_BODY_LENGTH = 400` |
 | `app/styles/global.css` | `.editor-grid` のレスポンシブ対応 |

@@ -10,11 +10,11 @@ Cloudflare R2 を使った画像のアップロード・配信・削除。日記
 R2 Bucket: 400-diary-images
 └── diaries/
     └── {diaryId}/
-        └── {timestamp}.{ext}    ← 例: diaries/abc123/1712345678.jpg
+        └── {timestamp}-{id}.{ext}    ← 例: diaries/abc123/1712345678-a1b2c3d4.jpg
 ```
 
-- キー生成: `diaries/${diaryId}/${Date.now()}.${ext}`
-- タイムスタンプでユニーク性を保証（同じ日記への再アップロードで上書きしない）
+- キー生成: `diaries/${diaryId}/${Date.now()}-${nanoid(8)}.${ext}`
+- タイムスタンプと短いランダム ID でユニーク性を保証（同じ日記への再アップロードで上書きしない）
 
 ## バリデーション
 
@@ -34,20 +34,20 @@ R2 Bucket: 400-diary-images
 ```mermaid
 sequenceDiagram
     actor User
-    participant Editor as VerticalEditor
+    participant ImageEditor as ImageAttachmentEditor
     participant API as /api/diaries/:id/image
     participant R2 as Cloudflare R2
     participant DB as D1
 
-    User->>Editor: 画像ファイルを選択
-    Editor->>Editor: クライアント側バリデーション (形式・サイズ)
-    Editor->>Editor: FileReader でプレビュー生成
-    Editor->>API: POST FormData { file }
+    User->>ImageEditor: 画像ファイルを選択
+    ImageEditor->>ImageEditor: クライアント側バリデーション (形式・サイズ)
+    ImageEditor->>ImageEditor: FileReader でプレビュー生成
+    ImageEditor->>API: POST FormData { file }
     API->>API: サーバー側バリデーション
     API->>R2: bucket.put(key, data, contentType)
     API->>DB: UPDATE diaries SET image_key = key
-    API-->>Editor: { image_key: key } (201)
-    Editor->>Editor: プレビュー更新
+    API-->>ImageEditor: { image_key: key } (201)
+    ImageEditor->>ImageEditor: プレビュー更新
 ```
 
 ## 画像配信フロー
@@ -80,9 +80,9 @@ Cache-Control: public, max-age=31536000, immutable
 
 ```mermaid
 flowchart TD
-    A[エディタで画像を削除] --> B["DELETE /api/diaries/:id/image"]
+    A[ImageAttachmentEditor で画像を削除] --> B["DELETE /api/diaries/:id/image"]
     B --> C["UPDATE diaries SET image_key = NULL"]
-    C --> D[エディタで新画像をアップロード]
+    C --> D[ImageAttachmentEditor で新画像をアップロード]
     D --> E["POST /api/diaries/:id/image"]
     E --> F[新キーで R2 に保存]
 ```
@@ -140,6 +140,7 @@ FlowText コンポーネントが `computeSlots` で画像を障害物として�
 | `app/lib/storage.ts` | R2 操作・バリデーション |
 | `app/routes/api/diaries/[id]/image.ts` | アップロード・削除 API |
 | `app/routes/api/images/[...key].ts` | 画像配信エンドポイント |
-| `app/islands/vertical-editor.tsx` | アップロード UI・プレビュー |
+| `app/islands/image-attachment-editor.tsx` | アップロード・削除 UI、ローカル preview 生成 |
+| `app/islands/vertical-editor.tsx` | 編集画面での画像 state / 座標 state の保持と子コンポーネントへの受け渡し |
 | `app/islands/flow-text.tsx` | 画像回り込みレイアウト |
 | `app/lib/db.ts` | `listSnapshotImageKeys` (削除時の R2 クリーンアップ) |

@@ -67,23 +67,36 @@ app/
 │       ├── diaries/[id].ts
 │       ├── diaries/[id]/publish.ts
 │       ├── diaries/[id]/image.ts
+│       ├── diaries/[id]/audio.ts
 │       ├── images/[...key].ts
+│       ├── audio/[...key].ts
 │       ├── og/index.ts
 │       └── og/[id].ts
 ├── islands/               # インタラクティブコンポーネント
 │   ├── vertical-editor.tsx
+│   ├── image-attachment-editor.tsx
+│   ├── audio-attachment-editor.tsx
+│   ├── audio-player.tsx
 │   ├── flow-text.tsx
 │   ├── calendar-view.tsx
-│   └── image-uploader.tsx
+│   ├── confirm-dialog.tsx
+│   ├── delete-diary-button.tsx
+│   └── mood-marker.tsx
 ├── lib/                   # 共有ロジック
 │   ├── db.ts              # D1 操作
 │   ├── auth.ts            # JWT 検証
 │   ├── storage.ts         # R2 操作
 │   ├── hydrate.ts         # Islands ハイドレーション
+│   ├── audio-mime.ts      # 音声 MIME type / 拡張子
+│   ├── grid.ts            # 400字グリッド制御
+│   ├── layout.ts          # 縦書き回り込み計算
 │   ├── mood.ts            # 気分データ
 │   ├── colors.ts          # パステルカラー生成
 │   ├── constants.ts       # MAX_BODY_LENGTH = 400
 │   ├── format.ts          # 日付フォーマット
+│   ├── use-audio-recorder.ts
+│   ├── use-diary-draft.ts
+│   ├── use-vertical-text-input.ts
 │   └── use-speech.ts      # 音声認識 Hook
 └── styles/
     └── global.css         # グローバルスタイル
@@ -120,10 +133,12 @@ flowchart LR
 
 | コンポーネント | 役割 | 状態 |
 |--------------|------|------|
-| `vertical-editor` | 縦書きエディタ（入力・保存・公開・画像・音声） | 最も複雑。多数の state |
+| `vertical-editor` | 縦書きエディタ全体の組み立て | 本文・添付・保存公開の状態を各 hook / 子コンポーネントへ委譲 |
+| `image-attachment-editor` | 画像アップロード・削除 UI | エラー、削除確認 |
+| `audio-attachment-editor` | 音声アップロード・録音・削除 UI | エラー、アップロード中、削除確認 |
+| `audio-player` | 公開ページの音声再生ボタン | 再生中状態 |
 | `flow-text` | テキスト流し込み表示（画像回り込み） | props からの派生（useMemo） |
 | `calendar-view` | ヒートマップ + 月間カレンダー | selectedMonth のみ |
-| `image-uploader` | 画像アップロード（単体版） | preview, uploading |
 
 ## SPA Navigation
 
