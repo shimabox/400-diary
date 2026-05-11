@@ -16,6 +16,31 @@ const IMAGE_EXT_MAP: Record<string, string> = {
   'image/gif': 'gif',
 }
 
+async function putObject(
+  bucket: R2Bucket,
+  key: string,
+  data: ArrayBuffer,
+  contentType: string,
+): Promise<void> {
+  await bucket.put(key, data, { httpMetadata: { contentType } })
+}
+
+async function getObject(
+  bucket: R2Bucket,
+  key: string,
+): Promise<{ body: ReadableStream; contentType: string } | null> {
+  const obj = await bucket.get(key)
+  if (!obj) return null
+  return {
+    body: obj.body as unknown as ReadableStream,
+    contentType: obj.httpMetadata?.contentType ?? 'application/octet-stream',
+  }
+}
+
+async function deleteObject(bucket: R2Bucket, key: string): Promise<void> {
+  await bucket.delete(key)
+}
+
 export function validateImage(
   size: number,
   type: string,
@@ -66,7 +91,7 @@ export async function uploadImage(
   data: ArrayBuffer,
   contentType: string,
 ): Promise<void> {
-  await bucket.put(key, data, { httpMetadata: { contentType } })
+  await putObject(bucket, key, data, contentType)
 }
 
 export async function uploadAudio(
@@ -75,43 +100,33 @@ export async function uploadAudio(
   data: ArrayBuffer,
   contentType: string,
 ): Promise<void> {
-  await bucket.put(key, data, { httpMetadata: { contentType } })
+  await putObject(bucket, key, data, contentType)
 }
 
 export async function getImage(
   bucket: R2Bucket,
   key: string,
 ): Promise<{ body: ReadableStream; contentType: string } | null> {
-  const obj = await bucket.get(key)
-  if (!obj) return null
-  return {
-    body: obj.body as unknown as ReadableStream,
-    contentType: obj.httpMetadata?.contentType ?? 'application/octet-stream',
-  }
+  return getObject(bucket, key)
 }
 
 export async function getAudio(
   bucket: R2Bucket,
   key: string,
 ): Promise<{ body: ReadableStream; contentType: string } | null> {
-  const obj = await bucket.get(key)
-  if (!obj) return null
-  return {
-    body: obj.body as unknown as ReadableStream,
-    contentType: obj.httpMetadata?.contentType ?? 'application/octet-stream',
-  }
+  return getObject(bucket, key)
 }
 
 export async function deleteImage(
   bucket: R2Bucket,
   key: string,
 ): Promise<void> {
-  await bucket.delete(key)
+  await deleteObject(bucket, key)
 }
 
 export async function deleteAudio(
   bucket: R2Bucket,
   key: string,
 ): Promise<void> {
-  await bucket.delete(key)
+  await deleteObject(bucket, key)
 }
