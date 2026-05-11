@@ -23,6 +23,7 @@ afterEach(() => {
 describe('useVerticalTextInput', () => {
   // hono/jsx の hooks は render context 外でも初期値と callback を返す。
   // ここでは textarea の値補正と caret 復元だけを直接検証する。
+  // body state の更新結果は rerender されないため、このテストでは観測しない。
   test('初期本文から文字数と超過状態を返す', () => {
     const normal = useVerticalTextInput('今日は晴れ')
     expect(normal.body).toBe('今日は晴れ')
@@ -87,21 +88,36 @@ describe('useVerticalTextInput', () => {
     expect(target.setSelectionRange).toHaveBeenCalledWith(5, 5)
   })
 
+  test('textarea が未マウントなら caret 復元を呼ばない', () => {
+    const requestAnimationFrame = vi.fn()
+    vi.stubGlobal('requestAnimationFrame', requestAnimationFrame)
+
+    const { handleSpeechResult } = useVerticalTextInput('本文')
+
+    handleSpeechResult('追加')
+
+    expect(requestAnimationFrame).not.toHaveBeenCalled()
+  })
+
   test('音声入力後の caret 復元に失敗しても例外を投げない', () => {
-    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+    const requestAnimationFrame = vi.fn((callback: FrameRequestCallback) => {
       callback(0)
       return 1
     })
+    vi.stubGlobal('requestAnimationFrame', requestAnimationFrame)
 
     const { handleSpeechResult, textareaRef } = useVerticalTextInput('本文')
+    const setSelectionRange = vi.fn(() => {
+      throw new Error('selection failed')
+    })
     const target = textarea({
-      setSelectionRange: vi.fn(() => {
-        throw new Error('selection failed')
-      }),
+      setSelectionRange,
       value: '本文',
     })
     textareaRef.current = target
 
     expect(() => handleSpeechResult('追加')).not.toThrow()
+    expect(requestAnimationFrame).toHaveBeenCalledTimes(1)
+    expect(setSelectionRange).toHaveBeenCalledWith(2, 2)
   })
 })
