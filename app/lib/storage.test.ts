@@ -197,6 +197,31 @@ describe('R2 object helpers', () => {
     })
   })
 
+  test('getImage は Content-Type がなければ fallback を返す', async () => {
+    const body = new ReadableStream()
+    const bucket = createBucketMock()
+    bucket.get.mockResolvedValue({ body })
+
+    await expect(getImage(bucket, 'image-key')).resolves.toEqual({
+      body,
+      contentType: 'application/octet-stream',
+    })
+  })
+
+  test('getAudio は R2 object の body と Content-Type を返す', async () => {
+    const body = new ReadableStream()
+    const bucket = createBucketMock()
+    bucket.get.mockResolvedValue({
+      body,
+      httpMetadata: { contentType: 'audio/webm' },
+    })
+
+    await expect(getAudio(bucket, 'audio-key')).resolves.toEqual({
+      body,
+      contentType: 'audio/webm',
+    })
+  })
+
   test('getAudio は Content-Type がなければ fallback を返す', async () => {
     const body = new ReadableStream()
     const bucket = createBucketMock()
@@ -213,6 +238,13 @@ describe('R2 object helpers', () => {
     bucket.get.mockResolvedValue(null)
 
     await expect(getImage(bucket, 'missing-key')).resolves.toBeNull()
+  })
+
+  test('getAudio は object がなければ null を返す', async () => {
+    const bucket = createBucketMock()
+    bucket.get.mockResolvedValue(null)
+
+    await expect(getAudio(bucket, 'missing-key')).resolves.toBeNull()
   })
 
   test('deleteImage は R2 object を削除する', async () => {
