@@ -20,6 +20,19 @@ function pickRecordingType(): string {
   )
 }
 
+export function cleanupActiveRecording(
+  recorder: MediaRecorder | null,
+  stream: MediaStream | null,
+) {
+  if (recorder?.state === 'recording') {
+    recorder.onstop = null
+    recorder.stop()
+  }
+  for (const track of stream?.getTracks() ?? []) {
+    track.stop()
+  }
+}
+
 export function useAudioRecorder() {
   const [isRecording, setIsRecording] = useState(false)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
@@ -28,14 +41,10 @@ export function useAudioRecorder() {
 
   useEffect(() => {
     return () => {
-      const recorder = mediaRecorderRef.current
-      if (recorder?.state === 'recording') {
-        recorder.onstop = null
-        recorder.stop()
-      }
-      for (const track of recordingStreamRef.current?.getTracks() ?? []) {
-        track.stop()
-      }
+      cleanupActiveRecording(
+        mediaRecorderRef.current,
+        recordingStreamRef.current,
+      )
     }
   }, [])
 

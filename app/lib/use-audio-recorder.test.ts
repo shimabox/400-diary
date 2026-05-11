@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, test, vi } from 'vitest'
-import { useAudioRecorder } from './use-audio-recorder'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import { cleanupActiveRecording, useAudioRecorder } from './use-audio-recorder'
 
 type MockStream = {
   stream: MediaStream
@@ -54,15 +54,19 @@ function stubRecordingGlobals({
   getUserMedia: ReturnType<typeof vi.fn>
   supportedTypes?: string[]
 }) {
-  MockMediaRecorder.instances = []
   MockMediaRecorder.supportedTypes = new Set(supportedTypes)
-  MockMediaRecorder.isTypeSupported.mockClear()
 
   vi.stubGlobal('navigator', {
     mediaDevices: { getUserMedia },
   })
   vi.stubGlobal('MediaRecorder', MockMediaRecorder)
 }
+
+beforeEach(() => {
+  MockMediaRecorder.instances = []
+  MockMediaRecorder.supportedTypes = new Set()
+  MockMediaRecorder.isTypeSupported.mockClear()
+})
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -102,6 +106,46 @@ describe('useAudioRecorder', () => {
     expect(file.name).toBe('recording-1234567890.webm')
     expect(file.type).toBe('audio/webm;codecs=opus')
     await expect(file.text()).resolves.toBe('hello')
+
+    stopRecording()
+    expect(recorder.stop).toHaveBeenCalledTimes(1)
+  })
+
+  test('録音していないときの stopRecording は何もしない', async () => {
+    const { stopRecording } = useAudioRecorder()
+    expect(() => stopRecording()).not.toThrow()
+
+    const { stream } = createMockStream()
+    const getUserMedia = vi.fn().mockResolvedValue(stream)
+    stubRecordingGlobals({ getUserMedia })
+    const onRecorded = vi.fn()
+    const onError = vi.fn()
+
+    const recorderHook = useAudioRecorder()
+
+    await recorderHook.startRecording({ onRecorded, onError })
+    const recorder = MockMediaRecorder.instances[0]
+    recorder.state = 'inactive'
+    recorderHook.stopRecording()
+
+    expect(recorder.stop).not.toHaveBeenCalled()
+  })
+
+  test('cleanup は録音中の onstop を外してから stop し track を止める', () => {
+    const { stream, track } = createMockStream()
+    const recorder = new MockMediaRecorder(stream, {
+      mimeType: 'audio/webm;codecs=opus',
+    })
+    recorder.start()
+    const onStop = vi.fn()
+    recorder.onstop = onStop
+
+    cleanupActiveRecording(recorder as unknown as MediaRecorder, stream)
+
+    expect(recorder.onstop).toBeNull()
+    expect(recorder.stop).toHaveBeenCalledTimes(1)
+    expect(onStop).not.toHaveBeenCalled()
+    expect(track.stop).toHaveBeenCalledTimes(1)
   })
 
   test('録音に対応していない環境ではエラーを返す', async () => {
