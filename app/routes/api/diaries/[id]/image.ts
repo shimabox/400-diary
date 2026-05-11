@@ -5,6 +5,7 @@ import {
   getDiary,
   updateDiary,
 } from '../../../../lib/db'
+import { deleteMediaIfOrphan } from '../../../../lib/media-cleanup'
 import {
   deleteImage,
   generateImageKey,
@@ -12,19 +13,19 @@ import {
   validateImage,
 } from '../../../../lib/storage'
 
-async function deleteIfOrphan(
+async function deleteImageIfOrphan(
   bucket: R2Bucket,
   db: D1Database,
   key: string,
 ): Promise<void> {
-  const refCount = await countSnapshotsWithImageKey(db, key)
-  if (refCount > 0) return
-
-  try {
-    await deleteImage(bucket, key)
-  } catch (e) {
-    console.error('Failed to delete image from R2:', e)
-  }
+  await deleteMediaIfOrphan({
+    bucket,
+    db,
+    key,
+    countReferences: countSnapshotsWithImageKey,
+    deleteObject: deleteImage,
+    logLabel: 'image',
+  })
 }
 
 export const POST = createRoute(async (c) => {
@@ -59,7 +60,7 @@ export const POST = createRoute(async (c) => {
   await updateDiary(db, id, { image_key: key })
 
   if (oldKey && oldKey !== key) {
-    await deleteIfOrphan(bucket, db, oldKey)
+    await deleteImageIfOrphan(bucket, db, oldKey)
   }
 
   return c.json({ image_key: key }, 201)
@@ -84,7 +85,7 @@ export const DELETE = createRoute(async (c) => {
     // 参照整合性は保たれる。
     const oldKey = diary.image_key
     await updateDiary(db, id, { image_key: null })
-    await deleteIfOrphan(c.env.BUCKET, db, oldKey)
+    await deleteImageIfOrphan(c.env.BUCKET, db, oldKey)
   }
 
   return c.body(null, 204)
