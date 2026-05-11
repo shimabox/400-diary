@@ -1,10 +1,32 @@
-import { describe, expect, test } from 'vitest'
+import type { R2Bucket } from '@cloudflare/workers-types/latest'
+import { describe, expect, test, vi } from 'vitest'
 import {
+  deleteAudio,
+  deleteImage,
   generateAudioKey,
   generateImageKey,
+  getAudio,
+  getImage,
+  uploadAudio,
+  uploadImage,
   validateAudio,
   validateImage,
 } from './storage'
+
+type BucketMock = R2Bucket & {
+  delete: ReturnType<typeof vi.fn>
+  get: ReturnType<typeof vi.fn>
+  put: ReturnType<typeof vi.fn>
+}
+
+function createBucketMock(): BucketMock {
+  const bucket = {
+    delete: vi.fn(),
+    get: vi.fn(),
+    put: vi.fn(),
+  }
+  return bucket as unknown as BucketMock
+}
 
 describe('validateImage', () => {
   test('JPEG画像を許可する', () => {
@@ -135,5 +157,109 @@ describe('generateAudioKey', () => {
   test('codec パラメータ付きでもベース MIME type から拡張子を決める', () => {
     const key = generateAudioKey('id1', 'audio/webm;codecs=opus')
     expect(key).toMatch(/\.webm$/)
+  })
+})
+
+describe('R2 object helpers', () => {
+  test('uploadImage は Content-Type 付きで R2 に保存する', async () => {
+    const bucket = createBucketMock()
+    const data = new ArrayBuffer(4)
+
+    await uploadImage(bucket, 'image-key', data, 'image/png')
+
+    expect(bucket.put).toHaveBeenCalledWith('image-key', data, {
+      httpMetadata: { contentType: 'image/png' },
+    })
+  })
+
+  test('uploadAudio は Content-Type 付きで R2 に保存する', async () => {
+    const bucket = createBucketMock()
+    const data = new ArrayBuffer(4)
+
+    await uploadAudio(bucket, 'audio-key', data, 'audio/webm')
+
+    expect(bucket.put).toHaveBeenCalledWith('audio-key', data, {
+      httpMetadata: { contentType: 'audio/webm' },
+    })
+  })
+
+  test('getImage は R2 object の body と Content-Type を返す', async () => {
+    const body = new ReadableStream()
+    const bucket = createBucketMock()
+    bucket.get.mockResolvedValue({
+      body,
+      httpMetadata: { contentType: 'image/png' },
+    })
+
+    await expect(getImage(bucket, 'image-key')).resolves.toEqual({
+      body,
+      contentType: 'image/png',
+    })
+  })
+
+  test('getImage は Content-Type がなければ fallback を返す', async () => {
+    const body = new ReadableStream()
+    const bucket = createBucketMock()
+    bucket.get.mockResolvedValue({ body })
+
+    await expect(getImage(bucket, 'image-key')).resolves.toEqual({
+      body,
+      contentType: 'application/octet-stream',
+    })
+  })
+
+  test('getAudio は R2 object の body と Content-Type を返す', async () => {
+    const body = new ReadableStream()
+    const bucket = createBucketMock()
+    bucket.get.mockResolvedValue({
+      body,
+      httpMetadata: { contentType: 'audio/webm' },
+    })
+
+    await expect(getAudio(bucket, 'audio-key')).resolves.toEqual({
+      body,
+      contentType: 'audio/webm',
+    })
+  })
+
+  test('getAudio は Content-Type がなければ fallback を返す', async () => {
+    const body = new ReadableStream()
+    const bucket = createBucketMock()
+    bucket.get.mockResolvedValue({ body })
+
+    await expect(getAudio(bucket, 'audio-key')).resolves.toEqual({
+      body,
+      contentType: 'application/octet-stream',
+    })
+  })
+
+  test('getImage は object がなければ null を返す', async () => {
+    const bucket = createBucketMock()
+    bucket.get.mockResolvedValue(null)
+
+    await expect(getImage(bucket, 'missing-key')).resolves.toBeNull()
+  })
+
+  test('getAudio は object がなければ null を返す', async () => {
+    const bucket = createBucketMock()
+    bucket.get.mockResolvedValue(null)
+
+    await expect(getAudio(bucket, 'missing-key')).resolves.toBeNull()
+  })
+
+  test('deleteImage は R2 object を削除する', async () => {
+    const bucket = createBucketMock()
+
+    await deleteImage(bucket, 'image-key')
+
+    expect(bucket.delete).toHaveBeenCalledWith('image-key')
+  })
+
+  test('deleteAudio は R2 object を削除する', async () => {
+    const bucket = createBucketMock()
+
+    await deleteAudio(bucket, 'audio-key')
+
+    expect(bucket.delete).toHaveBeenCalledWith('audio-key')
   })
 })
