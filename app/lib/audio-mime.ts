@@ -1,11 +1,13 @@
-export const AUDIO_ALLOWED_TYPES = [
+const AUDIO_ALLOWED_TYPES = [
   'audio/mpeg',
   'audio/mp3',
   'audio/webm',
   'audio/mp4',
   'audio/wav',
   'audio/ogg',
-]
+] as const
+
+const AUDIO_ALLOWED_TYPE_SET: ReadonlySet<string> = new Set(AUDIO_ALLOWED_TYPES)
 
 export const AUDIO_ACCEPT = AUDIO_ALLOWED_TYPES.join(',')
 
@@ -27,5 +29,5 @@ export function audioExtension(type: string): string {
 }
 
 export function isAllowedAudioType(type: string): boolean {
-  return AUDIO_ALLOWED_TYPES.includes(baseMimeType(type))
+  return AUDIO_ALLOWED_TYPE_SET.has(baseMimeType(type))
 }

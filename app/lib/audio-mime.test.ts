@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import {
   AUDIO_ACCEPT,
-  AUDIO_ALLOWED_TYPES,
   audioExtension,
   baseMimeType,
   isAllowedAudioType,
@@ -32,15 +31,28 @@ describe('audioExtension', () => {
 })
 
 describe('isAllowedAudioType', () => {
-  test('許可 MIME type を判定する', () => {
+  test('アップロード可能な音声 MIME type を許可する', () => {
+    expect(isAllowedAudioType('audio/mpeg')).toBe(true)
+    expect(isAllowedAudioType('audio/mp3')).toBe(true)
     expect(isAllowedAudioType('audio/webm')).toBe(true)
+    expect(isAllowedAudioType('audio/mp4')).toBe(true)
+    expect(isAllowedAudioType('audio/wav')).toBe(true)
+    expect(isAllowedAudioType('audio/ogg')).toBe(true)
+  })
+
+  test('codec パラメータ付きの録音 MIME type を許可する', () => {
     expect(isAllowedAudioType('audio/webm;codecs=opus')).toBe(true)
+  })
+
+  test('音声以外の MIME type を拒否する', () => {
     expect(isAllowedAudioType('text/plain')).toBe(false)
   })
 })
 
 describe('AUDIO_ACCEPT', () => {
-  test('許可 MIME type と同じ値から生成される', () => {
-    expect(AUDIO_ACCEPT).toBe(AUDIO_ALLOWED_TYPES.join(','))
+  test('file input の accept に渡す具体値を公開する', () => {
+    expect(AUDIO_ACCEPT).toBe(
+      'audio/mpeg,audio/mp3,audio/webm,audio/mp4,audio/wav,audio/ogg',
+    )
   })
 })
