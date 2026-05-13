@@ -6,7 +6,7 @@ type DeleteMediaIfOrphanOptions = {
   key: string
   countReferences: (db: D1Database, key: string) => Promise<number>
   deleteObject: (bucket: R2Bucket, key: string) => Promise<void>
-  logLabel: string
+  logLabel: 'image' | 'audio'
 }
 
 export async function deleteMediaIfOrphan({

@@ -4,14 +4,14 @@ import { deleteMediaIfOrphan } from './media-cleanup'
 
 function createOptions(
   overrides: Partial<Parameters<typeof deleteMediaIfOrphan>[0]> = {},
-) {
+): Parameters<typeof deleteMediaIfOrphan>[0] {
   return {
     bucket: {} as R2Bucket,
     countReferences: vi.fn().mockResolvedValue(0),
     db: {} as D1Database,
     deleteObject: vi.fn().mockResolvedValue(undefined),
     key: 'diaries/abc/media-key',
-    logLabel: 'media',
+    logLabel: 'image',
     ...overrides,
   }
 }
@@ -60,5 +60,32 @@ describe('deleteMediaIfOrphan', () => {
       'Failed to delete image from R2:',
       error,
     )
+  })
+
+  test('audio の R2 delete 失敗時は audio label で log する', async () => {
+    const error = new Error('R2 down')
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const options = createOptions({
+      deleteObject: vi.fn().mockRejectedValue(error),
+      logLabel: 'audio',
+    })
+
+    await expect(deleteMediaIfOrphan(options)).resolves.toBeUndefined()
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      'Failed to delete audio from R2:',
+      error,
+    )
+  })
+
+  test('参照カウント取得が失敗したら R2 delete を試みない', async () => {
+    const error = new Error('DB down')
+    const options = createOptions({
+      countReferences: vi.fn().mockRejectedValue(error),
+    })
+
+    await expect(deleteMediaIfOrphan(options)).rejects.toThrow('DB down')
+
+    expect(options.deleteObject).not.toHaveBeenCalled()
   })
 })
