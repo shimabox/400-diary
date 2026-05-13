@@ -58,7 +58,7 @@ flowchart TD
     F -->|No| H["#ebedf0 (灰色)"]
     G --> I{mood あり?}
     I -->|Yes| J[mood の色]
-    I -->|No| K["#c6e48b (既定の緑)"]
+    I -->|No| K["#bdbdbd (mood 未選択の灰色)"]
 ```
 
 ## 月間カレンダービュー
@@ -75,7 +75,7 @@ flowchart TD
 
 - `gridTemplateColumns: repeat(7, 1fr)` の標準グリッド
 - `firstDow` で月初の空白セルを挿入
-- 日記のある日はリンク・mood 色つき、ない日はグレーテキスト
+- 日記のある日はリンクになる。mood がある日は mood 色、mood 未選択の日は `#bdbdbd`、日記のない日は `#ebedf0`
 
 ## Mood（気分）システム
 
@@ -87,7 +87,7 @@ graph LR
         S["😢 悲しい<br/>#6495ED"]
         A["😠 怒り<br/>#FF6347"]
         X["😟 不安<br/>#DDA0DD"]
-        F["😆 楽しい<br/>#FFA500"]
+        F["😆 楽しい<br/>#c6e48b"]
     end
 
     style H fill:#FFD700,color:#000
@@ -95,7 +95,7 @@ graph LR
     style S fill:#6495ED,color:#fff
     style A fill:#FF6347,color:#fff
     style X fill:#DDA0DD,color:#000
-    style F fill:#FFA500,color:#000
+    style F fill:#c6e48b,color:#000
 ```
 
 | キー | ラベル | 絵文字 | 色 |
@@ -105,10 +105,10 @@ graph LR
 | `sad` | 悲しい | 😢 | `#6495ED` (Cornflower Blue) |
 | `angry` | 怒り | 😠 | `#FF6347` (Tomato) |
 | `anxious` | 不安 | 😟 | `#DDA0DD` (Plum) |
-| `fun` | 楽しい | 😆 | `#FFA500` (Orange) |
+| `fun` | 楽しい | 😆 | `#c6e48b` (Light Green) |
 
 - エディタで6つの絵文字ボタンから選択（トグル式）
-- 未選択なら `null`（ヒートマップでは既定の緑色）
+- 未選択なら `null`（カレンダーでは `#bdbdbd`）
 
 ## データフロー
 
