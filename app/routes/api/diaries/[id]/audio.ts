@@ -5,6 +5,7 @@ import {
   getDiary,
   updateDiary,
 } from '../../../../lib/db'
+import { deleteMediaIfOrphan } from '../../../../lib/media-cleanup'
 import {
   deleteAudio,
   generateAudioKey,
@@ -12,19 +13,19 @@ import {
   validateAudio,
 } from '../../../../lib/storage'
 
-async function deleteIfOrphan(
+async function deleteAudioIfOrphan(
   bucket: R2Bucket,
   db: D1Database,
   key: string,
 ): Promise<void> {
-  const refCount = await countSnapshotsWithAudioKey(db, key)
-  if (refCount > 0) return
-
-  try {
-    await deleteAudio(bucket, key)
-  } catch (e) {
-    console.error('Failed to delete audio from R2:', e)
-  }
+  await deleteMediaIfOrphan({
+    bucket,
+    db,
+    key,
+    countReferences: countSnapshotsWithAudioKey,
+    deleteObject: deleteAudio,
+    logLabel: 'audio',
+  })
 }
 
 export const POST = createRoute(async (c) => {
@@ -59,7 +60,7 @@ export const POST = createRoute(async (c) => {
   await updateDiary(db, id, { audio_key: key })
 
   if (oldKey && oldKey !== key) {
-    await deleteIfOrphan(bucket, db, oldKey)
+    await deleteAudioIfOrphan(bucket, db, oldKey)
   }
 
   return c.json({ audio_key: key }, 201)
@@ -81,7 +82,7 @@ export const DELETE = createRoute(async (c) => {
   if (diary.audio_key) {
     const oldKey = diary.audio_key
     await updateDiary(db, id, { audio_key: null })
-    await deleteIfOrphan(c.env.BUCKET, db, oldKey)
+    await deleteAudioIfOrphan(c.env.BUCKET, db, oldKey)
   }
 
   return c.body(null, 204)
