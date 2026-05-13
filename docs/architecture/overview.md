@@ -86,18 +86,22 @@ app/
 │   ├── db.ts              # D1 操作
 │   ├── auth.ts            # JWT 検証
 │   ├── storage.ts         # R2 操作
+│   ├── media-cleanup.ts   # snapshot 参照を考慮した R2 孤児削除
+│   ├── og-cache.ts        # OGP 画像キャッシュ
+│   ├── og-image.ts        # OGP 画像生成
 │   ├── hydrate.ts         # Islands ハイドレーション
 │   ├── audio-mime.ts      # 音声 MIME type / 拡張子
 │   ├── grid.ts            # 400字グリッド制御
 │   ├── layout.ts          # 縦書き回り込み計算
+│   ├── heatmap-scroll.ts  # ヒートマップ初期スクロール位置計算
 │   ├── mood.ts            # 気分データ
 │   ├── colors.ts          # パステルカラー生成
 │   ├── constants.ts       # MAX_BODY_LENGTH = 400
 │   ├── format.ts          # 日付フォーマット
-│   ├── use-audio-recorder.ts
-│   ├── use-diary-draft.ts
-│   ├── use-vertical-text-input.ts
-│   └── use-speech.ts      # 音声認識 Hook
+│   ├── use-audio-recorder.ts      # 音声録音 Hook
+│   ├── use-diary-draft.ts         # 下書き保存・公開 Hook
+│   ├── use-vertical-text-input.ts # 縦書き入力 Hook
+│   └── use-speech.ts              # 音声認識 Hook
 └── styles/
     └── global.css         # グローバルスタイル
 ```
@@ -139,6 +143,9 @@ flowchart LR
 | `audio-player` | 公開ページの音声再生ボタン | 再生中状態 |
 | `flow-text` | テキスト流し込み表示（画像回り込み） | props からの派生（useMemo） |
 | `calendar-view` | ヒートマップ + 月間カレンダー | selectedMonth のみ |
+| `confirm-dialog` | 削除確認ダイアログ | 表示・非表示 |
+| `delete-diary-button` | 日記削除ボタン | 削除中状態 |
+| `mood-marker` | 公開ページの mood 表示 | props からの表示 |
 
 ## SPA Navigation
 
@@ -219,5 +226,6 @@ flowchart LR
 | [Authentication](./authentication.md) | Cloudflare Access JWT 検証 |
 | [Speech Input](./speech-input.md) | Web Speech API による音声入力 |
 | [Image Upload & Storage](./image-upload.md) | R2 画像管理・配信・クリーンアップ |
+| [Audio Upload, Recording & Playback](./audio.md) | R2 音声管理・録音・再生・クリーンアップ |
 | [Calendar & Heatmap](./calendar.md) | ヒートマップ・月間カレンダー・Mood システム |
 | [OGP Image](./ogp-image.md) | OGP 画像の PNG 動的生成・フォント管理 |

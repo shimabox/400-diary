@@ -46,9 +46,13 @@ sequenceDiagram
     API->>API: サーバー側バリデーション
     API->>R2: bucket.put(key, data, contentType)
     API->>DB: UPDATE diaries SET image_key = key
+    API->>API: 旧画像が snapshot 参照中か確認
+    API->>R2: 参照されていなければ旧画像を削除
     API-->>ImageEditor: { image_key: key } (201)
     ImageEditor->>ImageEditor: プレビュー更新
 ```
+
+DB 更新は R2 アップロード後に行う。旧画像の R2 削除は `deleteMediaIfOrphan` 経由の best-effort で、削除に失敗してもレスポンスは成功のまま返す。
 
 ## 画像配信フロー
 
@@ -80,12 +84,32 @@ Cache-Control: public, max-age=31536000, immutable
 
 ```mermaid
 flowchart TD
-    A[ImageAttachmentEditor で画像を削除] --> B["DELETE /api/diaries/:id/image"]
-    B --> C["UPDATE diaries SET image_key = NULL"]
-    C --> D[ImageAttachmentEditor で新画像をアップロード]
-    D --> E["POST /api/diaries/:id/image"]
-    E --> F[新キーで R2 に保存]
+    A[ImageAttachmentEditor で新画像を選択] --> B["POST /api/diaries/:id/image"]
+    B --> C[新キーで R2 に保存]
+    C --> D["UPDATE diaries SET image_key = newKey"]
+    D --> E["deleteMediaIfOrphan(oldKey)"]
+    E --> F{"snapshot が参照中?"}
+    F -->|Yes| G["旧 R2 object は残す"]
+    F -->|No| H["旧 R2 object を削除"]
 ```
+
+### 画像の削除
+
+```mermaid
+flowchart TD
+    A["DELETE /api/diaries/:id/image"] --> B["diary.image_key を取得"]
+    B --> C{"image_key がある?"}
+    C -->|No| D["204 を返す"]
+    C -->|Yes| E["UPDATE diaries SET image_key = NULL"]
+    E --> F["deleteMediaIfOrphan(image_key)"]
+    F --> G{"snapshot が参照中?"}
+    G -->|Yes| H["R2 は残す"]
+    G -->|No| I["R2 から削除"]
+    H --> J["204 を返す"]
+    I --> J
+```
+
+DB 更新を先に行い、DB 更新に失敗した場合は R2 を削除しない。公開スナップショットが参照している画像も削除しない。
 
 ### 日記の削除時
 
@@ -94,7 +118,7 @@ flowchart TD
     A["DELETE /api/diaries/:id"] --> B[diary.image_key を取得]
     A --> C["listSnapshotImageKeys(db, id)"]
     B & C --> D[全 image_key を Set で重複除去]
-    D --> E["Promise.all で R2 から一括削除"]
+    D --> E["Promise.allSettled で R2 から best-effort 一括削除"]
     E --> F["DELETE FROM diaries (CASCADE で snapshots も削除)"]
 ```
 
@@ -138,8 +162,10 @@ FlowText コンポーネントが `computeSlots` で画像を障害物として�
 | ファイル | 役割 |
 |---------|------|
 | `app/lib/storage.ts` | R2 操作・バリデーション |
+| `app/lib/media-cleanup.ts` | snapshot 参照を考慮した R2 孤児削除 |
 | `app/routes/api/diaries/[id]/image.ts` | アップロード・削除 API |
 | `app/routes/api/images/[...key].ts` | 画像配信エンドポイント |
+| `app/routes/api/diaries/[id].ts` | 日記削除時の画像 R2 クリーンアップ |
 | `app/islands/image-attachment-editor.tsx` | アップロード・削除 UI、ローカル preview 生成 |
 | `app/islands/vertical-editor.tsx` | 編集画面での画像 state / 座標 state の保持と子コンポーネントへの受け渡し |
 | `app/islands/flow-text.tsx` | 画像回り込みレイアウト |

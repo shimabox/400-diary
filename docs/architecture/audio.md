@@ -9,11 +9,11 @@ Cloudflare R2 を使った音声のアップロード・録音・配信・削除
 ## R2 ストレージ構成
 
 ```
-R2 Bucket: 400-diary-images
+R2 Bucket: 400-diary-images (画像と共有)
 └── diaries/
     └── {diaryId}/
         └── audio/
-            └── {timestamp}-{nanoid}.{ext}
+            └── {timestamp}-{nanoid(8)}.{ext}
 ```
 
 - キー生成: `diaries/${diaryId}/audio/${Date.now()}-${nanoid(8)}.${ext}`
@@ -76,13 +76,13 @@ sequenceDiagram
     API->>API: サーバー側バリデーション
     API->>R2: bucket.put(key, data, contentType)
     API->>DB: UPDATE diaries SET audio_key = key
-    API->>API: 旧音声が snapshot 参照中か確認
+    API->>API: deleteMediaIfOrphan(oldKey)
     API->>R2: 参照されていなければ旧音声を削除
     API-->>AudioEditor: { audio_key: key } (201)
     AudioEditor->>AudioEditor: プレビュー再生を更新
 ```
 
-DB 更新は R2 アップロード後に行う。旧音声の R2 削除は best-effort で、削除に失敗してもレスポンスは成功のまま返す。
+DB 更新は R2 アップロード後に行う。旧音声の R2 削除は `deleteMediaIfOrphan` 経由の best-effort で、削除に失敗してもレスポンスは成功のまま返す。
 
 ## 録音フロー
 
@@ -179,7 +179,7 @@ flowchart TD
     B --> C{"audio_key がある?"}
     C -->|No| D["204 を返す"]
     C -->|Yes| E["UPDATE diaries SET audio_key = NULL"]
-    E --> F["countSnapshotsWithAudioKey"]
+    E --> F["deleteMediaIfOrphan(audio_key)"]
     F --> G{"snapshot が参照中?"}
     G -->|Yes| H["R2 は残す"]
     G -->|No| I["R2 から削除"]
@@ -255,6 +255,7 @@ pnpm wrangler d1 execute 400-diary-db --remote --file=db/migrations/20260509_000
 | `db/migrations/20260509_0001_add_audio_key.sql` | 既存DB向けの `audio_key` 追加 migration |
 | `app/lib/storage.ts` | R2 操作・音声バリデーション |
 | `app/lib/audio-mime.ts` | 許可 MIME type、accept 文字列、MIME ベース型抽出、MIME → 拡張子マップ（クライアント/サーバー共有） |
+| `app/lib/media-cleanup.ts` | snapshot 参照を考慮した R2 孤児削除 |
 | `app/lib/use-audio-recorder.ts` | ブラウザ録音、MIME type 選択、media track cleanup |
 | `app/lib/db.ts` | 音声キーの保存・公開コピー・参照確認 |
 | `app/routes/api/diaries/[id]/audio.ts` | 音声アップロード・削除 API |
