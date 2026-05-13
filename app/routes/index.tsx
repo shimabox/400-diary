@@ -122,7 +122,6 @@ export default createRoute(async (c) => {
                 (diary.body !== diary.snapshot_body ||
                   diary.background_color !== diary.snapshot_background_color ||
                   diary.image_key !== diary.snapshot_image_key ||
-                  diary.audio_key !== diary.snapshot_audio_key ||
                   diary.image_layout !== diary.snapshot_image_layout ||
                   diary.image_x !== diary.snapshot_image_x ||
                   diary.image_y !== diary.snapshot_image_y ||

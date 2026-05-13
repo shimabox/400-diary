@@ -1,7 +1,6 @@
 import type { R2Bucket } from '@cloudflare/workers-types/latest'
 import { nanoid } from 'nanoid'
-import { audioExtension, isAllowedAudioType } from './audio-mime'
-import { MAX_AUDIO_SIZE, MAX_IMAGE_SIZE } from './constants'
+import { MAX_IMAGE_SIZE } from './constants'
 
 const IMAGE_ALLOWED_TYPES = [
   'image/jpeg',
@@ -62,39 +61,7 @@ export function generateImageKey(diaryId: string, mime: string): string {
   return `diaries/${diaryId}/${Date.now()}-${nanoid(8)}.${ext}`
 }
 
-export function validateAudio(
-  size: number,
-  type: string,
-): { ok: true } | { ok: false; error: string } {
-  if (!isAllowedAudioType(type)) {
-    return {
-      ok: false,
-      error: 'MP3, WebM, MP4, WAV, Ogg のみアップロードできます',
-    }
-  }
-  if (size > MAX_AUDIO_SIZE) {
-    return {
-      ok: false,
-      error: `音声は${MAX_AUDIO_SIZE / (1024 * 1024)}MB以内にしてください`,
-    }
-  }
-  return { ok: true }
-}
-
-export function generateAudioKey(diaryId: string, mime: string): string {
-  return `diaries/${diaryId}/audio/${Date.now()}-${nanoid(8)}.${audioExtension(mime)}`
-}
-
 export async function uploadImage(
-  bucket: R2Bucket,
-  key: string,
-  data: ArrayBuffer,
-  contentType: string,
-): Promise<void> {
-  await putObject(bucket, key, data, contentType)
-}
-
-export async function uploadAudio(
   bucket: R2Bucket,
   key: string,
   data: ArrayBuffer,
@@ -110,21 +77,7 @@ export async function getImage(
   return getObject(bucket, key)
 }
 
-export async function getAudio(
-  bucket: R2Bucket,
-  key: string,
-): Promise<{ body: ReadableStream; contentType: string } | null> {
-  return getObject(bucket, key)
-}
-
 export async function deleteImage(
-  bucket: R2Bucket,
-  key: string,
-): Promise<void> {
-  await deleteObject(bucket, key)
-}
-
-export async function deleteAudio(
   bucket: R2Bucket,
   key: string,
 ): Promise<void> {

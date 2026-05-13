@@ -62,7 +62,6 @@ export default createRoute(async (c) => {
           initialImageLayout={diary.image_layout}
           initialMood={diary.mood}
           initialImageKey={diary.image_key}
-          initialAudioKey={diary.audio_key}
           initialImageX={diary.image_x}
           initialImageY={diary.image_y}
           diaryId={diary.id}

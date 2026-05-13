@@ -67,16 +67,12 @@ app/
 │       ├── diaries/[id].ts
 │       ├── diaries/[id]/publish.ts
 │       ├── diaries/[id]/image.ts
-│       ├── diaries/[id]/audio.ts
 │       ├── images/[...key].ts
-│       ├── audio/[...key].ts
 │       ├── og/index.ts
 │       └── og/[id].ts
 ├── islands/               # インタラクティブコンポーネント
 │   ├── vertical-editor.tsx
 │   ├── image-attachment-editor.tsx
-│   ├── audio-attachment-editor.tsx
-│   ├── audio-player.tsx
 │   ├── flow-text.tsx
 │   ├── calendar-view.tsx
 │   ├── confirm-dialog.tsx
@@ -90,7 +86,6 @@ app/
 │   ├── og-cache.ts        # OGP 画像キャッシュ
 │   ├── og-image.ts        # OGP 画像生成
 │   ├── hydrate.ts         # Islands ハイドレーション
-│   ├── audio-mime.ts      # 音声 MIME type / 拡張子
 │   ├── grid.ts            # 400字グリッド制御
 │   ├── layout.ts          # 縦書き回り込み計算
 │   ├── heatmap-scroll.ts  # ヒートマップ初期スクロール位置計算
@@ -98,7 +93,6 @@ app/
 │   ├── colors.ts          # パステルカラー生成
 │   ├── constants.ts       # MAX_BODY_LENGTH = 400
 │   ├── format.ts          # 日付フォーマット
-│   ├── use-audio-recorder.ts      # 音声録音 Hook
 │   ├── use-diary-draft.ts         # 下書き保存・公開 Hook
 │   ├── use-vertical-text-input.ts # 縦書き入力 Hook
 │   └── use-speech.ts              # 音声認識 Hook
@@ -137,10 +131,8 @@ flowchart LR
 
 | コンポーネント | 役割 | 状態 |
 |--------------|------|------|
-| `vertical-editor` | 縦書きエディタ全体の組み立て | 本文・添付・保存公開の状態を各 hook / 子コンポーネントへ委譲 |
+| `vertical-editor` | 縦書きエディタ全体の組み立て | 本文・画像添付・保存公開の状態を各 hook / 子コンポーネントへ委譲 |
 | `image-attachment-editor` | 画像アップロード・削除 UI | エラー、削除確認 |
-| `audio-attachment-editor` | 音声アップロード・録音・削除 UI | エラー、アップロード中、削除確認 |
-| `audio-player` | 公開ページの音声再生ボタン | 再生中状態 |
 | `flow-text` | テキスト流し込み表示（画像回り込み） | props からの派生（useMemo） |
 | `calendar-view` | ヒートマップ + 月間カレンダー | selectedMonth のみ |
 | `confirm-dialog` | 削除確認ダイアログ | 表示・非表示 |
@@ -226,6 +218,5 @@ flowchart LR
 | [Authentication](./authentication.md) | Cloudflare Access JWT 検証 |
 | [Speech Input](./speech-input.md) | Web Speech API による音声入力 |
 | [Image Upload & Storage](./image-upload.md) | R2 画像管理・配信・クリーンアップ |
-| [Audio Upload, Recording & Playback](./audio.md) | R2 音声管理・録音・再生・クリーンアップ |
 | [Calendar & Heatmap](./calendar.md) | ヒートマップ・月間カレンダー・Mood システム |
 | [OGP Image](./ogp-image.md) | OGP 画像の PNG 動的生成・フォント管理 |

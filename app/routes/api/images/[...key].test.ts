@@ -89,7 +89,7 @@ describe('GET /api/images/* 公開範囲', () => {
     expect(res.status).toBe(404)
   })
 
-  test('音声キーは images API から配信しない', async () => {
+  test('diaries 配下でも audio ディレクトリは配信しない', async () => {
     const { getImage } = await import('../../../lib/storage')
 
     const app = await createApp()

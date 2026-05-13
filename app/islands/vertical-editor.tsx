@@ -7,7 +7,6 @@ import { MOODS, type MoodKey } from '../lib/mood'
 import { useDiaryDraft } from '../lib/use-diary-draft'
 import { useSpeech } from '../lib/use-speech'
 import { useVerticalTextInput } from '../lib/use-vertical-text-input'
-import AudioAttachmentEditor from './audio-attachment-editor'
 import FlowText from './flow-text'
 import ImageAttachmentEditor from './image-attachment-editor'
 
@@ -21,7 +20,6 @@ type Props = {
   initialImageLayout?: 'left' | 'right'
   initialMood?: string | null
   initialImageKey?: string | null
-  initialAudioKey?: string | null
   initialImageX?: number | null
   initialImageY?: number | null
   diaryId?: string
@@ -36,7 +34,6 @@ export default function VerticalEditor({
   initialImageLayout = 'left',
   initialMood = null,
   initialImageKey = null,
-  initialAudioKey = null,
   initialImageX = null,
   initialImageY = null,
   diaryId,
@@ -84,9 +81,6 @@ export default function VerticalEditor({
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [imageX, setImageX] = useState<number | null>(initialImageX)
   const [imageY, setImageY] = useState<number | null>(initialImageY)
-
-  // 音声関連
-  const [audioKey, setAudioKey] = useState(initialAudioKey)
 
   const {
     currentDiaryId,
@@ -411,11 +405,6 @@ export default function VerticalEditor({
           onImagePreviewChange={setImagePreview}
         />
 
-        <AudioAttachmentEditor
-          diaryId={currentDiaryId || null}
-          audioKey={audioKey}
-          onAudioKeyChange={setAudioKey}
-        />
         <a
           href="/"
           style={{
