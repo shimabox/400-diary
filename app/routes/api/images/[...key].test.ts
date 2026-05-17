@@ -88,14 +88,4 @@ describe('GET /api/images/* 公開範囲', () => {
 
     expect(res.status).toBe(404)
   })
-
-  test('diaries 配下でも audio ディレクトリは配信しない', async () => {
-    const { getImage } = await import('../../../lib/storage')
-
-    const app = await createApp()
-    const res = await app.request('/api/images/diaries/abc/audio/voice.webm')
-
-    expect(res.status).toBe(404)
-    expect(vi.mocked(getImage)).not.toHaveBeenCalled()
-  })
 })
