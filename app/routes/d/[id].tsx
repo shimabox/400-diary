@@ -1,5 +1,4 @@
 import { createRoute } from '~/factory'
-import AudioPlayer from '../../islands/audio-player'
 import FlowText from '../../islands/flow-text'
 import MoodMarker from '../../islands/mood-marker'
 import { getDiaryWithSnapshot } from '../../lib/db'
@@ -44,7 +43,6 @@ export default createRoute(async (c) => {
   const { snapshot, ...diary } = result
   const pubBody = snapshot.body
   const pubImageKey = snapshot.image_key
-  const pubAudioKey = snapshot.audio_key
   const pubImageLayout = snapshot.image_layout as 'left' | 'right'
   const pubImageX = snapshot.image_x
   const pubImageY = snapshot.image_y
@@ -93,9 +91,6 @@ export default createRoute(async (c) => {
             <MoodMarker moodKey={pubMood} />
           </h1>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
-            {pubAudioKey && (
-              <AudioPlayer audioSrc={`/api/audio/${pubAudioKey}`} />
-            )}
             {isAuthenticated && (
               <a
                 href={`/edit/${diary.id}`}

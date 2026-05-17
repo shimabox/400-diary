@@ -5,7 +5,6 @@ export type Diary = {
   id: string
   body: string
   image_key: string | null
-  audio_key: string | null
   image_layout: 'left' | 'right'
   image_x: number | null
   image_y: number | null
@@ -22,7 +21,6 @@ export type DiarySnapshot = {
   diary_id: string
   body: string
   image_key: string | null
-  audio_key: string | null
   image_layout: 'left' | 'right'
   image_x: number | null
   image_y: number | null
@@ -37,7 +35,6 @@ export type DiaryWithPublished = Diary & {
   snapshot_body: string | null
   snapshot_background_color: string | null
   snapshot_image_key: string | null
-  snapshot_audio_key: string | null
   snapshot_image_layout: string | null
   snapshot_image_x: number | null
   snapshot_image_y: number | null
@@ -97,7 +94,12 @@ export async function getDiary(
   id: string,
 ): Promise<Diary | null> {
   return await db
-    .prepare('SELECT * FROM diaries WHERE id = ?')
+    .prepare(
+      `SELECT id, body, image_key, image_layout, image_x, image_y, background_color, mood,
+              diary_date, published_snapshot_id, created_at, updated_at
+       FROM diaries
+       WHERE id = ?`,
+    )
     .bind(id)
     .first<Diary>()
 }
@@ -108,12 +110,13 @@ export async function listDiaries(
 ): Promise<DiaryWithPublished[]> {
   const { results } = await db
     .prepare(
-      `SELECT d.*,
+      `SELECT d.id, d.body, d.image_key, d.image_layout, d.image_x, d.image_y,
+              d.background_color, d.mood, d.diary_date, d.published_snapshot_id,
+              d.created_at, d.updated_at,
               s.published_at,
               s.body AS snapshot_body,
               s.background_color AS snapshot_background_color,
               s.image_key AS snapshot_image_key,
-              s.audio_key AS snapshot_audio_key,
               s.image_layout AS snapshot_image_layout,
               s.image_x AS snapshot_image_x,
               s.image_y AS snapshot_image_y,
@@ -136,7 +139,6 @@ export async function updateDiary(
     image_layout?: 'left' | 'right'
     mood?: string | null
     image_key?: string | null
-    audio_key?: string | null
     image_x?: number | null
     image_y?: number | null
   },
@@ -171,10 +173,6 @@ export async function updateDiary(
     setClauses.push('image_key = ?')
     values.push(params.image_key ?? null)
   }
-  if ('audio_key' in params) {
-    setClauses.push('audio_key = ?')
-    values.push(params.audio_key ?? null)
-  }
   if ('image_x' in params) {
     setClauses.push('image_x = ?')
     values.push(params.image_x ?? null)
@@ -206,15 +204,14 @@ export async function publishDiary(
 
   await db
     .prepare(
-      `INSERT INTO diary_snapshots (id, diary_id, body, image_key, audio_key, image_layout, image_x, image_y, background_color, mood)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO diary_snapshots (id, diary_id, body, image_key, image_layout, image_x, image_y, background_color, mood)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .bind(
       snapshotId,
       id,
       diary.body,
       diary.image_key,
-      diary.audio_key,
       diary.image_layout,
       diary.image_x,
       diary.image_y,
@@ -231,7 +228,12 @@ export async function publishDiary(
     .run()
 
   return await db
-    .prepare('SELECT * FROM diary_snapshots WHERE id = ?')
+    .prepare(
+      `SELECT id, diary_id, body, image_key, image_layout, image_x, image_y,
+              background_color, mood, published_at
+       FROM diary_snapshots
+       WHERE id = ?`,
+    )
     .bind(snapshotId)
     .first<DiarySnapshot>()
 }
@@ -243,12 +245,13 @@ export async function getDiaryWithPublished(
 ): Promise<DiaryWithPublished | null> {
   return await db
     .prepare(
-      `SELECT d.*,
+      `SELECT d.id, d.body, d.image_key, d.image_layout, d.image_x, d.image_y,
+              d.background_color, d.mood, d.diary_date, d.published_snapshot_id,
+              d.created_at, d.updated_at,
               s.published_at,
               s.body AS snapshot_body,
               s.background_color AS snapshot_background_color,
               s.image_key AS snapshot_image_key,
-              s.audio_key AS snapshot_audio_key,
               s.image_layout AS snapshot_image_layout,
               s.image_x AS snapshot_image_x,
               s.image_y AS snapshot_image_y,
@@ -270,7 +273,12 @@ export async function getDiaryWithSnapshot(
   if (!diary || !diary.published_snapshot_id) return null
 
   const snapshot = await db
-    .prepare('SELECT * FROM diary_snapshots WHERE id = ?')
+    .prepare(
+      `SELECT id, diary_id, body, image_key, image_layout, image_x, image_y,
+              background_color, mood, published_at
+       FROM diary_snapshots
+       WHERE id = ?`,
+    )
     .bind(diary.published_snapshot_id)
     .first<DiarySnapshot>()
 
@@ -325,20 +333,6 @@ export async function countSnapshotsWithImageKey(
   return result?.count ?? 0
 }
 
-/** audio_key を参照している snapshot 件数を返す（R2 孤児判定用） */
-export async function countSnapshotsWithAudioKey(
-  db: D1Database,
-  audioKey: string,
-): Promise<number> {
-  const result = await db
-    .prepare(
-      'SELECT COUNT(*) AS count FROM diary_snapshots WHERE audio_key = ?',
-    )
-    .bind(audioKey)
-    .first<{ count: number }>()
-  return result?.count ?? 0
-}
-
 /** diary に紐づく全 snapshot の image_key を取得（削除時に R2 からも消すため） */
 export async function listSnapshotImageKeys(
   db: D1Database,
@@ -351,20 +345,6 @@ export async function listSnapshotImageKeys(
     .bind(diaryId)
     .all<{ image_key: string }>()
   return results.map((r) => r.image_key)
-}
-
-/** diary に紐づく全 snapshot の audio_key を取得（削除時に R2 からも消すため） */
-export async function listSnapshotAudioKeys(
-  db: D1Database,
-  diaryId: string,
-): Promise<string[]> {
-  const { results } = await db
-    .prepare(
-      'SELECT DISTINCT audio_key FROM diary_snapshots WHERE diary_id = ? AND audio_key IS NOT NULL',
-    )
-    .bind(diaryId)
-    .all<{ audio_key: string }>()
-  return results.map((r) => r.audio_key)
 }
 
 export async function deleteDiary(

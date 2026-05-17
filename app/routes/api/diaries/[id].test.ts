@@ -9,12 +9,10 @@ vi.mock('../../../lib/db', () => ({
   updateDiary: vi.fn(),
   deleteDiary: vi.fn(),
   listSnapshotImageKeys: vi.fn(),
-  listSnapshotAudioKeys: vi.fn(),
 }))
 
 vi.mock('../../../lib/storage', () => ({
   deleteImage: vi.fn(),
-  deleteAudio: vi.fn(),
 }))
 
 vi.mock('../../../lib/og-cache', () => ({
@@ -46,7 +44,6 @@ function makeDiary(overrides: Partial<Diary> = {}): Diary {
     id: 'abc',
     body: '下書き本文',
     image_key: 'diaries/abc/draft.jpg',
-    audio_key: null,
     image_layout: 'left',
     image_x: null,
     image_y: null,
@@ -66,7 +63,6 @@ function makeSnapshot(overrides: Partial<DiarySnapshot> = {}): DiarySnapshot {
     diary_id: 'abc',
     body: '公開済み本文',
     image_key: 'diaries/abc/published.jpg',
-    audio_key: null,
     image_layout: 'left',
     image_x: null,
     image_y: null,
@@ -82,8 +78,11 @@ describe('GET /api/diaries/:id 公開チェック', () => {
     vi.clearAllMocks()
   })
 
-  test('認証済みなら未公開の日記も取得できる', async () => {
-    const diary = makeDiary({ body: '下書き' })
+  test('認証済みなら未公開の日記も取得でき、未使用の audio_key は返さない', async () => {
+    const diary = {
+      ...makeDiary({ body: '下書き' }),
+      audio_key: 'diaries/abc/audio/old.webm',
+    } as unknown as Diary
     const { getDiary } = await import('../../../lib/db')
     vi.mocked(getDiary).mockResolvedValue(diary)
 
@@ -91,8 +90,9 @@ describe('GET /api/diaries/:id 公開チェック', () => {
     const res = await app.request('/api/diaries/abc')
 
     expect(res.status).toBe(200)
-    const json = (await res.json()) as Diary
+    const json = (await res.json()) as Record<string, unknown>
     expect(json.body).toBe('下書き')
+    expect(json).not.toHaveProperty('audio_key')
   })
 
   test('未認証で公開済みの日記は snapshot の内容を返す', async () => {
@@ -106,7 +106,6 @@ describe('GET /api/diaries/:id 公開チェック', () => {
     const snapshot = makeSnapshot({
       body: '公開された本文',
       image_key: 'diaries/abc/published.jpg',
-      audio_key: 'diaries/abc/audio/published.webm',
       background_color: '#EEEEEE',
       mood: 'calm',
       published_at: '2026-04-15 12:00:00',
@@ -124,7 +123,7 @@ describe('GET /api/diaries/:id 公開チェック', () => {
     const json = (await res.json()) as Record<string, unknown>
     expect(json.body).toBe('公開された本文')
     expect(json.image_key).toBe('diaries/abc/published.jpg')
-    expect(json.audio_key).toBe('diaries/abc/audio/published.webm')
+    expect(json).not.toHaveProperty('audio_key')
     expect(json.background_color).toBe('#EEEEEE')
     expect(json.mood).toBe('calm')
     expect(json.id).toBe('abc')
@@ -225,16 +224,12 @@ describe('DELETE /api/diaries/:id', () => {
   })
 
   test('削除時に OGP キャッシュ(全スナップショット分)も R2 から捨てる', async () => {
-    const {
-      getDiary,
-      listSnapshotImageKeys,
-      listSnapshotAudioKeys,
-      deleteDiary,
-    } = await import('../../../lib/db')
+    const { getDiary, listSnapshotImageKeys, deleteDiary } = await import(
+      '../../../lib/db'
+    )
     const { deleteDiaryOgCache } = await import('../../../lib/og-cache')
     vi.mocked(getDiary).mockResolvedValue(makeDiary({ image_key: null }))
     vi.mocked(listSnapshotImageKeys).mockResolvedValue([])
-    vi.mocked(listSnapshotAudioKeys).mockResolvedValue([])
     vi.mocked(deleteDiary).mockResolvedValue(true)
 
     const app = await createApp(true)
@@ -242,37 +237,5 @@ describe('DELETE /api/diaries/:id', () => {
 
     expect(res.status).toBe(204)
     expect(deleteDiaryOgCache).toHaveBeenCalledWith(expect.anything(), 'abc')
-  })
-
-  test('削除時に下書きと snapshot の音声も R2 から捨てる', async () => {
-    const {
-      getDiary,
-      listSnapshotImageKeys,
-      listSnapshotAudioKeys,
-      deleteDiary,
-    } = await import('../../../lib/db')
-    const { deleteAudio } = await import('../../../lib/storage')
-
-    vi.mocked(getDiary).mockResolvedValue(
-      makeDiary({ audio_key: 'diaries/abc/audio/draft.webm' }),
-    )
-    vi.mocked(listSnapshotImageKeys).mockResolvedValue([])
-    vi.mocked(listSnapshotAudioKeys).mockResolvedValue([
-      'diaries/abc/audio/published.webm',
-    ])
-    vi.mocked(deleteDiary).mockResolvedValue(true)
-
-    const app = await createApp(true)
-    const res = await app.request('/api/diaries/abc', { method: 'DELETE' })
-
-    expect(res.status).toBe(204)
-    expect(deleteAudio).toHaveBeenCalledWith(
-      expect.anything(),
-      'diaries/abc/audio/draft.webm',
-    )
-    expect(deleteAudio).toHaveBeenCalledWith(
-      expect.anything(),
-      'diaries/abc/audio/published.webm',
-    )
   })
 })

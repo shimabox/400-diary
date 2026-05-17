@@ -13,7 +13,6 @@ erDiagram
         TEXT id PK "nanoid(12)"
         TEXT body "本文 (max 400字)"
         TEXT image_key "R2オブジェクトキー"
-        TEXT audio_key "R2音声オブジェクトキー"
         TEXT image_layout "left / right"
         REAL image_x "画像X座標 (nullable)"
         REAL image_y "画像Y座標 (nullable)"
@@ -29,7 +28,6 @@ erDiagram
         TEXT diary_id FK "diaries.id"
         TEXT body
         TEXT image_key
-        TEXT audio_key
         TEXT image_layout
         REAL image_x
         REAL image_y
@@ -105,9 +103,9 @@ stateDiagram-v2
 
 ```
 DELETE /api/diaries/:id
-  1. diary の image_key / audio_key を取得
-  2. 全 snapshot の image_key / audio_key を取得 (listSnapshotImageKeys / listSnapshotAudioKeys)
-  3. 重複除去して画像・音声を R2 から best-effort で一括削除
+  1. diary の image_key を取得
+  2. 全 snapshot の image_key を取得 (listSnapshotImageKeys)
+  3. 重複除去して画像を R2 から best-effort で一括削除
   4. OGP キャッシュを R2 から best-effort で削除
   5. DELETE FROM diaries (CASCADE で snapshots も削除)
 ```

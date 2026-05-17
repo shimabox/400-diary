@@ -62,22 +62,6 @@ describe('deleteMediaIfOrphan', () => {
     )
   })
 
-  test('audio の R2 delete 失敗時は audio label で log する', async () => {
-    const error = new Error('R2 down')
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-    const options = createOptions({
-      deleteObject: vi.fn().mockRejectedValue(error),
-      logLabel: 'audio',
-    })
-
-    await expect(deleteMediaIfOrphan(options)).resolves.toBeUndefined()
-
-    expect(errorSpy).toHaveBeenCalledWith(
-      'Failed to delete audio from R2:',
-      error,
-    )
-  })
-
   test('参照カウント取得が失敗したら R2 delete を試みない', async () => {
     const error = new Error('DB down')
     const options = createOptions({
