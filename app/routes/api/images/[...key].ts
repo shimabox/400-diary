@@ -7,7 +7,7 @@ export const GET = createRoute(async (c) => {
 
   // 公開面は diary 画像のみ。fonts/ や og/ などの内部オブジェクトをこの
   // エンドポイント経由で露出させないよう prefix を固定する。
-  if (!key.startsWith('diaries/') || /^diaries\/[^/]+\/audio\//.test(key)) {
+  if (!key.startsWith('diaries/')) {
     return c.body(null, 404)
   }
 

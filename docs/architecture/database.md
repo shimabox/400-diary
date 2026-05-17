@@ -115,6 +115,7 @@ DELETE /api/diaries/:id
 | ファイル | 役割 |
 |---------|------|
 | `db/schema.sql` | テーブル定義 |
+| `db/migrations/*.sql` | 既存DB向けの個別 migration |
 | `app/lib/db.ts` | DB操作関数・型定義 |
 | `app/routes/api/diaries.ts` | 新規作成 API |
 | `app/routes/api/diaries/[id].ts` | 取得・更新・削除 API |
