@@ -46,6 +46,13 @@ export type DiaryWithSnapshot = Diary & {
   snapshot: DiarySnapshot
 }
 
+export type PublishedFeedItem = {
+  id: string
+  diary_date: string
+  body: string
+  published_at: string
+}
+
 export async function createDiary(
   db: D1Database,
   params: {
@@ -126,6 +133,24 @@ export async function listDiaries(
        ORDER BY d.diary_date DESC`,
     )
     .all<DiaryWithPublished>()
+  return results
+}
+
+/** RSS用: 公開中の snapshot のみを新しい順で取得 */
+export async function listPublishedFeedItems(
+  db: D1Database,
+  limit = 20,
+): Promise<PublishedFeedItem[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT d.id, d.diary_date, s.body, s.published_at
+       FROM diaries d
+       JOIN diary_snapshots s ON d.published_snapshot_id = s.id
+       ORDER BY s.published_at DESC
+       LIMIT ?`,
+    )
+    .bind(limit)
+    .all<PublishedFeedItem>()
   return results
 }
 
