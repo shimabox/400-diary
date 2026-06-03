@@ -21,18 +21,29 @@ function toRssDate(value: string): string {
     : date.toUTCString()
 }
 
+function compareFeedItemsByDiaryDate(
+  a: PublishedFeedItem,
+  b: PublishedFeedItem,
+): number {
+  if (a.diary_date !== b.diary_date) {
+    return b.diary_date.localeCompare(a.diary_date)
+  }
+  return b.published_at.localeCompare(a.published_at)
+}
+
 export function buildRssFeed(params: {
   appName: string
   origin: string
   items: PublishedFeedItem[]
 }): string {
   const { appName, origin, items } = params
+  const orderedItems = [...items].sort(compareFeedItemsByDiaryDate)
   const siteUrl = `${origin}/`
   const feedUrl = `${origin}/rss.xml`
-  const lastBuildDate = items[0]?.published_at
-    ? `    <lastBuildDate>${toRssDate(items[0].published_at)}</lastBuildDate>\n`
+  const lastBuildDate = orderedItems[0]?.published_at
+    ? `    <lastBuildDate>${toRssDate(orderedItems[0].published_at)}</lastBuildDate>\n`
     : ''
-  const itemXml = items
+  const itemXml = orderedItems
     .map((item) => {
       const url = `${origin}/d/${item.id}`
       const title = `${formatDiaryDate(item.diary_date)} の日記`
