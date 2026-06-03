@@ -136,7 +136,7 @@ export async function listDiaries(
   return results
 }
 
-/** RSS用: 公開中の snapshot のみを新しい順で取得 */
+/** RSS用: 公開中の snapshot のみを日記の日付順で取得 */
 export async function listPublishedFeedItems(
   db: D1Database,
   limit = 20,
@@ -146,7 +146,7 @@ export async function listPublishedFeedItems(
       `SELECT d.id, d.diary_date, s.body, s.published_at
        FROM diaries d
        JOIN diary_snapshots s ON d.published_snapshot_id = s.id
-       ORDER BY s.published_at DESC
+       ORDER BY d.diary_date DESC, s.published_at DESC
        LIMIT ?`,
     )
     .bind(limit)
