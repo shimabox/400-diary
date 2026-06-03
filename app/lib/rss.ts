@@ -47,13 +47,13 @@ export function buildRssFeed(params: {
     .join('\n')
 
   return `<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0">
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>${escapeXml(appName)}</title>
     <link>${escapeXml(siteUrl)}</link>
     <description>${escapeXml(FEED_DESCRIPTION)}</description>
     <language>ja</language>
-    <atom:link xmlns:atom="http://www.w3.org/2005/Atom" href="${escapeXml(feedUrl)}" rel="self" type="application/rss+xml" />
+    <atom:link href="${escapeXml(feedUrl)}" rel="self" type="application/rss+xml" />
 ${lastBuildDate}${itemXml}
   </channel>
 </rss>`

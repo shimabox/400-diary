@@ -17,10 +17,13 @@ describe('buildRssFeed', () => {
     })
 
     expect(xml).toContain('<?xml version="1.0" encoding="UTF-8"?>')
+    expect(xml).toContain(
+      '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">',
+    )
     expect(xml).toContain('<title>400字日記</title>')
     expect(xml).toContain('<link>https://example.com/</link>')
     expect(xml).toContain(
-      '<atom:link xmlns:atom="http://www.w3.org/2005/Atom" href="https://example.com/rss.xml" rel="self" type="application/rss+xml" />',
+      '<atom:link href="https://example.com/rss.xml" rel="self" type="application/rss+xml" />',
     )
     expect(xml).toContain('<title>2026/4/13 (月) の日記</title>')
     expect(xml).toContain('<link>https://example.com/d/diary-1</link>')
