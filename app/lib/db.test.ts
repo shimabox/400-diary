@@ -4,6 +4,7 @@ import {
   createDiary,
   deleteDiary,
   getDiary,
+  listPublishedFeedItems,
   publishDiary,
   updateDiary,
 } from './db'
@@ -211,6 +212,25 @@ describe('countSnapshotsWithImageKey', () => {
     const result = await countSnapshotsWithImageKey(db, 'diaries/abc/x.jpg')
 
     expect(result).toBe(0)
+  })
+})
+
+describe('listPublishedFeedItems', () => {
+  test('公開中スナップショットを指定件数で取得する', async () => {
+    const items = [
+      {
+        id: 'diary-1',
+        diary_date: '2026-04-13',
+        body: '公開本文',
+        published_at: '2026-04-13 12:34:56',
+      },
+    ]
+    const db = createMockDB({ all: { results: items, meta: { changes: 0 } } })
+
+    const result = await listPublishedFeedItems(db, 10)
+
+    expect(result).toEqual(items)
+    expect(db.boundValues).toContain(10)
   })
 })
 

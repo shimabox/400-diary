@@ -249,6 +249,9 @@ export default createRoute(async (c) => {
           >
             GitHub
           </a>
+          <a href="/rss.xml" style={{ color: '#595959' }}>
+            RSS
+          </a>
         </footer>
       </div>
     </div>,

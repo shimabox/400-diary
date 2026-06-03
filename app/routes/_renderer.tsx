@@ -42,6 +42,12 @@ export default jsxRenderer(
           ) : (
             description && <meta name="twitter:card" content="summary" />
           )}
+          <link
+            rel="alternate"
+            type="application/rss+xml"
+            title={`${pageTitle} RSS`}
+            href="/rss.xml"
+          />
           <link rel="preconnect" href="https://fonts.googleapis.com" />
           <link
             rel="preconnect"
