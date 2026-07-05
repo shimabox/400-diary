@@ -4,6 +4,7 @@ import {
   computeInitialScrollLeft,
   decideScrollTarget,
 } from '../lib/heatmap-scroll'
+import { HEATMAP_SCROLL_INLINE_SCRIPT } from '../lib/heatmap-scroll-inline'
 import { getMoodByKey, MOODS } from '../lib/mood'
 
 type Entry = {
@@ -345,10 +346,13 @@ function HeatmapView({
         </div>
       </div>
       {/* hydration 前に scrollLeft を確定させてちらつきを抑える。
-          失敗しても useEffect 側で同じ計算が走るためフェイルセーフ。 */}
+          失敗しても useEffect 側で同じ計算が走るためフェイルセーフ。
+          CSP は 'unsafe-inline' ではなくこのスクリプトの SHA-256 ハッシュのみを
+          許可しているため、本体は heatmap-scroll-inline.ts の定数を必ず使うこと
+          （直接文字列を書くとハッシュ不一致で CSP にブロックされる）。 */}
       <script
         dangerouslySetInnerHTML={{
-          __html: `(()=>{const s=document.currentScript;const el=s&&s.previousElementSibling;if(!el||el.scrollWidth<=el.clientWidth)return;const y=Number(el.dataset.year);const c=(el.dataset.monthStartCols||'').split(',').map(Number);const p=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit'}).format(new Date()).split('-');const cy=Number(p[0]);const cm=Number(p[1])-1;let n=0;if(y<cy){n=el.scrollWidth;}else if(y===cy){n=Math.max(0,(c[cm]||0)*14-4);}el.scrollLeft=n;})();`,
+          __html: HEATMAP_SCROLL_INLINE_SCRIPT,
         }}
       />
 

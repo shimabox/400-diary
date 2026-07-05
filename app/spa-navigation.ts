@@ -17,6 +17,25 @@ function activateScripts(container: Element): void {
   }
 }
 
+/**
+ * `data-scroll-align="end"` が付いた要素の横スクロール位置を末尾（scrollWidth）に揃える。
+ * d/[id].tsx の日記本文コンテナ（右→左に流れる縦書き）を「文頭」から表示するための処理。
+ * 元は d/[id].tsx に直接埋め込んだインラインスクリプトだったが、CSP の script-src
+ * から 'unsafe-inline' を排除するためこちらへ移した。初回ロード（client.ts）と
+ * SPA ナビゲーション後（navigate 内）の両方から呼び出し、挙動を維持する。
+ * rAF で1フレーム後にずらすタイミングは元のインラインスクリプトと同じ。
+ */
+export function alignScrollToEnd(root: Document | Element): void {
+  const elements = root.querySelectorAll<HTMLElement>(
+    '[data-scroll-align="end"]',
+  )
+  for (const el of elements) {
+    requestAnimationFrame(() => {
+      el.scrollLeft = el.scrollWidth
+    })
+  }
+}
+
 function shouldIntercept(anchor: HTMLAnchorElement): boolean {
   if (anchor.origin !== location.origin) return false
   if (
@@ -95,6 +114,7 @@ async function navigate(url: string, push: boolean): Promise<void> {
 
     activateScripts(document.body)
     await hydrateIslands(document.body)
+    alignScrollToEnd(document.body)
 
     const saved = history.state
     if (!push && isScrollState(saved)) {

@@ -126,6 +126,13 @@ export default createRoute(async (c) => {
         }}
         id="diary-scroll"
         class="hide-scrollbar"
+        // 縦書き本文は右→左に流れるため、初期表示は右端（=文頭）を見せたい。
+        // かつてはここに直接インラインスクリプトを置いていたが、CSP の script-src
+        // から 'unsafe-inline' を排除するためクライアントバンドル側
+        // （app/spa-navigation.ts の alignScrollToEnd）に処理を移した。
+        // 初回ロードは app/client.ts から、SPA ナビゲーション後は
+        // spa-navigation.ts の navigate() から呼ばれる。
+        data-scroll-align="end"
       >
         <div style={{ minWidth: '880px' }}>
           <FlowText
@@ -143,16 +150,6 @@ export default createRoute(async (c) => {
             }
           />
         </div>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-          requestAnimationFrame(function() {
-            var el = document.getElementById('diary-scroll');
-            if (el) el.scrollLeft = el.scrollWidth;
-          });
-        `,
-          }}
-        />
       </div>
     </div>,
     {

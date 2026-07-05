@@ -36,6 +36,9 @@ importers:
       '@hono/vite-dev-server':
         specifier: ^0.25.0
         version: 0.25.1(hono@4.12.12)(miniflare@4.20260401.0)(wrangler@4.80.0(@cloudflare/workers-types@4.20260405.1))
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
       vite:
         specifier: ^6.2.0
         version: 6.4.2

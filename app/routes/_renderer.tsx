@@ -56,14 +56,18 @@ export default jsxRenderer(
             crossorigin=""
           />
           {/* Google Fonts CSS を render-blocking から外す。
-              media="print" で initial paint には適用させず、ロード後に media="all" に
-              切り替えて適用する。Google 側の dynamic subsetting (unicode-range 分割)
-              はそのまま活かせるため、自前ホスト+サブセットより総転送量で有利。 */}
+              media="print" で initial paint には適用させず、クライアントバンドル側
+              （app/lib/async-css.ts）で media="all" に切り替えて適用する。
+              以前は onload 属性（インラインイベントハンドラ）で切り替えていたが、
+              CSP の script-src から 'unsafe-inline' を排除するため、data-async-css で
+              マークして client.ts から querySelector する方式に変更した。
+              Google 側の dynamic subsetting (unicode-range 分割) はそのまま活かせるため、
+              自前ホスト+サブセットより総転送量で有利。 */}
           <link
             href="https://fonts.googleapis.com/css2?family=Klee+One:wght@400;600&display=swap"
             rel="stylesheet"
             media="print"
-            onload="this.media='all'"
+            data-async-css="true"
           />
           <noscript>
             <link
