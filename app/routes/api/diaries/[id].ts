@@ -1,4 +1,4 @@
-import { createRoute } from '~/factory'
+import { createRoute, requireAuth } from '~/factory'
 import {
   deleteDiary,
   getDiary,
@@ -56,11 +56,7 @@ export const GET = createRoute(async (c) => {
   })
 })
 
-export const PUT = createRoute(async (c) => {
-  if (!c.get('isAuthenticated')) {
-    return c.json({ error: '認証が必要です' }, 401)
-  }
-
+export const PUT = createRoute(requireAuth, async (c) => {
   const id = c.req.param('id')!
 
   let json: unknown
@@ -86,11 +82,7 @@ export const PUT = createRoute(async (c) => {
   return c.json(diary)
 })
 
-export const DELETE = createRoute(async (c) => {
-  if (!c.get('isAuthenticated')) {
-    return c.json({ error: '認証が必要です' }, 401)
-  }
-
+export const DELETE = createRoute(requireAuth, async (c) => {
   const id = c.req.param('id')!
   const db = c.env.DB
 

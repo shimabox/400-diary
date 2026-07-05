@@ -1,13 +1,9 @@
-import { createRoute } from '~/factory'
+import { createRoute, requireAuth } from '~/factory'
 import { randomPastelColor } from '../../lib/colors'
 import { createDiary } from '../../lib/db'
 import { validateDiaryInput } from '../../lib/validation'
 
-export const POST = createRoute(async (c) => {
-  if (!c.get('isAuthenticated')) {
-    return c.json({ error: '認証が必要です' }, 401)
-  }
-
+export const POST = createRoute(requireAuth, async (c) => {
   let json: unknown
   try {
     json = await c.req.json()
