@@ -24,15 +24,28 @@ describe('useVerticalTextInput', () => {
   // hono/jsx の hooks は render context 外でも初期値と callback を返す。
   // ここでは textarea の値補正と caret 復元だけを直接検証する。
   // body state の更新結果は rerender されないため、このテストでは観測しない。
-  test('初期本文から文字数と超過状態を返す', () => {
+  test('初期本文から消費マス数と超過状態を返す', () => {
     const normal = useVerticalTextInput('今日は晴れ')
     expect(normal.body).toBe('今日は晴れ')
-    expect(normal.charCount).toBe(5)
+    expect(normal.cellCount).toBe(5)
     expect(normal.isOver).toBe(false)
 
     const over = useVerticalTextInput('あ'.repeat(MAX_BODY_LENGTH + 1))
-    expect(over.charCount).toBe(MAX_BODY_LENGTH + 1)
+    expect(over.cellCount).toBe(MAX_BODY_LENGTH + 1)
     expect(over.isOver).toBe(true)
+  })
+
+  test('改行は列の残りマスを消費するためマス数は文字数より大きくなる', () => {
+    // 「あ」(1文字) + 改行 → 1列(20マス)を丸ごと消費し、次列の「い」で21マス
+    const { cellCount } = useVerticalTextInput('あ\nい')
+    expect(cellCount).toBe(21)
+  })
+
+  test('列数超過の本文(APIから直接保存された等)は isOver になる', () => {
+    // 空行だらけで文字数は少ないが21列 = 420マス消費 → 20列の grid に収まらない
+    const { cellCount, isOver } = useVerticalTextInput('あ\n'.repeat(21))
+    expect(cellCount).toBe(420)
+    expect(isOver).toBe(true)
   })
 
   test('通常入力では400文字に切り詰める', () => {

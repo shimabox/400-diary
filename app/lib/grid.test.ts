@@ -1,5 +1,12 @@
 import { describe, expect, test } from 'vitest'
-import { COLS, countColumns, insertAtSelection, ROWS, trimToGrid } from './grid'
+import {
+  COLS,
+  countColumns,
+  countUsedCells,
+  insertAtSelection,
+  ROWS,
+  trimToGrid,
+} from './grid'
 
 describe('グリッド定数', () => {
   test('COLSは20', () => {
@@ -151,5 +158,43 @@ describe('insertAtSelection', () => {
     const r = insertAtSelection('今日は晴れです', 'とても', 2, 4)
     expect(r.text).toBe('今日とてもれです')
     expect(r.caret).toBe(5)
+  })
+})
+
+describe('countUsedCells', () => {
+  test('空文字は0マス', () => {
+    expect(countUsedCells('')).toBe(0)
+  })
+
+  test('改行なしの本文は文字数と同じ(まだ列を閉じていない)', () => {
+    expect(countUsedCells('今日は晴れ')).toBe(5)
+    expect(countUsedCells('あ'.repeat(400))).toBe(400)
+  })
+
+  test('改行で閉じた行は列の残りマスも消費する', () => {
+    // 「あ」1文字で改行 → 1列(20マス)消費 + 開いている行「い」の1マス
+    expect(countUsedCells('あ\nい')).toBe(21)
+    // 21文字で改行 → 2列(40マス)消費
+    expect(countUsedCells(`${'あ'.repeat(21)}\n`)).toBe(40)
+  })
+
+  test('ちょうど1列(20文字)で改行した場合は無駄マスが出ない', () => {
+    expect(countUsedCells(`${'あ'.repeat(20)}\nい`)).toBe(21)
+  })
+
+  test('空行は1列(20マス)を丸ごと消費する', () => {
+    // 「あ」+改行(1列) + 空行(1列) + 開いている「い」1マス
+    expect(countUsedCells('あ\n\nい')).toBe(41)
+  })
+
+  test('末尾が改行のとき、開いている行は0マス', () => {
+    expect(countUsedCells('あ\n')).toBe(20)
+  })
+
+  test('20列を使い切った本文はちょうど400マスにはならないこともある(開き行は文字数分)', () => {
+    // 閉じた19列(19行×1文字) + 開いている行3文字 = 19*20 + 3 = 383
+    const text = `${Array.from({ length: 19 }, () => 'あ').join('\n')}\nいうえ`
+    expect(countUsedCells(text)).toBe(383)
+    expect(countColumns(text)).toBe(20)
   })
 })
