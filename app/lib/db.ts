@@ -111,10 +111,37 @@ export async function getDiary(
     .first<Diary>()
 }
 
-/** 一覧用: LEFT JOIN で published_at を取得 */
-export async function listDiaries(
+export type DiaryPageCursor = { diaryDate: string; id: string }
+
+/**
+ * 一覧用: keyset pagination で1ページ分を取得する。
+ * OFFSET 方式ではなく (diary_date, id) を境界にするのは、データ増加時に
+ * ページが深くなるほど OFFSET 分の行を読み捨てるコストが線形に増えるのを避けるため。
+ * 同日に複数件あり得るため id をタイブレークに使う（nanoid なので意味順ではないが、
+ * 一意で安定していればカーソルとして十分）。
+ */
+export async function listDiariesPage(
   db: D1Database,
+  params: {
+    limit: number
+    before?: DiaryPageCursor
+    publishedOnly: boolean
+  },
 ): Promise<DiaryWithPublished[]> {
+  const { limit, before, publishedOnly } = params
+
+  const conditions: string[] = []
+  const values: unknown[] = []
+  if (publishedOnly) {
+    conditions.push('d.published_snapshot_id IS NOT NULL')
+  }
+  if (before) {
+    conditions.push('(d.diary_date < ? OR (d.diary_date = ? AND d.id < ?))')
+    values.push(before.diaryDate, before.diaryDate, before.id)
+  }
+  const whereClause =
+    conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
+
   const { results } = await db
     .prepare(
       `SELECT d.id, d.body, d.image_key, d.image_layout, d.image_x, d.image_y,
@@ -130,10 +157,30 @@ export async function listDiaries(
               s.mood AS snapshot_mood
        FROM diaries d
        LEFT JOIN diary_snapshots s ON d.published_snapshot_id = s.id
-       ORDER BY d.diary_date DESC`,
+       ${whereClause}
+       ORDER BY d.diary_date DESC, d.id DESC
+       LIMIT ?`,
     )
+    .bind(...values, limit)
     .all<DiaryWithPublished>()
   return results
+}
+
+/** カレンダーの minYear/maxYear 導出用: 一覧に含まれる日付の範囲を取得する */
+export async function getDiaryDateRange(
+  db: D1Database,
+  publishedOnly: boolean,
+): Promise<{ min: string; max: string } | null> {
+  const whereClause = publishedOnly
+    ? 'WHERE published_snapshot_id IS NOT NULL'
+    : ''
+  const result = await db
+    .prepare(
+      `SELECT MIN(diary_date) AS min, MAX(diary_date) AS max FROM diaries ${whereClause}`,
+    )
+    .first<{ min: string | null; max: string | null }>()
+  if (!result || result.min === null || result.max === null) return null
+  return { min: result.min, max: result.max }
 }
 
 /** RSS用: 公開中の snapshot のみを日記の日付順で取得 */

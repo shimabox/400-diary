@@ -4,6 +4,8 @@ import {
   createDiary,
   deleteDiary,
   getDiary,
+  getDiaryDateRange,
+  listDiariesPage,
   listPublishedFeedItems,
   publishDiary,
   updateDiary,
@@ -254,6 +256,101 @@ describe('listPublishedFeedItems', () => {
 
     expect(result).toEqual(items)
     expect(db.boundValues).toContain(10)
+  })
+})
+
+describe('listDiariesPage', () => {
+  test('before 未指定なら WHERE に before 条件を含めず limit だけ bind する', async () => {
+    const rows = [{ id: 'a', diary_date: '2026-07-05' }]
+    const db = createMockDB({ all: { results: rows, meta: { changes: 0 } } })
+
+    const result = await listDiariesPage(db, {
+      limit: 31,
+      publishedOnly: false,
+    })
+
+    expect(result).toEqual(rows)
+    const sql = vi.mocked(db.prepare).mock.calls[0][0] as string
+    expect(sql).not.toContain('before')
+    expect(sql).not.toContain('published_snapshot_id IS NOT NULL')
+    expect(sql).toContain('ORDER BY d.diary_date DESC, d.id DESC')
+    expect(db.boundValues).toEqual([31])
+  })
+
+  test('before 指定時は keyset カーソル条件を WHERE に含め、値を diaryDate, diaryDate, id, limit の順で bind する', async () => {
+    const db = createMockDB()
+
+    await listDiariesPage(db, {
+      limit: 10,
+      before: { diaryDate: '2026-07-01', id: 'cursor-id' },
+      publishedOnly: false,
+    })
+
+    const sql = vi.mocked(db.prepare).mock.calls[0][0] as string
+    expect(sql).toContain(
+      '(d.diary_date < ? OR (d.diary_date = ? AND d.id < ?))',
+    )
+    expect(db.boundValues).toEqual([
+      '2026-07-01',
+      '2026-07-01',
+      'cursor-id',
+      10,
+    ])
+  })
+
+  test('publishedOnly 指定時は published_snapshot_id IS NOT NULL を条件に含める', async () => {
+    const db = createMockDB()
+
+    await listDiariesPage(db, { limit: 31, publishedOnly: true })
+
+    const sql = vi.mocked(db.prepare).mock.calls[0][0] as string
+    expect(sql).toContain('d.published_snapshot_id IS NOT NULL')
+  })
+
+  test('publishedOnly と before を同時に指定すると AND で結合される', async () => {
+    const db = createMockDB()
+
+    await listDiariesPage(db, {
+      limit: 5,
+      before: { diaryDate: '2026-07-01', id: 'cursor-id' },
+      publishedOnly: true,
+    })
+
+    const sql = vi.mocked(db.prepare).mock.calls[0][0] as string
+    expect(sql).toContain(
+      'WHERE d.published_snapshot_id IS NOT NULL AND (d.diary_date < ?',
+    )
+    expect(db.boundValues).toEqual(['2026-07-01', '2026-07-01', 'cursor-id', 5])
+  })
+})
+
+describe('getDiaryDateRange', () => {
+  test('publishedOnly=false なら WHERE 無しで MIN/MAX を取得する', async () => {
+    const db = createMockDB({ first: { min: '2026-01-01', max: '2026-07-05' } })
+
+    const result = await getDiaryDateRange(db, false)
+
+    expect(result).toEqual({ min: '2026-01-01', max: '2026-07-05' })
+    const sql = vi.mocked(db.prepare).mock.calls[0][0] as string
+    expect(sql).not.toContain('WHERE')
+  })
+
+  test('publishedOnly=true なら published_snapshot_id IS NOT NULL を条件に含める', async () => {
+    const db = createMockDB({ first: { min: '2026-02-01', max: '2026-06-01' } })
+
+    const result = await getDiaryDateRange(db, true)
+
+    expect(result).toEqual({ min: '2026-02-01', max: '2026-06-01' })
+    const sql = vi.mocked(db.prepare).mock.calls[0][0] as string
+    expect(sql).toContain('WHERE published_snapshot_id IS NOT NULL')
+  })
+
+  test('日記が1件も無ければ null を返す', async () => {
+    const db = createMockDB({ first: { min: null, max: null } })
+
+    const result = await getDiaryDateRange(db, false)
+
+    expect(result).toBeNull()
   })
 })
 

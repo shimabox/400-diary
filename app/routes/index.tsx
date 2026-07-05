@@ -1,12 +1,18 @@
 import { createRoute } from '~/factory'
 import CalendarView from '../islands/calendar-view'
+import DiaryList from '../islands/diary-list'
 import { DEFAULT_APP_NAME } from '../lib/constants'
 import {
-  listDiaries,
+  getDiaryDateRange,
+  listDiariesPage,
   listDiaryCalendarEntries,
   listPublishedCalendarEntries,
 } from '../lib/db'
-import { formatDiaryDate } from '../lib/format'
+import { toDiaryListPage } from '../lib/diary-cards'
+
+// 一覧は全件 SSR せず、無限スクロールの初回ページ分のみ描画する（残りは island が
+// GET /api/diaries?limit=31&before_date=...&before_id=... で取得する）
+const DIARY_LIST_PAGE_SIZE = 31
 
 export default createRoute(async (c) => {
   const appName = c.env.APP_NAME || DEFAULT_APP_NAME
@@ -16,21 +22,29 @@ export default createRoute(async (c) => {
     ? Number.parseInt(yearParam, 10)
     : new Date().getFullYear()
   const isAuthenticated = c.get('isAuthenticated')
-  const [allDiaries, calendarEntries] = await Promise.all([
-    listDiaries(db),
+  const publishedOnly = !isAuthenticated
+
+  const [diaryRows, calendarEntries, dateRange] = await Promise.all([
+    listDiariesPage(db, { limit: DIARY_LIST_PAGE_SIZE, publishedOnly }),
     isAuthenticated
       ? listDiaryCalendarEntries(db, year)
       : listPublishedCalendarEntries(db, year),
+    getDiaryDateRange(db, publishedOnly),
   ])
-  const diaries = isAuthenticated
-    ? allDiaries
-    : allDiaries.filter((d) => d.published_snapshot_id)
 
-  const diaryYears = diaries.map((d) =>
-    Number.parseInt(d.diary_date.slice(0, 4), 10),
+  const { items: diaryCards, next: initialNext } = toDiaryListPage(
+    diaryRows,
+    isAuthenticated,
+    DIARY_LIST_PAGE_SIZE,
   )
-  const minYear = diaryYears.length > 0 ? Math.min(...diaryYears) : year
-  const maxYear = diaryYears.length > 0 ? Math.max(...diaryYears) : year
+
+  // 未認証時は公開済みのみの範囲になる点は従来（全件取得からのフィルタ）と同じ挙動
+  const minYear = dateRange
+    ? Number.parseInt(dateRange.min.slice(0, 4), 10)
+    : year
+  const maxYear = dateRange
+    ? Number.parseInt(dateRange.max.slice(0, 4), 10)
+    : year
 
   return c.render(
     <div
@@ -83,7 +97,7 @@ export default createRoute(async (c) => {
           />
         </div>
 
-        {diaries.length === 0 ? (
+        {diaryCards.length === 0 ? (
           <div
             style={{
               textAlign: 'center',
@@ -99,124 +113,11 @@ export default createRoute(async (c) => {
             </p>
           </div>
         ) : (
-          <div
-            class="hide-scrollbar"
-            data-scroll-restore="diary-list"
-            style={{
-              height: '480px',
-              overflowX: 'auto',
-              overflowY: 'hidden',
-              direction: 'rtl',
-              display: 'flex',
-              alignItems: 'stretch',
-              gap: '1rem',
-              padding: '0 0.5rem',
-            }}
-          >
-            {diaries.map((diary) => {
-              const cardBody = diary.snapshot_body ?? diary.body
-              const cardColor =
-                diary.snapshot_background_color ?? diary.background_color
-              const hasDraft =
-                isAuthenticated &&
-                diary.published_snapshot_id &&
-                (diary.body !== diary.snapshot_body ||
-                  diary.background_color !== diary.snapshot_background_color ||
-                  diary.image_key !== diary.snapshot_image_key ||
-                  diary.image_layout !== diary.snapshot_image_layout ||
-                  diary.image_x !== diary.snapshot_image_x ||
-                  diary.image_y !== diary.snapshot_image_y ||
-                  diary.mood !== diary.snapshot_mood)
-              const cardHref = isAuthenticated
-                ? `/edit/${diary.id}`
-                : `/d/${diary.id}`
-              return (
-                <a
-                  key={diary.id}
-                  href={cardHref}
-                  style={{
-                    direction: 'ltr',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    flexShrink: 0,
-                    width: '168px',
-                    background: cardColor,
-                    backgroundImage: 'url(/images/background.webp)',
-                    backgroundRepeat: 'repeat',
-                    backgroundBlendMode: 'luminosity',
-                    borderRadius: '8px',
-                    padding: '1rem 0.8rem',
-                    transition: 'transform 0.15s',
-                    overflow: 'hidden',
-                    position: 'relative',
-                  }}
-                  class="diary-card"
-                >
-                  {isAuthenticated && !diary.published_snapshot_id && (
-                    <span
-                      style={{
-                        position: 'absolute',
-                        top: '0.4rem',
-                        left: '0.4rem',
-                        fontSize: '0.65rem',
-                        background: 'rgba(0,0,0,0.45)',
-                        color: '#fff',
-                        padding: '0.1rem 0.4rem',
-                        borderRadius: '3px',
-                      }}
-                    >
-                      下書き
-                    </span>
-                  )}
-                  {hasDraft && (
-                    <span
-                      style={{
-                        position: 'absolute',
-                        top: '0.4rem',
-                        left: '0.4rem',
-                        fontSize: '0.65rem',
-                        background: 'rgba(180,100,0,0.7)',
-                        color: '#fff',
-                        padding: '0.1rem 0.4rem',
-                        borderRadius: '3px',
-                      }}
-                    >
-                      未公開の変更
-                    </span>
-                  )}
-                  <time
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'center',
-                      fontSize: '1rem',
-                      color: '#666',
-                      marginBottom: '0.8rem',
-                      flexShrink: 0,
-                    }}
-                  >
-                    {formatDiaryDate(diary.diary_date)}
-                  </time>
-                  <div
-                    style={{
-                      flex: 1,
-                      minHeight: 0,
-                      writingMode: 'vertical-rl',
-                      fontSize: '1.25rem',
-                      lineHeight: '1.8',
-                      overflow: 'hidden',
-                      fontWeight: 600,
-                      maskImage:
-                        'radial-gradient(circle at bottom left, transparent 0%, black 3.5rem)',
-                      WebkitMaskImage:
-                        'radial-gradient(circle at bottom left, transparent 0%, black 3.5rem)',
-                    }}
-                  >
-                    {cardBody}
-                  </div>
-                </a>
-              )
-            })}
-          </div>
+          <DiaryList
+            initialItems={diaryCards}
+            initialNext={initialNext}
+            isAuthenticated={isAuthenticated}
+          />
         )}
 
         <style>{`
