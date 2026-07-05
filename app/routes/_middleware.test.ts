@@ -30,7 +30,64 @@ describe('_middleware', () => {
   })
 
   describe('secureHeaders', () => {
-    test('CSP・nosniff・Referrer-Policy・frame-ancestors 相当のヘッダーが付与される', async () => {
+    describe('本番ビルド相当(import.meta.env.DEV === false)', () => {
+      // authMiddleware の DEV_AUTH_BYPASS 分岐と同様、script-src の 'unsafe-inline' も
+      // import.meta.env.DEV を見て切り替えているため、本番相当の検証はここで DEV を
+      // 明示的に false にして行う(vite は本番ビルド時にこれを静的に false へ置換する)。
+      beforeEach(() => {
+        import.meta.env.DEV = false
+      })
+
+      afterEach(() => {
+        // 他のテストに影響しないよう元に戻す
+        import.meta.env.DEV = true
+      })
+
+      test('CSP・nosniff・Referrer-Policy・frame-ancestors 相当のヘッダーが付与される', async () => {
+        vi.mocked(verifyAccess).mockResolvedValue(false)
+        const app = createApp({
+          CF_ACCESS_TEAM_DOMAIN: 'team.cloudflareaccess.com',
+          CF_ACCESS_AUD: 'aud-tag',
+        })
+
+        const res = await app.request('/')
+
+        expect(res.headers.get('X-Content-Type-Options')).toBe('nosniff')
+        expect(res.headers.get('Referrer-Policy')).toBeTruthy()
+        // frame-ancestors 'none' を主として使い、古いブラウザ向けに X-Frame-Options も設定する
+        expect(res.headers.get('X-Frame-Options')).toBe('DENY')
+
+        const csp = res.headers.get('Content-Security-Policy')
+        expect(csp).toBeTruthy()
+        expect(csp).toContain("frame-ancestors 'none'")
+        expect(csp).toContain("default-src 'self'")
+        // Google Fonts: stylesheet と フォント本体
+        expect(csp).toContain('style-src')
+        expect(csp).toContain('https://fonts.googleapis.com')
+        expect(csp).toContain('font-src')
+        expect(csp).toContain('https://fonts.gstatic.com')
+        // Cloudflare Web Analytics: script と beacon 送信先(connect-src)
+        expect(csp).toContain('https://static.cloudflareinsights.com')
+        expect(csp).toContain('connect-src')
+        expect(csp).toContain('https://cloudflareinsights.com')
+        // 本番相当では script-src から 'unsafe-inline' を排除済み
+        // (インラインスクリプトは全て外部化。理由は _middleware.ts のコメント参照)
+        expect(csp).toContain(
+          "script-src 'self' https://static.cloudflareinsights.com",
+        )
+        const scriptSrcDirective = csp
+          ?.split(';')
+          .find((directive) => directive.trim().startsWith('script-src'))
+        expect(scriptSrcDirective).not.toContain('unsafe-inline')
+        // style-src はインラインスタイルを多用しているため 'unsafe-inline' を維持(理由は _middleware.ts のコメント参照)
+        expect(csp).toContain("style-src 'self' 'unsafe-inline'")
+        expect(csp).toContain("img-src 'self' data:")
+      })
+    })
+
+    test('dev環境(import.meta.env.DEV === true)では vite の HMR インラインスクリプト用に script-src へ unsafe-inline を許容する', async () => {
+      // vitest の実行時は import.meta.env.DEV が true になる
+      expect(import.meta.env.DEV).toBe(true)
       vi.mocked(verifyAccess).mockResolvedValue(false)
       const app = createApp({
         CF_ACCESS_TEAM_DOMAIN: 'team.cloudflareaccess.com',
@@ -38,29 +95,11 @@ describe('_middleware', () => {
       })
 
       const res = await app.request('/')
-
-      expect(res.headers.get('X-Content-Type-Options')).toBe('nosniff')
-      expect(res.headers.get('Referrer-Policy')).toBeTruthy()
-      // frame-ancestors 'none' を主として使い、古いブラウザ向けに X-Frame-Options も設定する
-      expect(res.headers.get('X-Frame-Options')).toBe('DENY')
-
       const csp = res.headers.get('Content-Security-Policy')
-      expect(csp).toBeTruthy()
-      expect(csp).toContain("frame-ancestors 'none'")
-      expect(csp).toContain("default-src 'self'")
-      // Google Fonts: stylesheet と フォント本体
-      expect(csp).toContain('style-src')
-      expect(csp).toContain('https://fonts.googleapis.com')
-      expect(csp).toContain('font-src')
-      expect(csp).toContain('https://fonts.gstatic.com')
-      // Cloudflare Web Analytics: script と beacon 送信先(connect-src)
-      expect(csp).toContain('https://static.cloudflareinsights.com')
-      expect(csp).toContain('connect-src')
-      expect(csp).toContain('https://cloudflareinsights.com')
-      // インラインスクリプト/スタイルの許容(理由は _middleware.ts のコメント参照)
-      expect(csp).toContain("script-src 'self' 'unsafe-inline'")
-      expect(csp).toContain("style-src 'self' 'unsafe-inline'")
-      expect(csp).toContain("img-src 'self' data:")
+
+      expect(csp).toContain(
+        "script-src 'self' https://static.cloudflareinsights.com 'unsafe-inline'",
+      )
     })
   })
 
