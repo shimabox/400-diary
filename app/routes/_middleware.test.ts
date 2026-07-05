@@ -65,7 +65,8 @@ describe('_middleware', () => {
         // Google Fonts: stylesheet と フォント本体
         expect(csp).toContain('style-src')
         expect(csp).toContain('https://fonts.googleapis.com')
-        expect(csp).toContain('font-src')
+        // data: はフォント置換系ブラウザ拡張の data URI フォントを許容するため
+        expect(csp).toContain("font-src 'self' data: https://fonts.gstatic.com")
         expect(csp).toContain('https://fonts.gstatic.com')
         // Cloudflare Web Analytics: script と beacon 送信先(connect-src)
         expect(csp).toContain('https://static.cloudflareinsights.com')

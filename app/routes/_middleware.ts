@@ -44,7 +44,10 @@ const secureHeadersMiddleware = createMiddleware<AppEnv>(async (c, next) => {
           : [HEATMAP_SCROLL_INLINE_SCRIPT_HASH]),
       ],
       styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
-      fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+      // data: はフォント置換系のブラウザ拡張が data URI フォントを注入するのを
+      // 許容するため。フォントはスクリプト実行ベクタではなく、style-src が既に
+      // 'unsafe-inline' を許容している以上、data: フォントの遮断に追加の防御価値はほぼ無い
+      fontSrc: ["'self'", 'data:', 'https://fonts.gstatic.com'],
       imgSrc: ["'self'", 'data:'],
       connectSrc: ["'self'", 'https://cloudflareinsights.com'],
       objectSrc: ["'none'"],
