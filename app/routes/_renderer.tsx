@@ -1,6 +1,7 @@
 import { jsxRenderer, useRequestContext } from 'hono/jsx-renderer'
 import { Script } from 'honox/server'
 import type { AppEnv } from '~/factory'
+import { DEFAULT_APP_NAME } from '~/lib/constants'
 import globalCss from '~/styles/global.css?inline'
 
 export default jsxRenderer(
@@ -14,7 +15,7 @@ export default jsxRenderer(
       requestUrl.hostname === '[::1]'
     const shouldLoadCfAnalytics =
       import.meta.env.PROD && cfWebAnalyticsToken && !isLocalhost
-    const pageTitle = title ?? '400字日記'
+    const pageTitle = title ?? DEFAULT_APP_NAME
     return (
       <html lang="ja">
         <head>

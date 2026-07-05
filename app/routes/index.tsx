@@ -1,5 +1,6 @@
 import { createRoute } from '~/factory'
 import CalendarView from '../islands/calendar-view'
+import { DEFAULT_APP_NAME } from '../lib/constants'
 import {
   listDiaries,
   listDiaryCalendarEntries,
@@ -8,7 +9,7 @@ import {
 import { formatDiaryDate } from '../lib/format'
 
 export default createRoute(async (c) => {
-  const appName = c.env.APP_NAME || '400字日記'
+  const appName = c.env.APP_NAME || DEFAULT_APP_NAME
   const db = c.env.DB
   const yearParam = c.req.query('year')
   const year = yearParam

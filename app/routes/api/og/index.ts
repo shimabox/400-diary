@@ -1,4 +1,5 @@
 import { createRoute } from '~/factory'
+import { DEFAULT_APP_NAME } from '~/lib/constants'
 import { svgToPng } from '~/lib/og-image'
 
 const WIDTH = 1200
@@ -51,7 +52,7 @@ export default createRoute(async (c) => {
     return new Response(await cached.arrayBuffer(), { headers: PNG_HEADERS })
   }
 
-  const appName = c.env.APP_NAME || '400字日記'
+  const appName = c.env.APP_NAME || DEFAULT_APP_NAME
   const svg = generateTopOgSvg(appName)
 
   try {

@@ -1,4 +1,5 @@
 import { createRoute } from '~/factory'
+import { DEFAULT_APP_NAME } from '~/lib/constants'
 import { getDiaryWithSnapshot } from '~/lib/db'
 import { formatDiaryDate } from '~/lib/format'
 import { ogCacheKey } from '~/lib/og-cache'
@@ -67,7 +68,7 @@ export default createRoute(async (c) => {
     return new Response(await cached.arrayBuffer(), { headers: PNG_HEADERS })
   }
 
-  const appName = c.env.APP_NAME || '400字日記'
+  const appName = c.env.APP_NAME || DEFAULT_APP_NAME
   const { snapshot, ...diary } = result
   const dateLabel = formatDiaryDate(diary.diary_date)
   const bgColor = snapshot.background_color

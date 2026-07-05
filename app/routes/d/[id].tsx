@@ -1,11 +1,12 @@
 import { createRoute } from '~/factory'
 import FlowText from '../../islands/flow-text'
 import MoodMarker from '../../islands/mood-marker'
+import { DEFAULT_APP_NAME } from '../../lib/constants'
 import { getDiaryWithSnapshot } from '../../lib/db'
 import { formatDiaryDate } from '../../lib/format'
 
 export default createRoute(async (c) => {
-  const appName = c.env.APP_NAME || '400字日記'
+  const appName = c.env.APP_NAME || DEFAULT_APP_NAME
   const id = c.req.param('id')!
   const db = c.env.DB
   const result = await getDiaryWithSnapshot(db, id)
