@@ -1,8 +1,17 @@
 import { hydrateIslands } from './lib/hydrate'
 
+type ContainerScrollState = {
+  x: number
+  y: number
+  // 無限スクロールで読み込み済みの件数（diary-list island が data-scroll-restore-count で
+  // 書き出す）。汎用性維持のため、その属性を持たないコンテナでは常に undefined になる。
+  // 旧形式（この属性導入前）に保存された state にも存在しないため optional。
+  count?: number
+}
+
 type ScrollState = {
   window: { x: number; y: number }
-  containers: Record<string, { x: number; y: number }>
+  containers: Record<string, ContainerScrollState>
 }
 
 function activateScripts(container: Element): void {
@@ -49,14 +58,23 @@ function shouldIntercept(anchor: HTMLAnchorElement): boolean {
 }
 
 function captureScrollState(): ScrollState {
-  const containers: Record<string, { x: number; y: number }> = {}
+  const containers: Record<string, ContainerScrollState> = {}
   const elements = document.querySelectorAll<HTMLElement>(
     '[data-scroll-restore]',
   )
   for (const el of elements) {
     const key = el.dataset.scrollRestore
     if (!key) continue
-    containers[key] = { x: el.scrollLeft, y: el.scrollTop }
+    // data-scroll-restore-count が無いコンテナ（属性を書き出さない汎用ケース）では
+    // 従来通り x/y のみ保存する。
+    const rawCount = el.dataset.scrollRestoreCount
+    const count =
+      rawCount === undefined ? Number.NaN : Number.parseInt(rawCount, 10)
+    containers[key] = {
+      x: el.scrollLeft,
+      y: el.scrollTop,
+      ...(Number.isFinite(count) ? { count } : {}),
+    }
   }
   return {
     window: { x: window.scrollX, y: window.scrollY },
@@ -67,13 +85,34 @@ function captureScrollState(): ScrollState {
 function isScrollState(value: unknown): value is ScrollState {
   if (!value || typeof value !== 'object') return false
   const v = value as Partial<ScrollState>
-  return (
-    !!v.window &&
-    typeof v.window.x === 'number' &&
-    typeof v.window.y === 'number' &&
-    !!v.containers &&
-    typeof v.containers === 'object'
+  if (
+    !v.window ||
+    typeof v.window.x !== 'number' ||
+    typeof v.window.y !== 'number' ||
+    !v.containers ||
+    typeof v.containers !== 'object'
+  ) {
+    return false
+  }
+  // count は導入前の旧形式 state には存在しない。存在する場合のみ number であることを確認する
+  // （後方互換: 無くても不正扱いしない）。
+  return Object.values(v.containers).every(
+    (pos) => pos.count === undefined || typeof pos.count === 'number',
   )
+}
+
+/**
+ * history.state に保存された ScrollState から、指定した data-scroll-restore key の
+ * コンテナ状態を取り出す。diary-list island が SPA 復帰後の無限スクロール件数キャッチアップ
+ * （読み込み済み件数が不足していれば追加取得してから scrollLeft を上書きする）に使うために公開する。
+ * ScrollState が無い（初回訪問）/ 該当 key が無い場合は null を返す。
+ */
+export function getSavedContainerScrollState(
+  key: string,
+): ContainerScrollState | null {
+  const state = history.state
+  if (!isScrollState(state)) return null
+  return state.containers[key] ?? null
 }
 
 function restoreScrollState(state: ScrollState): void {

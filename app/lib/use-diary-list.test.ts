@@ -3,6 +3,7 @@ import type { DiaryCard } from './diary-cards'
 import {
   appendDiaryPage,
   buildDiaryListRequestUrl,
+  computeCatchUpLimit,
   hasNextPage,
 } from './use-diary-list'
 
@@ -81,5 +82,37 @@ describe('hasNextPage', () => {
     expect(
       hasNextPage({ before_date: '2026-07-01', before_id: 'cursor-id' }),
     ).toBe(true)
+  })
+})
+
+describe('computeCatchUpLimit', () => {
+  const cursor = { before_date: '2026-06-01', before_id: 'cursor-id' }
+
+  test('不足が無ければ null（savedCount === currentItemCount）', () => {
+    expect(computeCatchUpLimit(31, 31, cursor)).toBeNull()
+  })
+
+  test('現在の件数の方が多くても null（savedCount < currentItemCount）', () => {
+    expect(computeCatchUpLimit(31, 62, cursor)).toBeNull()
+  })
+
+  test('不足があれば差分を返す', () => {
+    expect(computeCatchUpLimit(62, 31, cursor)).toBe(31)
+  })
+
+  test('cursor が null（サーバー側で打ち止め済み）なら不足があっても null', () => {
+    expect(computeCatchUpLimit(62, 31, null)).toBeNull()
+  })
+
+  test('不足が100件を超える場合は100にクランプする', () => {
+    expect(computeCatchUpLimit(200, 31, cursor)).toBe(100)
+  })
+
+  test('不足がちょうど100件なら100を返す（境界値）', () => {
+    expect(computeCatchUpLimit(131, 31, cursor)).toBe(100)
+  })
+
+  test('不足が101件なら100にクランプする（境界値）', () => {
+    expect(computeCatchUpLimit(132, 31, cursor)).toBe(100)
   })
 })

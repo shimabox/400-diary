@@ -31,3 +31,28 @@ export function appendDiaryPage(
 export function hasNextPage(next: DiaryListCursor): boolean {
   return next !== null
 }
+
+// キャッチアップ取得1回あたりの上限。GET /api/diaries の limit クランプ上限（100）に合わせる。
+// これを超える不足（101件以上深いスクロール位置からの復帰）は打ち切ってよい前提
+// （現実のデータ規模では起きない）。
+const CATCH_UP_MAX_LIMIT = 100
+
+/**
+ * SPA 遷移から戻った直後のキャッチアップ取得で使う limit を計算する。
+ *
+ * savedCount（遷移前に読み込み済みだった件数）が currentItemCount（戻った直後、
+ * SSR 由来で今読み込まれている件数）より多い場合にだけ、その差分をキャッチアップ取得する。
+ * - 不足が無い（savedCount <= currentItemCount）: null（取得不要、クランプ位置のままでよい）
+ * - cursor が null（サーバー側で既に打ち止め）: null（これ以上取得できるページが無い）
+ * - 不足が CATCH_UP_MAX_LIMIT を超える: CATCH_UP_MAX_LIMIT にクランプ（打ち切ってよい）
+ */
+export function computeCatchUpLimit(
+  savedCount: number,
+  currentItemCount: number,
+  cursor: DiaryListCursor,
+): number | null {
+  if (cursor === null) return null
+  const deficit = savedCount - currentItemCount
+  if (deficit <= 0) return null
+  return Math.min(CATCH_UP_MAX_LIMIT, deficit)
+}
