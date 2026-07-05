@@ -41,6 +41,13 @@ const PNG_HEADERS = {
   'Cache-Control': 'public, max-age=86400',
 }
 
+// PNG生成失敗時のSVGフォールバックは、正常系より短いTTLでキャッシュする。
+// 障害復旧後に劣化OGP(SVGフォールバック)が最長1日キャッシュされ続けるのを防ぐため。
+const SVG_FALLBACK_HEADERS = {
+  'Content-Type': 'image/svg+xml',
+  'Cache-Control': 'public, max-age=300',
+}
+
 export default createRoute(async (c) => {
   const id = c.req.param('id')!
   const bucket = c.env.BUCKET
@@ -81,10 +88,7 @@ export default createRoute(async (c) => {
   } catch (e) {
     console.error('[OGP] PNG generation failed:', e)
     return new Response(svg, {
-      headers: {
-        'Content-Type': 'image/svg+xml',
-        'Cache-Control': 'public, max-age=86400',
-      },
+      headers: SVG_FALLBACK_HEADERS,
     })
   }
 })

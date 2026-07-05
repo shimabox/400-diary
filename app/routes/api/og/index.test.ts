@@ -34,10 +34,11 @@ function createApp(appName?: string) {
         },
       })
     } catch {
+      // 障害復旧後に劣化OGPが最長1日キャッシュされ続けないよう、正常系より短いTTL
       return new Response(svg, {
         headers: {
           'Content-Type': 'image/svg+xml',
-          'Cache-Control': 'public, max-age=86400',
+          'Cache-Control': 'public, max-age=300',
         },
       })
     }
@@ -97,6 +98,7 @@ describe('GET /api/og', () => {
 
     expect(res.status).toBe(200)
     expect(res.headers.get('Content-Type')).toBe('image/svg+xml')
+    expect(res.headers.get('Cache-Control')).toBe('public, max-age=300')
     const body = await res.text()
     expect(body).toContain('<svg>')
   })

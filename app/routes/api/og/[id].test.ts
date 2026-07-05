@@ -167,6 +167,8 @@ describe('GET /api/og/:id', () => {
 
     expect(res.status).toBe(200)
     expect(res.headers.get('Content-Type')).toBe('image/svg+xml')
+    // 障害復旧後に劣化OGPが最長1日キャッシュされ続けないよう、正常系(86400)より短いTTL
+    expect(res.headers.get('Cache-Control')).toBe('public, max-age=300')
     const body = await res.text()
     expect(body).toContain('#FFE4E1')
   })
