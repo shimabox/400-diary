@@ -6,6 +6,10 @@ import {
   buildDiaryListRequestUrl,
   computeCatchUpLimit,
   hasNextPage,
+  parseScrollRestoreState,
+  resolveCatchUpSource,
+  SCROLL_STORAGE_KEY,
+  type ScrollRestoreState,
 } from '../lib/use-diary-list'
 import { getSavedContainerScrollState } from '../spa-navigation'
 
@@ -68,12 +72,24 @@ export default function DiaryList({
   }, [])
 
   useEffect(() => {
-    // SPA 遷移から popstate で戻ったときだけ発火するキャッチアップ取得。
-    // 初回訪問（history.state に ScrollState が無い）や、この機能導入前に保存された
-    // 旧形式の state（count が無い）では saved が null か count が undefined になるため、
-    // その場合は何もしない（＝従来通りクランプ位置に留まるだけ）。
-    const saved = getSavedContainerScrollState('diary-list')
-    if (!saved || saved.count === undefined) return undefined
+    // SPA 復帰直後のキャッチアップ取得。復元元は2種類あり、history.state（popstate 専用、
+    // PR #56）を最優先し、無ければ同一タブの sessionStorage（ヘッダーリンク等での前進
+    // ナビゲーション経由の復帰にも対応するため追加）にフォールバックする。
+    // 選択ロジックは resolveCatchUpSource に切り出し済み（挙動: history.state に count が
+    // あれば従来通りそれを使うので popstate 復帰の挙動に変更はない）。
+    const historySaved = getSavedContainerScrollState('diary-list')
+    let sessionSaved: ScrollRestoreState | null = null
+    try {
+      sessionSaved = parseScrollRestoreState(
+        sessionStorage.getItem(SCROLL_STORAGE_KEY),
+      )
+    } catch {
+      // プライベートモード等で sessionStorage へのアクセス自体が例外になり得るが、
+      // 復元できないだけなので無視して初回訪問相当（null）にフォールバックする。
+      sessionSaved = null
+    }
+    const saved = resolveCatchUpSource(historySaved, sessionSaved)
+    if (saved === null) return undefined
 
     // initialItems（マウント時点の SSR 由来件数）と、マウント時点のカーソルを使う。
     // items は非同期に増えうる state なので、キャッチアップの要否判定には使わない。
@@ -136,6 +152,47 @@ export default function DiaryList({
     const el = containerRef.current
     if (el) {
       el.scrollLeft = targetX
+    }
+  }, [items])
+
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return undefined
+
+    // 同一タブ内であれば、ヘッダーリンク等の前進ナビゲーションで一覧に戻ってきた場合でも
+    // 続きから再開できるようにするための保存（history.state は popstate 専用で、前進
+    // ナビゲーションでは新しい履歴エントリになり使えないため sessionStorage を併用する）。
+    const save = () => {
+      try {
+        const state: ScrollRestoreState = {
+          count: items.length,
+          x: el.scrollLeft,
+        }
+        sessionStorage.setItem(SCROLL_STORAGE_KEY, JSON.stringify(state))
+      } catch {
+        // プライベートモード等で例外になり得るが、次回復元できないだけなので無視してよい
+      }
+    }
+
+    // items 数が変化した（＝この effect が再実行された）タイミングでも保存する。
+    save()
+
+    // scroll イベントは高頻度で発火するため、そのたびに JSON.stringify するのは避けたい。
+    // rAF で1フレームにつき最大1回に間引く（passive リスナーで scroll 自体をブロックしない）。
+    let rafId: number | null = null
+    const onScroll = () => {
+      if (rafId !== null) return
+      rafId = requestAnimationFrame(() => {
+        rafId = null
+        save()
+      })
+    }
+    // なお、キャッチアップ復元による programmatic な scrollLeft 代入（上の effect）でも
+    // scroll イベントは発火するが、そのとき保存されるのはその時点の正しい位置なので害はない。
+    el.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      el.removeEventListener('scroll', onScroll)
+      if (rafId !== null) cancelAnimationFrame(rafId)
     }
   }, [items])
 
