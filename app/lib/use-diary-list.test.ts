@@ -5,6 +5,8 @@ import {
   buildDiaryListRequestUrl,
   computeCatchUpLimit,
   hasNextPage,
+  parseScrollRestoreState,
+  resolveCatchUpSource,
 } from './use-diary-list'
 
 function makeCard(id: string): DiaryCard {
@@ -114,5 +116,82 @@ describe('computeCatchUpLimit', () => {
 
   test('不足が101件なら100にクランプする（境界値）', () => {
     expect(computeCatchUpLimit(132, 31, cursor)).toBe(100)
+  })
+})
+
+describe('parseScrollRestoreState', () => {
+  test('raw が null なら null（保存データなし）', () => {
+    expect(parseScrollRestoreState(null)).toBeNull()
+  })
+
+  test('JSON として壊れていれば null', () => {
+    expect(parseScrollRestoreState('{count: 1, x:')).toBeNull()
+  })
+
+  test('オブジェクトでなければ null（配列）', () => {
+    expect(parseScrollRestoreState('[1, 2]')).toBeNull()
+  })
+
+  test('オブジェクトでなければ null（数値）', () => {
+    expect(parseScrollRestoreState('42')).toBeNull()
+  })
+
+  test('count が無ければ null', () => {
+    expect(parseScrollRestoreState(JSON.stringify({ x: 10 }))).toBeNull()
+  })
+
+  test('x が無ければ null', () => {
+    expect(parseScrollRestoreState(JSON.stringify({ count: 31 }))).toBeNull()
+  })
+
+  test('count が有限数でなければ null（NaN）', () => {
+    expect(
+      parseScrollRestoreState(JSON.stringify({ count: Number.NaN, x: 10 })),
+    ).toBeNull()
+  })
+
+  test('count が有限数でなければ null（Infinity 相当の文字列は JSON では表現できないため型違反で確認）', () => {
+    expect(
+      parseScrollRestoreState(JSON.stringify({ count: '31', x: 10 })),
+    ).toBeNull()
+  })
+
+  test('x が数値でなければ null', () => {
+    expect(
+      parseScrollRestoreState(JSON.stringify({ count: 31, x: '10' })),
+    ).toBeNull()
+  })
+
+  test('形式が正しければ ScrollRestoreState を返す', () => {
+    expect(
+      parseScrollRestoreState(JSON.stringify({ count: 31, x: 120 })),
+    ).toEqual({ count: 31, x: 120 })
+  })
+})
+
+describe('resolveCatchUpSource', () => {
+  const sessionState = { count: 62, x: 240 }
+
+  test('history.state に count があれば最優先で採用する（popstate 復帰、挙動変更なし）', () => {
+    expect(resolveCatchUpSource({ x: 100, count: 31 }, sessionState)).toEqual({
+      count: 31,
+      x: 100,
+    })
+  })
+
+  test('history.state が無ければ sessionStorage 側を採用する', () => {
+    expect(resolveCatchUpSource(null, sessionState)).toEqual(sessionState)
+  })
+
+  test('history.state はあっても count が無ければ sessionStorage 側にフォールバックする', () => {
+    expect(resolveCatchUpSource({ x: 100 }, sessionState)).toEqual(sessionState)
+  })
+
+  test('どちらも無ければ null（初回訪問）', () => {
+    expect(resolveCatchUpSource(null, null)).toBeNull()
+  })
+
+  test('history.state に count が無く sessionStorage も無ければ null', () => {
+    expect(resolveCatchUpSource({ x: 100 }, null)).toBeNull()
   })
 })
