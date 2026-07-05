@@ -11,6 +11,7 @@ import {
   generateImageKey,
   uploadImage,
   validateImage,
+  validateImageBytes,
 } from '../../../../lib/storage'
 
 async function deleteImageIfOrphan(
@@ -53,9 +54,17 @@ export const POST = createRoute(async (c) => {
     return c.json({ error: validation.error }, 400)
   }
 
+  const data = await file.arrayBuffer()
+
+  // Content-Type は申告値であり偽装できるため、実バイトのシグネチャが
+  // 申告 MIME と一致するかを検証する(allowlist だけでは詐称を防げない)
+  const bytesValidation = validateImageBytes(new Uint8Array(data), file.type)
+  if (!bytesValidation.ok) {
+    return c.json({ error: bytesValidation.error }, 400)
+  }
+
   const oldKey = diary.image_key
   const key = generateImageKey(id, file.type)
-  const data = await file.arrayBuffer()
   await uploadImage(bucket, key, data, file.type)
   await updateDiary(db, id, { image_key: key })
 

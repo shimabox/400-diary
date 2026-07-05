@@ -6,6 +6,7 @@ import {
   getImage,
   uploadImage,
   validateImage,
+  validateImageBytes,
 } from './storage'
 
 type BucketMock = R2Bucket & {
@@ -63,6 +64,117 @@ describe('validateImage', () => {
     if (!result.ok) {
       expect(result.error).toContain('10MB')
     }
+  })
+})
+
+describe('validateImageBytes', () => {
+  test('正規のJPEGシグネチャを許可する', () => {
+    const bytes = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10])
+    expect(validateImageBytes(bytes, 'image/jpeg')).toEqual({ ok: true })
+  })
+
+  test('正規のPNGシグネチャを許可する', () => {
+    const bytes = new Uint8Array([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00,
+    ])
+    expect(validateImageBytes(bytes, 'image/png')).toEqual({ ok: true })
+  })
+
+  test('正規のGIF87aシグネチャを許可する', () => {
+    const bytes = new Uint8Array([
+      0x47, 0x49, 0x46, 0x38, 0x37, 0x61, 0x00, 0x00,
+    ])
+    expect(validateImageBytes(bytes, 'image/gif')).toEqual({ ok: true })
+  })
+
+  test('正規のGIF89aシグネチャを許可する', () => {
+    const bytes = new Uint8Array([
+      0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x00, 0x00,
+    ])
+    expect(validateImageBytes(bytes, 'image/gif')).toEqual({ ok: true })
+  })
+
+  test('正規のWebPシグネチャを許可する', () => {
+    const bytes = new Uint8Array([
+      0x52,
+      0x49,
+      0x46,
+      0x46, // RIFF
+      0x00,
+      0x00,
+      0x00,
+      0x00, // ファイルサイズ(検証対象外)
+      0x57,
+      0x45,
+      0x42,
+      0x50, // WEBP
+    ])
+    expect(validateImageBytes(bytes, 'image/webp')).toEqual({ ok: true })
+  })
+
+  test('JPEG宣言でPNGバイトは拒否する(偽装)', () => {
+    const bytes = new Uint8Array([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+    ])
+    const result = validateImageBytes(bytes, 'image/jpeg')
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error).toBe(
+        '画像ファイルが壊れているか、形式が一致しません',
+      )
+    }
+  })
+
+  test('JPEG宣言でHTMLバイトは拒否する(偽装)', () => {
+    const bytes = new TextEncoder().encode('<html><body>hi</body></html>')
+    const result = validateImageBytes(bytes, 'image/jpeg')
+    expect(result.ok).toBe(false)
+  })
+
+  test('PNG宣言でGIFバイトは拒否する(偽装)', () => {
+    const bytes = new Uint8Array([
+      0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x00, 0x00,
+    ])
+    const result = validateImageBytes(bytes, 'image/png')
+    expect(result.ok).toBe(false)
+  })
+
+  test('WebP宣言でRIFFはあるがWEBPが無いバイトは拒否する(偽装)', () => {
+    const bytes = new Uint8Array([
+      0x52,
+      0x49,
+      0x46,
+      0x46, // RIFF
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x41,
+      0x56,
+      0x49,
+      0x20, // 'AVI ' (RIFF系だがWebPではない)
+    ])
+    const result = validateImageBytes(bytes, 'image/webp')
+    expect(result.ok).toBe(false)
+  })
+
+  test('短すぎるバイト列(空)は拒否する', () => {
+    const result = validateImageBytes(new Uint8Array([]), 'image/jpeg')
+    expect(result.ok).toBe(false)
+  })
+
+  test('短すぎるバイト列(シグネチャ長未満)は拒否する', () => {
+    const result = validateImageBytes(
+      new Uint8Array([0xff, 0xd8]),
+      'image/jpeg',
+    )
+    expect(result.ok).toBe(false)
+  })
+
+  test('未知のMIMEタイプは拒否する(fail-closed)', () => {
+    const bytes = new Uint8Array([0xff, 0xd8, 0xff])
+    const result = validateImageBytes(bytes, 'image/svg+xml')
+    expect(result.ok).toBe(false)
   })
 })
 
