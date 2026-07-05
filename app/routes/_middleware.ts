@@ -3,6 +3,7 @@ import { createMiddleware } from 'hono/factory'
 import { secureHeaders } from 'hono/secure-headers'
 import type { AppEnv } from '~/factory'
 import { verifyAccess } from '../lib/auth'
+import { HEATMAP_SCROLL_INLINE_SCRIPT_HASH } from '../lib/heatmap-scroll-inline'
 
 // セキュリティヘッダー。CSP は以下の外部リソース/インライン利用を壊さないように設計している:
 // - Google Fonts: スタイルシートは https://fonts.googleapis.com（_renderer.tsx）、
@@ -13,10 +14,10 @@ import { verifyAccess } from '../lib/auth'
 //   Google Fonts onload 属性は以前インラインスクリプト/属性を使っていたが、クライアント
 //   バンドル（app/client.ts, app/spa-navigation.ts, app/lib/async-css.ts）側に処理を移し、
 //   script-src から 'unsafe-inline' を排除した
-//   ※ islands/calendar-view.tsx のヒートマップ横スクロール初期化には、hydration 前の
-//   ちらつき防止用インラインスクリプトが今回のスコープ外として残っている。CSP により
-//   実行はブロックされるが、同じ計算を行う useEffect フォールバックがあるため機能自体は
-//   失われず、初期表示時に軽微なスクロール位置のちらつきが起きうるのみ。別途対応予定
+//   ※ islands/calendar-view.tsx のヒートマップ横スクロール初期化だけは「hydration 前に
+//   実行してちらつきを抑える」ことが目的のため外部化できない。'unsafe-inline' で全許可する
+//   代わりに、このスクリプト（静的文字列）の SHA-256 ハッシュのみを本番の script-src で
+//   個別許可する。ハッシュとスクリプト本体の整合は heatmap-scroll-inline.test.ts が検証する
 // - インラインスタイル（style 属性 / <style> タグでの global.css インライン化）を多用しているため
 //   style-src にも 'unsafe-inline' が必須
 // - dev サーバー(vite)は HMR クライアントを読み込むためのインラインスクリプト
@@ -35,7 +36,12 @@ const secureHeadersMiddleware = createMiddleware<AppEnv>(async (c, next) => {
       scriptSrc: [
         "'self'",
         'https://static.cloudflareinsights.com',
-        ...(import.meta.env.DEV ? ["'unsafe-inline'"] : []),
+        // CSP はハッシュ/nonce が存在すると 'unsafe-inline' を無視する仕様のため、
+        // dev（vite の HMR インラインスクリプトに 'unsafe-inline' が必要）では
+        // ハッシュを付けず、本番のみハッシュで calendar-view のインラインスクリプトを許可する
+        ...(import.meta.env.DEV
+          ? ["'unsafe-inline'"]
+          : [HEATMAP_SCROLL_INLINE_SCRIPT_HASH]),
       ],
       styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       fontSrc: ["'self'", 'https://fonts.gstatic.com'],

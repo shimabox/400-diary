@@ -7,6 +7,7 @@ vi.mock('../lib/auth', () => ({
 }))
 
 import { verifyAccess } from '../lib/auth'
+import { HEATMAP_SCROLL_INLINE_SCRIPT_HASH } from '../lib/heatmap-scroll-inline'
 import middlewares from './_middleware'
 
 function createApp(env: Partial<AppEnv['Bindings']> = {}) {
@@ -70,10 +71,11 @@ describe('_middleware', () => {
         expect(csp).toContain('https://static.cloudflareinsights.com')
         expect(csp).toContain('connect-src')
         expect(csp).toContain('https://cloudflareinsights.com')
-        // 本番相当では script-src から 'unsafe-inline' を排除済み
-        // (インラインスクリプトは全て外部化。理由は _middleware.ts のコメント参照)
+        // 本番相当では script-src から 'unsafe-inline' を排除済み。
+        // calendar-view のちらつき防止インラインスクリプトのみ SHA-256 ハッシュで
+        // 個別許可する(理由は _middleware.ts のコメント参照)
         expect(csp).toContain(
-          "script-src 'self' https://static.cloudflareinsights.com",
+          `script-src 'self' https://static.cloudflareinsights.com ${HEATMAP_SCROLL_INLINE_SCRIPT_HASH}`,
         )
         const scriptSrcDirective = csp
           ?.split(';')
