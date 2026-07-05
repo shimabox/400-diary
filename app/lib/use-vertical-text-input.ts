@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'hono/jsx'
 import { MAX_BODY_LENGTH } from './constants'
-import { insertAtSelection, trimToGrid } from './grid'
+import { countUsedCells, insertAtSelection, trimToGrid } from './grid'
 
 export function useVerticalTextInput(initialBody: string) {
   const [body, setBody] = useState(initialBody)
@@ -54,14 +54,18 @@ export function useVerticalTextInput(initialBody: string) {
     setBody(target.value)
   }, [])
 
+  // カウンターは文字数ではなく「消費マス数」を返す。改行が列の残りマスを消費するため、
+  // 文字数表示だと「残りがあるのに入力できない」という乖離が生まれる（詳細は countUsedCells）。
+  const cellCount = countUsedCells(body)
+
   return {
     body,
-    charCount: body.length,
+    cellCount,
     handleCompositionEnd,
     handleCompositionStart,
     handleInput,
     handleSpeechResult,
-    isOver: body.length > MAX_BODY_LENGTH,
+    isOver: cellCount > MAX_BODY_LENGTH,
     textareaRef,
   }
 }

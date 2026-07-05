@@ -49,7 +49,7 @@ export default function VerticalEditor({
   const previewScrollRef = useRef<HTMLDivElement>(null)
   const {
     body,
-    charCount,
+    cellCount,
     handleCompositionEnd,
     handleCompositionStart,
     handleInput,
@@ -357,7 +357,7 @@ export default function VerticalEditor({
             fontWeight: isOver ? 'bold' : 'normal',
           }}
         >
-          {charCount} / {MAX_BODY_LENGTH}
+          {cellCount} / {MAX_BODY_LENGTH}
         </span>
         <div style={{ display: 'flex', gap: '0.25rem', fontSize: '0.85rem' }}>
           <button
