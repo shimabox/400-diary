@@ -13,6 +13,7 @@ vi.mock('../../../../lib/storage', () => ({
   generateImageKey: vi.fn(() => 'diaries/abc/new-key.jpg'),
   uploadImage: vi.fn(),
   validateImage: vi.fn(() => ({ ok: true })),
+  validateImageBytes: vi.fn(() => ({ ok: true })),
 }))
 
 async function createApp(isAuthenticated: boolean) {
@@ -142,6 +143,32 @@ describe('POST /api/diaries/:id/image 旧画像の孤児削除', () => {
     const res = await postImage(app)
 
     expect(res.status).toBe(401)
+  })
+
+  test('マジックバイト検証に失敗した場合は 400 を返しアップロードしない', async () => {
+    const { getDiary, updateDiary } = await import('../../../../lib/db')
+    const { uploadImage, validateImageBytes } = await import(
+      '../../../../lib/storage'
+    )
+
+    vi.mocked(getDiary).mockResolvedValue({
+      id: 'abc',
+      image_key: null,
+    } as never)
+    vi.mocked(validateImageBytes).mockReturnValueOnce({
+      ok: false,
+      error: '画像ファイルが壊れているか、形式が一致しません',
+    })
+
+    const app = await createApp(true)
+    const res = await postImage(app)
+
+    expect(res.status).toBe(400)
+    expect(await res.json()).toEqual({
+      error: '画像ファイルが壊れているか、形式が一致しません',
+    })
+    expect(vi.mocked(uploadImage)).not.toHaveBeenCalled()
+    expect(vi.mocked(updateDiary)).not.toHaveBeenCalled()
   })
 })
 

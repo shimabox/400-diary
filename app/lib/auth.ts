@@ -33,6 +33,14 @@ interface JWTPayload {
 let cachedJWKS: { keys: JWK[]; fetchedAt: number } | null = null
 const JWKS_CACHE_TTL = 60 * 60 * 1000 // 1時間
 
+// clock skew（サーバー間の時刻ズレ）を吸収するための許容秒数
+const CLOCK_SKEW_TOLERANCE_SECONDS = 60
+
+// テスト専用: モジュールレベルのキャッシュをテスト間でリセットするため
+export function __resetJWKSCacheForTest(): void {
+  cachedJWKS = null
+}
+
 function base64UrlDecode(str: string): Uint8Array {
   const base64 = str.replace(/-/g, '+').replace(/_/g, '/')
   const pad = base64.length % 4
@@ -45,9 +53,16 @@ function base64UrlDecode(str: string): Uint8Array {
   return bytes
 }
 
-async function fetchJWKS(teamDomain: string): Promise<JWK[]> {
+async function fetchJWKS(
+  teamDomain: string,
+  forceRefresh = false,
+): Promise<JWK[]> {
   const now = Date.now()
-  if (cachedJWKS && now - cachedJWKS.fetchedAt < JWKS_CACHE_TTL) {
+  if (
+    !forceRefresh &&
+    cachedJWKS &&
+    now - cachedJWKS.fetchedAt < JWKS_CACHE_TTL
+  ) {
     return cachedJWKS.keys
   }
 
@@ -118,14 +133,22 @@ export async function verifyAccess(
     // aud の検証
     if (!payload.aud.includes(aud)) return false
 
-    // 有効期限の検証
+    // iss の検証（JWKS は team domain 固定なので実害は薄いが defense-in-depth として）
+    if (payload.iss !== `https://${teamDomain}`) return false
+
+    // 有効期限の検証（エッジ間の時刻ズレを吸収するため clock skew を許容する）
     const now = Math.floor(Date.now() / 1000)
-    if (payload.exp < now) return false
+    if (payload.exp < now - CLOCK_SKEW_TOLERANCE_SECONDS) return false
 
     // 署名の検証
-    const keys = await fetchJWKS(teamDomain)
-    const jwk = keys.find((k) => k.kid === header.kid)
-    if (!jwk) return false
+    let keys = await fetchJWKS(teamDomain)
+    let jwk = keys.find((k) => k.kid === header.kid)
+    if (!jwk) {
+      // 鍵ローテーション対応: キャッシュに無ければキャッシュを破棄して1回だけ再フェッチする
+      keys = await fetchJWKS(teamDomain, true)
+      jwk = keys.find((k) => k.kid === header.kid)
+      if (!jwk) return false
+    }
 
     const publicKey = await importPublicKey(jwk)
     const data = new TextEncoder().encode(signedPart)

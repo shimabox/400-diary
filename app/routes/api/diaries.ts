@@ -1,45 +1,34 @@
-import { createRoute } from '~/factory'
+import { createRoute, requireAuth } from '~/factory'
 import { randomPastelColor } from '../../lib/colors'
-import { MAX_BODY_LENGTH } from '../../lib/constants'
 import { createDiary } from '../../lib/db'
+import { validateDiaryInput } from '../../lib/validation'
 
-export const POST = createRoute(async (c) => {
-  if (!c.get('isAuthenticated')) {
-    return c.json({ error: '認証が必要です' }, 401)
+export const POST = createRoute(requireAuth, async (c) => {
+  let json: unknown
+  try {
+    json = await c.req.json()
+  } catch {
+    return c.json({ error: 'リクエストの形式が不正です' }, 400)
   }
 
-  const json = await c.req.json<{
-    body?: string
-    diary_date?: string
-    background_color?: string
-    image_layout?: 'left' | 'right'
-    mood?: string | null
-    image_x?: number | null
-    image_y?: number | null
-  }>()
-
-  if (!json.body || json.body.length === 0) {
-    return c.json({ error: '本文を入力してください' }, 400)
+  const result = validateDiaryInput(json, {
+    requireBody: true,
+    requireDate: true,
+  })
+  if (!result.ok) {
+    return c.json({ error: result.error }, 400)
   }
-  if (json.body.length > MAX_BODY_LENGTH) {
-    return c.json(
-      { error: `本文は${MAX_BODY_LENGTH}文字以内で入力してください` },
-      400,
-    )
-  }
-  if (!json.diary_date) {
-    return c.json({ error: '日付を入力してください' }, 400)
-  }
+  const input = result.value
 
   const db = c.env.DB
   const diary = await createDiary(db, {
-    body: json.body,
-    diary_date: json.diary_date,
-    background_color: json.background_color || randomPastelColor(),
-    image_layout: json.image_layout,
-    mood: json.mood,
-    image_x: json.image_x,
-    image_y: json.image_y,
+    body: input.body as string,
+    diary_date: input.diary_date as string,
+    background_color: input.background_color || randomPastelColor(),
+    image_layout: input.image_layout,
+    mood: input.mood,
+    image_x: input.image_x,
+    image_y: input.image_y,
   })
 
   return c.json(diary, 201)

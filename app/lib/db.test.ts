@@ -186,6 +186,29 @@ describe('publishDiary', () => {
     expect(db.boundValues).toContain('本文')
     expect(db.boundValues).toContain('diaries/abc/image.jpg')
   })
+
+  test('snapshot の INSERT と published_snapshot_id の UPDATE を batch で原子的に実行する', async () => {
+    const diary = {
+      id: 'abc',
+      body: '本文',
+      image_key: null,
+      image_layout: 'left' as const,
+      image_x: null,
+      image_y: null,
+      background_color: '#FFE4E1',
+      mood: null,
+    }
+    const db = createMockDB({ first: diary })
+
+    await publishDiary(db, 'abc')
+
+    // 部分失敗で孤児 snapshot が残らないよう、INSERT と UPDATE をまとめて1回の batch で実行する
+    expect(db.batch).toHaveBeenCalledTimes(1)
+    const batchedStatements = vi.mocked(db.batch).mock.calls[0][0]
+    expect(batchedStatements).toHaveLength(2)
+    expect(db.boundValues).toContain('test-id-1234') // snapshotId
+    expect(db.boundValues).toContain('abc') // diary id
+  })
 })
 
 describe('countSnapshotsWithImageKey', () => {

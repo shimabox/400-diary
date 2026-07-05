@@ -1,5 +1,4 @@
-import { createRoute } from '~/factory'
-import { MAX_BODY_LENGTH } from '../../../lib/constants'
+import { createRoute, requireAuth } from '~/factory'
 import {
   deleteDiary,
   getDiary,
@@ -9,6 +8,7 @@ import {
 } from '../../../lib/db'
 import { deleteDiaryOgCache } from '../../../lib/og-cache'
 import { deleteImage } from '../../../lib/storage'
+import { validateDiaryInput } from '../../../lib/validation'
 
 export const GET = createRoute(async (c) => {
   const id = c.req.param('id')!
@@ -56,36 +56,24 @@ export const GET = createRoute(async (c) => {
   })
 })
 
-export const PUT = createRoute(async (c) => {
-  if (!c.get('isAuthenticated')) {
-    return c.json({ error: '認証が必要です' }, 401)
+export const PUT = createRoute(requireAuth, async (c) => {
+  const id = c.req.param('id')!
+
+  let json: unknown
+  try {
+    json = await c.req.json()
+  } catch {
+    return c.json({ error: 'リクエストの形式が不正です' }, 400)
   }
 
-  const id = c.req.param('id')!
-  const json = await c.req.json<{
-    body?: string
-    diary_date?: string
-    background_color?: string
-    image_layout?: 'left' | 'right'
-    mood?: string | null
-    image_x?: number | null
-    image_y?: number | null
-  }>()
-
-  if (json.body !== undefined) {
-    if (json.body.length === 0) {
-      return c.json({ error: '本文を入力してください' }, 400)
-    }
-    if (json.body.length > MAX_BODY_LENGTH) {
-      return c.json(
-        { error: `本文は${MAX_BODY_LENGTH}文字以内で入力してください` },
-        400,
-      )
-    }
+  // PUT は部分更新のため、渡されたフィールドのみ検証する(requireBody/requireDate は指定しない)
+  const result = validateDiaryInput(json)
+  if (!result.ok) {
+    return c.json({ error: result.error }, 400)
   }
 
   const db = c.env.DB
-  const diary = await updateDiary(db, id, json)
+  const diary = await updateDiary(db, id, result.value)
 
   if (!diary) {
     return c.json({ error: '日記が見つかりません' }, 404)
@@ -94,11 +82,7 @@ export const PUT = createRoute(async (c) => {
   return c.json(diary)
 })
 
-export const DELETE = createRoute(async (c) => {
-  if (!c.get('isAuthenticated')) {
-    return c.json({ error: '認証が必要です' }, 401)
-  }
-
+export const DELETE = createRoute(requireAuth, async (c) => {
   const id = c.req.param('id')!
   const db = c.env.DB
 

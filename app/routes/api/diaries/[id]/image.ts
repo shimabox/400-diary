@@ -1,5 +1,5 @@
 import type { D1Database, R2Bucket } from '@cloudflare/workers-types/latest'
-import { createRoute } from '~/factory'
+import { createRoute, requireAuth } from '~/factory'
 import {
   countSnapshotsWithImageKey,
   getDiary,
@@ -11,6 +11,7 @@ import {
   generateImageKey,
   uploadImage,
   validateImage,
+  validateImageBytes,
 } from '../../../../lib/storage'
 
 async function deleteImageIfOrphan(
@@ -28,11 +29,7 @@ async function deleteImageIfOrphan(
   })
 }
 
-export const POST = createRoute(async (c) => {
-  if (!c.get('isAuthenticated')) {
-    return c.json({ error: '認証が必要です' }, 401)
-  }
-
+export const POST = createRoute(requireAuth, async (c) => {
   const id = c.req.param('id')!
   const db = c.env.DB
   const bucket = c.env.BUCKET
@@ -53,9 +50,17 @@ export const POST = createRoute(async (c) => {
     return c.json({ error: validation.error }, 400)
   }
 
+  const data = await file.arrayBuffer()
+
+  // Content-Type は申告値であり偽装できるため、実バイトのシグネチャが
+  // 申告 MIME と一致するかを検証する(allowlist だけでは詐称を防げない)
+  const bytesValidation = validateImageBytes(new Uint8Array(data), file.type)
+  if (!bytesValidation.ok) {
+    return c.json({ error: bytesValidation.error }, 400)
+  }
+
   const oldKey = diary.image_key
   const key = generateImageKey(id, file.type)
-  const data = await file.arrayBuffer()
   await uploadImage(bucket, key, data, file.type)
   await updateDiary(db, id, { image_key: key })
 
@@ -66,11 +71,7 @@ export const POST = createRoute(async (c) => {
   return c.json({ image_key: key }, 201)
 })
 
-export const DELETE = createRoute(async (c) => {
-  if (!c.get('isAuthenticated')) {
-    return c.json({ error: '認証が必要です' }, 401)
-  }
-
+export const DELETE = createRoute(requireAuth, async (c) => {
   const id = c.req.param('id')!
   const db = c.env.DB
 

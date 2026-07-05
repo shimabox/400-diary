@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import type { AppEnv } from '~/factory'
+import { MAX_BODY_LENGTH } from '../../../lib/constants'
 import type { Diary, DiarySnapshot, DiaryWithSnapshot } from '../../../lib/db'
 
 vi.mock('../../../lib/db', () => ({
@@ -20,7 +21,7 @@ vi.mock('../../../lib/og-cache', () => ({
 }))
 
 async function createApp(isAuthenticated: boolean) {
-  const { GET, DELETE } = await import('./[id]')
+  const { GET, PUT, DELETE } = await import('./[id]')
   const app = new Hono<AppEnv>()
   const mockBucket = { delete: vi.fn() }
 
@@ -34,9 +35,18 @@ async function createApp(isAuthenticated: boolean) {
   })
 
   app.get('/api/diaries/:id', ...GET)
+  app.put('/api/diaries/:id', ...PUT)
   app.delete('/api/diaries/:id', ...DELETE)
 
   return app
+}
+
+function putJSON(app: Hono<AppEnv>, body: unknown) {
+  return app.request('/api/diaries/abc', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
 }
 
 function makeDiary(overrides: Partial<Diary> = {}): Diary {
@@ -198,6 +208,137 @@ describe('GET /api/diaries/:id 公開チェック', () => {
 
     const app = await createApp(true)
     const res = await app.request('/api/diaries/not-found')
+
+    expect(res.status).toBe(404)
+  })
+})
+
+describe('PUT /api/diaries/:id バリデーション', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  test('未認証は401を返す', async () => {
+    const app = await createApp(false)
+    const res = await putJSON(app, { body: '更新' })
+
+    expect(res.status).toBe(401)
+  })
+
+  test('本文が空は400を返す', async () => {
+    const app = await createApp(true)
+    const res = await putJSON(app, { body: '' })
+
+    expect(res.status).toBe(400)
+  })
+
+  test('400文字ちょうどは許可される', async () => {
+    const { updateDiary } = await import('../../../lib/db')
+    vi.mocked(updateDiary).mockResolvedValue(makeDiary())
+
+    const app = await createApp(true)
+    const res = await putJSON(app, { body: 'あ'.repeat(400) })
+
+    expect(res.status).toBe(200)
+  })
+
+  test('401文字は400エラーを返す', async () => {
+    const app = await createApp(true)
+    const res = await putJSON(app, { body: 'あ'.repeat(401) })
+
+    expect(res.status).toBe(400)
+    const json = await res.json()
+    expect(json.error).toContain(`${MAX_BODY_LENGTH}文字`)
+  })
+
+  test('bodyを省略した更新は許可される', async () => {
+    const { updateDiary } = await import('../../../lib/db')
+    vi.mocked(updateDiary).mockResolvedValue(makeDiary())
+
+    const app = await createApp(true)
+    const res = await putJSON(app, { background_color: '#D6E6FF' })
+
+    expect(res.status).toBe(200)
+  })
+
+  test('不正な diary_date は400を返す', async () => {
+    const app = await createApp(true)
+    const res = await putJSON(app, { diary_date: 'not-a-date' })
+
+    expect(res.status).toBe(400)
+  })
+
+  test('存在しない日付(2月30日)は400を返す', async () => {
+    const app = await createApp(true)
+    const res = await putJSON(app, { diary_date: '2026-02-30' })
+
+    expect(res.status).toBe(400)
+  })
+
+  test('不正な background_color(XSS混入含む)は400を返す', async () => {
+    const app = await createApp(true)
+    const res = await putJSON(app, { background_color: '"/><script>' })
+
+    expect(res.status).toBe(400)
+    const json = await res.json()
+    expect(json.error).toContain('背景色')
+  })
+
+  test('不正な image_layout は400を返す', async () => {
+    const app = await createApp(true)
+    const res = await putJSON(app, { image_layout: 'center' })
+
+    expect(res.status).toBe(400)
+  })
+
+  test('不正な mood は400を返す', async () => {
+    const app = await createApp(true)
+    const res = await putJSON(app, { mood: 'invalid' })
+
+    expect(res.status).toBe(400)
+  })
+
+  test('mood に null を指定した更新(明示的なクリア)は許可される', async () => {
+    const { updateDiary } = await import('../../../lib/db')
+    vi.mocked(updateDiary).mockResolvedValue(makeDiary({ mood: null }))
+
+    const app = await createApp(true)
+    const res = await putJSON(app, { mood: null })
+
+    expect(res.status).toBe(200)
+    expect(updateDiary).toHaveBeenCalledWith(
+      expect.anything(),
+      'abc',
+      expect.objectContaining({ mood: null }),
+    )
+  })
+
+  test('image_x が数値でない文字列の場合は400を返す', async () => {
+    const app = await createApp(true)
+    const res = await putJSON(app, { image_x: 'NaN文字列' })
+
+    expect(res.status).toBe(400)
+  })
+
+  test('不正なJSONは400を返す', async () => {
+    const app = await createApp(true)
+    const res = await app.request('/api/diaries/abc', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: 'not json',
+    })
+
+    expect(res.status).toBe(400)
+    const json = await res.json()
+    expect(json.error).toContain('形式')
+  })
+
+  test('存在しない日記は404を返す', async () => {
+    const { updateDiary } = await import('../../../lib/db')
+    vi.mocked(updateDiary).mockResolvedValue(null)
+
+    const app = await createApp(true)
+    const res = await putJSON(app, { body: '更新' })
 
     expect(res.status).toBe(404)
   })

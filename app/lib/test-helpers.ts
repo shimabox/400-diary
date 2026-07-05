@@ -14,6 +14,7 @@ export function createMockDB(options?: {
   first?: unknown
   all?: D1Result
   run?: D1Result
+  batch?: unknown[]
 }): D1Database & { boundValues: unknown[] } {
   const boundValues: unknown[] = []
 
@@ -31,6 +32,14 @@ export function createMockDB(options?: {
 
   const db = {
     prepare: vi.fn(() => stmt),
+    // db.batch([...]) は D1 の暗黙トランザクション。渡された statement 数と同じ長さの
+    // 結果配列を返す（各要素は run() 相当のデフォルト値）
+    batch: vi.fn((statements: unknown[]) =>
+      Promise.resolve(
+        options?.batch ??
+          statements.map(() => ({ results: [], meta: { changes: 0 } })),
+      ),
+    ),
     boundValues,
     _stmt: stmt,
   }

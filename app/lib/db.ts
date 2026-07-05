@@ -227,30 +227,32 @@ export async function publishDiary(
 
   const snapshotId = nanoid(12)
 
-  await db
-    .prepare(
-      `INSERT INTO diary_snapshots (id, diary_id, body, image_key, image_layout, image_x, image_y, background_color, mood)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    )
-    .bind(
-      snapshotId,
-      id,
-      diary.body,
-      diary.image_key,
-      diary.image_layout,
-      diary.image_x,
-      diary.image_y,
-      diary.background_color,
-      diary.mood,
-    )
-    .run()
-
-  await db
-    .prepare(
-      "UPDATE diaries SET published_snapshot_id = ?, updated_at = datetime('now') WHERE id = ?",
-    )
-    .bind(snapshotId, id)
-    .run()
+  // snapshot の INSERT と published_snapshot_id の UPDATE を batch（D1 の暗黙トランザクション）で
+  // 原子的に実行する。個別に run() すると 1 文目成功・2 文目失敗でどこからも参照されない
+  // 孤児 snapshot が残り得るため。
+  await db.batch([
+    db
+      .prepare(
+        `INSERT INTO diary_snapshots (id, diary_id, body, image_key, image_layout, image_x, image_y, background_color, mood)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .bind(
+        snapshotId,
+        id,
+        diary.body,
+        diary.image_key,
+        diary.image_layout,
+        diary.image_x,
+        diary.image_y,
+        diary.background_color,
+        diary.mood,
+      ),
+    db
+      .prepare(
+        "UPDATE diaries SET published_snapshot_id = ?, updated_at = datetime('now') WHERE id = ?",
+      )
+      .bind(snapshotId, id),
+  ])
 
   return await db
     .prepare(

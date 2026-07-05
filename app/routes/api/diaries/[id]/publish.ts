@@ -1,11 +1,7 @@
-import { createRoute } from '~/factory'
+import { createRoute, requireAuth } from '~/factory'
 import { publishDiary } from '../../../../lib/db'
 
-export const POST = createRoute(async (c) => {
-  if (!c.get('isAuthenticated')) {
-    return c.json({ error: '認証が必要です' }, 401)
-  }
-
+export const POST = createRoute(requireAuth, async (c) => {
   const id = c.req.param('id')!
   const db = c.env.DB
   const snapshot = await publishDiary(db, id)

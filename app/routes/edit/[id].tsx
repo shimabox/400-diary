@@ -1,10 +1,11 @@
 import { createRoute } from '~/factory'
 import DeleteDiaryButton from '../../islands/delete-diary-button'
 import VerticalEditor from '../../islands/vertical-editor'
+import { DEFAULT_APP_NAME } from '../../lib/constants'
 import { getDiaryWithPublished } from '../../lib/db'
 
 export default createRoute(async (c) => {
-  const appName = c.env.APP_NAME || '400字日記'
+  const appName = c.env.APP_NAME || DEFAULT_APP_NAME
   if (!c.get('isAuthenticated')) {
     return c.redirect('/')
   }
