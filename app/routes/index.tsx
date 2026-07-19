@@ -82,7 +82,13 @@ export default createRoute(async (c) => {
             >
               <a
                 href="/api/export"
-                style={{ color: '#595959', fontSize: '0.9rem' }}
+                style={{
+                  padding: '0.4rem 1rem',
+                  border: '1px solid #595959',
+                  borderRadius: '4px',
+                  fontSize: '0.9rem',
+                  color: '#595959',
+                }}
               >
                 エクスポート
               </a>
