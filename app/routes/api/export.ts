@@ -27,6 +27,9 @@ export const GET = createRoute(requireAuth, async (c) => {
     headers: {
       'Content-Type': 'application/zip',
       'Content-Disposition': `attachment; filename="400-diary-export-${dateStamp}.zip"`,
+      // 下書きを含む認証済みユーザー専用のレスポンスのため、CDN・共有キャッシュに
+      // 保存されて他ユーザーに配信される事故を防ぐ
+      'Cache-Control': 'private, no-store',
     },
   })
 })

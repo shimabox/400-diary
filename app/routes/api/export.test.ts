@@ -71,6 +71,16 @@ describe('GET /api/export', () => {
     expect(res.headers.get('Content-Disposition')).toContain('.zip"')
   })
 
+  test('下書きを含む個人データのため CDN・共有キャッシュに保存されないよう指定する', async () => {
+    const { listAllDiaries } = await import('../../lib/db')
+    vi.mocked(listAllDiaries).mockResolvedValue([makeDiary()])
+    const app = await createApp(true)
+
+    const res = await app.request('/api/export')
+
+    expect(res.headers.get('Cache-Control')).toBe('private, no-store')
+  })
+
   test('zip の中身は 1日記 = 1 md ファイルで、frontmatterと本文を含む', async () => {
     const { listAllDiaries } = await import('../../lib/db')
     vi.mocked(listAllDiaries).mockResolvedValue([
