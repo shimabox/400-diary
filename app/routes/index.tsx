@@ -66,8 +66,10 @@ export default createRoute(async (c) => {
         <div
           style={{
             display: 'flex',
+            flexWrap: 'wrap',
             justifyContent: 'space-between',
             alignItems: 'center',
+            gap: '0.5rem',
             padding: '0 0.5rem 1rem',
           }}
         >
@@ -77,17 +79,18 @@ export default createRoute(async (c) => {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '1rem',
+                gap: '0.5rem',
               }}
             >
               <a
                 href="/api/export"
                 style={{
-                  padding: '0.4rem 1rem',
+                  padding: '0.4rem 0.75rem',
                   border: '1px solid #595959',
                   borderRadius: '4px',
                   fontSize: '0.9rem',
                   color: '#595959',
+                  whiteSpace: 'nowrap',
                 }}
               >
                 エクスポート
@@ -95,10 +98,11 @@ export default createRoute(async (c) => {
               <a
                 href="/new"
                 style={{
-                  padding: '0.4rem 1rem',
+                  padding: '0.4rem 0.75rem',
                   border: '1px solid #333',
                   borderRadius: '4px',
                   fontSize: '0.9rem',
+                  whiteSpace: 'nowrap',
                 }}
               >
                 日記を書く
