@@ -154,6 +154,11 @@ export default createRoute(async (c) => {
           <a href="/rss.xml" style={{ color: '#595959' }}>
             RSS
           </a>
+          {isAuthenticated && (
+            <a href="/api/export" style={{ color: '#595959' }}>
+              エクスポート
+            </a>
+          )}
         </footer>
       </div>
     </div>,
