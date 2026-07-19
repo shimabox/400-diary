@@ -421,6 +421,19 @@ export async function listSnapshotImageKeys(
   return results.map((r) => r.image_key)
 }
 
+/** エクスポート用: 全日記を日付昇順で取得（JOIN 不要、下書き・本文は diaries の現行値をそのまま返す） */
+export async function listAllDiaries(db: D1Database): Promise<Diary[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT id, body, image_key, image_layout, image_x, image_y, background_color, mood,
+              diary_date, published_snapshot_id, created_at, updated_at
+       FROM diaries
+       ORDER BY diary_date ASC, id ASC`,
+    )
+    .all<Diary>()
+  return results
+}
+
 export async function deleteDiary(
   db: D1Database,
   id: string,

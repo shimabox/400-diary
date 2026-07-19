@@ -5,6 +5,7 @@ import {
   deleteDiary,
   getDiary,
   getDiaryDateRange,
+  listAllDiaries,
   listDiariesPage,
   listPublishedFeedItems,
   publishDiary,
@@ -373,5 +374,23 @@ describe('deleteDiary', () => {
     const result = await deleteDiary(db, 'not-found')
 
     expect(result).toBe(false)
+  })
+})
+
+describe('listAllDiaries', () => {
+  test('diary_date ASC, id ASC で LIMIT なしの一発クエリを発行する', async () => {
+    const rows = [
+      { id: 'a', diary_date: '2026-07-01' },
+      { id: 'b', diary_date: '2026-07-02' },
+    ]
+    const db = createMockDB({ all: { results: rows, meta: { changes: 0 } } })
+
+    const result = await listAllDiaries(db)
+
+    expect(result).toEqual(rows)
+    const sql = vi.mocked(db.prepare).mock.calls[0][0] as string
+    expect(sql).toContain('ORDER BY diary_date ASC, id ASC')
+    expect(sql).not.toContain('LIMIT')
+    expect(sql).not.toContain('JOIN')
   })
 })

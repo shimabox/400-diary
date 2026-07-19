@@ -66,24 +66,48 @@ export default createRoute(async (c) => {
         <div
           style={{
             display: 'flex',
+            flexWrap: 'wrap',
             justifyContent: 'space-between',
             alignItems: 'center',
+            gap: '0.5rem',
             padding: '0 0.5rem 1rem',
           }}
         >
           <h1 style={{ fontSize: '1.3rem' }}>{appName}</h1>
           {isAuthenticated && (
-            <a
-              href="/new"
+            <div
               style={{
-                padding: '0.4rem 1rem',
-                border: '1px solid #333',
-                borderRadius: '4px',
-                fontSize: '0.9rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
               }}
             >
-              日記を書く
-            </a>
+              <a
+                href="/api/export"
+                style={{
+                  padding: '0.4rem 0.75rem',
+                  border: '1px solid #595959',
+                  borderRadius: '4px',
+                  fontSize: '0.9rem',
+                  color: '#595959',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                エクスポート
+              </a>
+              <a
+                href="/new"
+                style={{
+                  padding: '0.4rem 0.75rem',
+                  border: '1px solid #333',
+                  borderRadius: '4px',
+                  fontSize: '0.9rem',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                日記を書く
+              </a>
+            </div>
           )}
         </div>
 
