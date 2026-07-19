@@ -13,6 +13,7 @@ https://diary.orukubami.sh で公開されているアプリのソースコー�
 - **画像アップロード** — ドラッグで自由に配置でき、[chenglou/pretext](https://github.com/chenglou/pretext) によりテキストが画像を回り込む
 - **音声入力** — Web Speech API による日本語リアルタイム音声認識
 - **カレンダー** — GitHub風ヒートマップ + 月間カレンダーで気分を可視化
+- **マークダウン一括エクスポート** — 全日記を frontmatter 付きマークダウン + zip で一括ダウンロード(認証時のみ)
 - **SPA ナビゲーション** — History API によるページ遷移
 
 ## 技術スタック
