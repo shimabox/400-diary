@@ -73,17 +73,31 @@ export default createRoute(async (c) => {
         >
           <h1 style={{ fontSize: '1.3rem' }}>{appName}</h1>
           {isAuthenticated && (
-            <a
-              href="/new"
+            <div
               style={{
-                padding: '0.4rem 1rem',
-                border: '1px solid #333',
-                borderRadius: '4px',
-                fontSize: '0.9rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '1rem',
               }}
             >
-              日記を書く
-            </a>
+              <a
+                href="/api/export"
+                style={{ color: '#595959', fontSize: '0.9rem' }}
+              >
+                エクスポート
+              </a>
+              <a
+                href="/new"
+                style={{
+                  padding: '0.4rem 1rem',
+                  border: '1px solid #333',
+                  borderRadius: '4px',
+                  fontSize: '0.9rem',
+                }}
+              >
+                日記を書く
+              </a>
+            </div>
           )}
         </div>
 
@@ -154,11 +168,6 @@ export default createRoute(async (c) => {
           <a href="/rss.xml" style={{ color: '#595959' }}>
             RSS
           </a>
-          {isAuthenticated && (
-            <a href="/api/export" style={{ color: '#595959' }}>
-              エクスポート
-            </a>
-          )}
         </footer>
       </div>
     </div>,
