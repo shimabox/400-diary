@@ -11,6 +11,7 @@ import {
   useRef,
   useState,
 } from 'hono/jsx'
+import { IMAGE_SCALE_MAX, IMAGE_SCALE_MIN } from '../lib/constants'
 import {
   adjustSlotsForDate,
   computeSlots,
@@ -48,6 +49,8 @@ type Props = {
   draggable?: boolean
   /** ドラッグによる位置変更コールバック */
   onPositionChange?: (x: number, y: number) => void
+  /** ピンチによる倍率変更コールバック（draggable 時のみ有効） */
+  onScaleChange?: (scale: number) => void
 }
 
 export default function FlowText({
@@ -62,6 +65,7 @@ export default function FlowText({
   dateLabel,
   draggable = false,
   onPositionChange,
+  onScaleChange,
 }: Props) {
   const scale = imageScale ?? 1
   const containerRef = useRef<HTMLDivElement>(null)
@@ -194,51 +198,107 @@ export default function FlowText({
     dateSide,
   ])
 
-  // ドラッグ処理
+  // ドラッグ（指1本）とピンチ（指2本）の処理。
+  // setPointerCapture で move/up が button に届くため、ハンドラはすべて button 側に置く
+  const activePointers = useMemo(
+    () => new Map<number, { x: number; y: number }>(),
+    [],
+  )
+  const dragRef = useRef<{
+    pointerId: number
+    offsetX: number
+    offsetY: number
+  } | null>(null)
+  const pinchRef = useRef<{ startDistance: number; startScale: number } | null>(
+    null,
+  )
+
   const handlePointerDown = useCallback(
     (e: PointerEvent) => {
-      if (!draggable || !onPositionChange) return
+      if (!draggable) return
       e.preventDefault()
 
       const target = e.currentTarget as HTMLElement
       target.setPointerCapture(e.pointerId)
+      activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
 
-      const containerEl = containerRef.current
-      if (!containerEl || !imageSize) return
-      const rect = containerEl.getBoundingClientRect()
+      if (activePointers.size === 2 && onScaleChange) {
+        // 2本目の指が触れたらピンチ開始。移動は中断する
+        dragRef.current = null
+        const [p1, p2] = [...activePointers.values()]
+        pinchRef.current = {
+          startDistance: Math.hypot(p1.x - p2.x, p1.y - p2.y),
+          startScale: scale,
+        }
+        return
+      }
 
-      const offsetX = e.clientX - rect.left - obstacleRect.x
-      const offsetY = e.clientY - rect.top - obstacleRect.y
+      if (activePointers.size === 1 && onPositionChange) {
+        const containerEl = containerRef.current
+        if (!containerEl) return
+        const rect = containerEl.getBoundingClientRect()
+        dragRef.current = {
+          pointerId: e.pointerId,
+          offsetX: e.clientX - rect.left - obstacleRect.x,
+          offsetY: e.clientY - rect.top - obstacleRect.y,
+        }
+      }
+    },
+    [draggable, onPositionChange, onScaleChange, scale, obstacleRect],
+  )
 
-      const maxX = containerWidth - imageSize.width
-      const maxY = containerHeight - imageSize.height
+  const handlePointerMove = useCallback(
+    (e: PointerEvent) => {
+      if (!activePointers.has(e.pointerId)) return
+      activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
 
-      const onPointerMove = (ev: globalThis.PointerEvent) => {
-        const nx = ev.clientX - rect.left - offsetX
-        const ny = ev.clientY - rect.top - offsetY
+      const pinch = pinchRef.current
+      if (pinch && activePointers.size >= 2 && onScaleChange) {
+        const [p1, p2] = [...activePointers.values()]
+        const distance = Math.hypot(p1.x - p2.x, p1.y - p2.y)
+        if (pinch.startDistance > 0) {
+          const next = (pinch.startScale * distance) / pinch.startDistance
+          const clamped = Math.max(
+            IMAGE_SCALE_MIN,
+            Math.min(IMAGE_SCALE_MAX, next),
+          )
+          onScaleChange(Math.round(clamped * 100) / 100)
+        }
+        return
+      }
+
+      const drag = dragRef.current
+      if (
+        drag?.pointerId === e.pointerId &&
+        onPositionChange &&
+        imageSize &&
+        containerRef.current
+      ) {
+        const rect = containerRef.current.getBoundingClientRect()
+        const nx = e.clientX - rect.left - drag.offsetX
+        const ny = e.clientY - rect.top - drag.offsetY
+        const maxX = containerWidth - imageSize.width
+        const maxY = containerHeight - imageSize.height
         onPositionChange(
           Math.max(0, Math.min(nx, maxX)),
           Math.max(0, Math.min(ny, maxY)),
         )
       }
-
-      const onPointerUp = () => {
-        window.removeEventListener('pointermove', onPointerMove)
-        window.removeEventListener('pointerup', onPointerUp)
-      }
-
-      window.addEventListener('pointermove', onPointerMove)
-      window.addEventListener('pointerup', onPointerUp)
     },
     [
-      draggable,
+      onScaleChange,
       onPositionChange,
       imageSize,
-      obstacleRect,
       containerWidth,
       containerHeight,
     ],
   )
+
+  const handlePointerEnd = useCallback((e: PointerEvent) => {
+    activePointers.delete(e.pointerId)
+    if (activePointers.size < 2) pinchRef.current = null
+    if (dragRef.current?.pointerId === e.pointerId) dragRef.current = null
+  }, [])
 
   return (
     <div
@@ -273,6 +333,9 @@ export default function FlowText({
           type="button"
           onClick={draggable ? undefined : () => setShowViewer(true)}
           onPointerDown={draggable ? handlePointerDown : undefined}
+          onPointerMove={draggable ? handlePointerMove : undefined}
+          onPointerUp={draggable ? handlePointerEnd : undefined}
+          onPointerCancel={draggable ? handlePointerEnd : undefined}
           style={{
             position: 'absolute',
             left: `${obstacleRect.x}px`,

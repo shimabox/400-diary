@@ -224,6 +224,7 @@ export default function VerticalEditor({
                 setImageX(x)
                 setImageY(y)
               }}
+              onScaleChange={setImageScale}
             />
           </div>
         </div>
