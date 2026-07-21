@@ -3,7 +3,14 @@ import {
   layoutNextLine,
   prepareWithSegments,
 } from '@chenglou/pretext'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'hono/jsx'
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'hono/jsx'
 import {
   adjustSlotsForDate,
   computeSlots,
@@ -20,6 +27,10 @@ type ImageSize = {
   height: number
 }
 
+// 倍率 1.0 のときの画像の最大サイズ。imageScale はこれに乗算される
+const IMAGE_BASE_MAX_WIDTH_PERCENT = 30
+const IMAGE_BASE_MAX_HEIGHT_PX = 256
+
 type Props = {
   text: string
   fontSize: number
@@ -29,6 +40,8 @@ type Props = {
   containerHeight: number
   /** 画像の位置（指定時は imageLayout より優先） */
   imagePosition?: { x: number; y: number } | null
+  /** 画像の表示倍率（null は 1.0 扱い） */
+  imageScale?: number | null
   /** 日付ラベル（画像の反対側に配置し、テキストが回り込む） */
   dateLabel?: string
   /** ドラッグで画像を移動可能にする */
@@ -45,10 +58,12 @@ export default function FlowText({
   imageSrc,
   containerHeight,
   imagePosition,
+  imageScale,
   dateLabel,
   draggable = false,
   onPositionChange,
 }: Props) {
+  const scale = imageScale ?? 1
   const containerRef = useRef<HTMLDivElement>(null)
   const dateRef = useRef<HTMLDivElement>(null)
   const imgRef = useRef<HTMLImageElement>(null)
@@ -72,6 +87,15 @@ export default function FlowText({
       setImageSize({ width: img.offsetWidth, height: img.offsetHeight })
     }
   }, [])
+
+  // 倍率変更で CSS の最大サイズが変わるため、ペイント前に実測し直して
+  // テキストの回り込み（obstacleRect → computeSlots）へ即時反映する
+  useLayoutEffect(() => {
+    const img = imgRef.current
+    if (img?.complete && img.naturalWidth > 0) {
+      setImageSize({ width: img.offsetWidth, height: img.offsetHeight })
+    }
+  }, [scale])
 
   // 日付サイズを計測
   useEffect(() => {
@@ -104,13 +128,22 @@ export default function FlowText({
       return { x: 0, y: 0, width: 0, height: 0 }
 
     if (imagePosition) {
-      return { ...imagePosition, ...imageSize }
+      // 保存済みの位置のまま拡大するとコンテナからはみ出し得るため、表示上は内側に丸める
+      const x = Math.max(
+        0,
+        Math.min(imagePosition.x, containerWidth - imageSize.width),
+      )
+      const y = Math.max(
+        0,
+        Math.min(imagePosition.y, containerHeight - imageSize.height),
+      )
+      return { x, y, ...imageSize }
     }
 
     // imagePosition が未指定なら imageLayout から導出
     const x = imageLayout === 'right' ? containerWidth - imageSize.width : 0
     return { x, y: 0, ...imageSize }
-  }, [imageSize, imagePosition, imageLayout, containerWidth])
+  }, [imageSize, imagePosition, imageLayout, containerWidth, containerHeight])
 
   // 日付の表示位置（画像の反対側）
   const dateSide = imageLayout === 'right' ? 'left' : 'right'
@@ -244,7 +277,7 @@ export default function FlowText({
             position: 'absolute',
             left: `${obstacleRect.x}px`,
             top: `${obstacleRect.y}px`,
-            maxWidth: '30%',
+            maxWidth: `${IMAGE_BASE_MAX_WIDTH_PERCENT * scale}%`,
             padding: 0,
             border: 'none',
             background: 'none',
@@ -263,7 +296,7 @@ export default function FlowText({
             onLoad={handleImageLoad}
             style={{
               maxWidth: '100%',
-              maxHeight: '256px',
+              maxHeight: `${IMAGE_BASE_MAX_HEIGHT_PX * scale}px`,
               objectFit: 'cover',
               borderRadius: '12px',
               display: 'block',

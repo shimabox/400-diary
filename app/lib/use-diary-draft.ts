@@ -9,6 +9,7 @@ export type DiaryDraft = {
   mood: string | null
   imageX: number | null
   imageY: number | null
+  imageScale: number | null
 }
 
 type Options = {
@@ -21,6 +22,7 @@ type Options = {
   mood: string | null
   imageX: number | null
   imageY: number | null
+  imageScale: number | null
 }
 
 export function validateDiaryDraft(draft: DiaryDraft): string | null {
@@ -46,6 +48,7 @@ export function useDiaryDraft({
   mood,
   imageX,
   imageY,
+  imageScale,
 }: Options) {
   const [saving, setSaving] = useState(false)
   const [publishing, setPublishing] = useState(false)
@@ -64,6 +67,7 @@ export function useDiaryDraft({
       mood,
       imageX,
       imageY,
+      imageScale,
     }
     const validationError = validateDiaryDraft(draft)
     if (validationError) {
@@ -91,6 +95,7 @@ export function useDiaryDraft({
           mood: draft.mood,
           image_x: draft.imageX,
           image_y: draft.imageY,
+          image_scale: draft.imageScale,
         }),
       })
 
@@ -117,6 +122,7 @@ export function useDiaryDraft({
     mood,
     imageX,
     imageY,
+    imageScale,
     currentDiaryId,
   ])
 

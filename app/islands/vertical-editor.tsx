@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from 'hono/jsx'
 import { PASTEL_COLORS } from '../lib/colors'
-import { MAX_BODY_LENGTH } from '../lib/constants'
+import {
+  IMAGE_SCALE_MAX,
+  IMAGE_SCALE_MIN,
+  MAX_BODY_LENGTH,
+} from '../lib/constants'
 import { formatDiaryDate } from '../lib/format'
 import { COLS, ROWS } from '../lib/grid'
 import { MOODS, type MoodKey } from '../lib/mood'
@@ -22,6 +26,7 @@ type Props = {
   initialImageKey?: string | null
   initialImageX?: number | null
   initialImageY?: number | null
+  initialImageScale?: number | null
   diaryId?: string
   publishedAt?: string | null
 }
@@ -36,6 +41,7 @@ export default function VerticalEditor({
   initialImageKey = null,
   initialImageX = null,
   initialImageY = null,
+  initialImageScale = null,
   diaryId,
   publishedAt: initialPublishedAt = null,
 }: Props) {
@@ -81,6 +87,7 @@ export default function VerticalEditor({
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [imageX, setImageX] = useState<number | null>(initialImageX)
   const [imageY, setImageY] = useState<number | null>(initialImageY)
+  const [imageScale, setImageScale] = useState<number | null>(initialImageScale)
 
   const {
     currentDiaryId,
@@ -101,6 +108,7 @@ export default function VerticalEditor({
     mood,
     imageX,
     imageY,
+    imageScale,
   })
   const imageSrc = imagePreview ?? (imageKey ? `/api/images/${imageKey}` : null)
 
@@ -210,6 +218,7 @@ export default function VerticalEditor({
                   ? { x: imageX, y: imageY }
                   : null
               }
+              imageScale={imageScale}
               draggable={true}
               onPositionChange={(x, y) => {
                 setImageX(x)
@@ -397,6 +406,40 @@ export default function VerticalEditor({
             画像右
           </button>
         </div>
+
+        {imageSrc && (
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.25rem',
+              fontSize: '0.85rem',
+              color: '#666',
+            }}
+          >
+            画像サイズ
+            <input
+              type="range"
+              min={IMAGE_SCALE_MIN}
+              max={IMAGE_SCALE_MAX}
+              step={0.05}
+              value={imageScale ?? 1}
+              onInput={(e) =>
+                setImageScale(Number((e.target as HTMLInputElement).value))
+              }
+              style={{ width: '6rem' }}
+            />
+            <span
+              style={{
+                minWidth: '3em',
+                textAlign: 'right',
+                fontVariantNumeric: 'tabular-nums',
+              }}
+            >
+              {Math.round((imageScale ?? 1) * 100)}%
+            </span>
+          </label>
+        )}
 
         <ImageAttachmentEditor
           diaryId={currentDiaryId || null}
