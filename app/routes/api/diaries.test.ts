@@ -62,6 +62,7 @@ function makeRow(
     image_layout: 'left',
     image_x: null,
     image_y: null,
+    image_scale: null,
     background_color: '#FFE4E1',
     mood: 'happy',
     diary_date: '2026-07-05',
@@ -75,6 +76,7 @@ function makeRow(
     snapshot_image_layout: 'left',
     snapshot_image_x: null,
     snapshot_image_y: null,
+    snapshot_image_scale: null,
     snapshot_mood: 'happy',
     ...overrides,
   }
@@ -203,6 +205,17 @@ describe('POST /api/diaries バリデーション', () => {
       body: 'テスト',
       diary_date: '2026-04-12',
       image_x: 'NaN文字列',
+    })
+
+    expect(res.status).toBe(400)
+  })
+
+  test('image_scale が範囲外の場合は400を返す', async () => {
+    const app = await createPostApp(true)
+    const res = await postJSON(app, {
+      body: 'テスト',
+      diary_date: '2026-04-12',
+      image_scale: 2,
     })
 
     expect(res.status).toBe(400)

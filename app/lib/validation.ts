@@ -1,4 +1,4 @@
-import { MAX_BODY_LENGTH } from './constants'
+import { IMAGE_SCALE_MAX, IMAGE_SCALE_MIN, MAX_BODY_LENGTH } from './constants'
 import { MOODS, type MoodKey } from './mood'
 
 // TypeScript の型は c.req.json<T>() のキャストにすぎずランタイムでは何も守らない。
@@ -43,6 +43,17 @@ export function isImageCoord(v: unknown): v is number | null {
   return v === null || (typeof v === 'number' && Number.isFinite(v))
 }
 
+/** 画像表示倍率。null は「未設定 = 1.0 扱い」を意味する */
+export function isImageScale(v: unknown): v is number | null {
+  return (
+    v === null ||
+    (typeof v === 'number' &&
+      Number.isFinite(v) &&
+      v >= IMAGE_SCALE_MIN &&
+      v <= IMAGE_SCALE_MAX)
+  )
+}
+
 export type DiaryInput = {
   body?: string
   diary_date?: string
@@ -51,6 +62,7 @@ export type DiaryInput = {
   mood?: string | null
   image_x?: number | null
   image_y?: number | null
+  image_scale?: number | null
 }
 
 export type ValidateDiaryInputOptions = {
@@ -126,6 +138,9 @@ export function validateDiaryInput(
   if ('image_y' in input && !isImageCoord(input.image_y)) {
     return { ok: false, error: '画像位置の指定が不正です' }
   }
+  if ('image_scale' in input && !isImageScale(input.image_scale)) {
+    return { ok: false, error: '画像サイズの指定が不正です' }
+  }
 
   const value: DiaryInput = {}
   if (input.body !== undefined) value.body = input.body as string
@@ -141,6 +156,9 @@ export function validateDiaryInput(
   if ('mood' in input) value.mood = input.mood as string | null
   if ('image_x' in input) value.image_x = input.image_x as number | null
   if ('image_y' in input) value.image_y = input.image_y as number | null
+  if ('image_scale' in input) {
+    value.image_scale = input.image_scale as number | null
+  }
 
   return { ok: true, value }
 }

@@ -38,7 +38,7 @@ export function toDiaryCard(
   const backgroundColor = row.snapshot_background_color ?? row.background_color
   const isDraft = isAuthenticated && !row.published_snapshot_id
 
-  // 「未公開の変更」バッジ判定。index.tsx にあった下書きとスナップショットの7フィールド比較を移植。
+  // 「未公開の変更」バッジ判定。index.tsx にあった下書きとスナップショットのフィールド比較を移植。
   const hasUnpublishedChanges =
     isAuthenticated &&
     !!row.published_snapshot_id &&
@@ -48,6 +48,7 @@ export function toDiaryCard(
       row.image_layout !== row.snapshot_image_layout ||
       row.image_x !== row.snapshot_image_x ||
       row.image_y !== row.snapshot_image_y ||
+      row.image_scale !== row.snapshot_image_scale ||
       row.mood !== row.snapshot_mood)
 
   return {

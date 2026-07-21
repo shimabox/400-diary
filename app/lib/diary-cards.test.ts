@@ -12,6 +12,7 @@ function makeRow(
     image_layout: 'left',
     image_x: null,
     image_y: null,
+    image_scale: null,
     background_color: '#FFE4E1',
     mood: 'happy',
     diary_date: '2026-07-05',
@@ -25,6 +26,7 @@ function makeRow(
     snapshot_image_layout: 'left',
     snapshot_image_x: null,
     snapshot_image_y: null,
+    snapshot_image_scale: null,
     snapshot_mood: 'happy',
     ...overrides,
   }
@@ -74,6 +76,7 @@ describe('toDiaryCard', () => {
       snapshot_image_layout: null,
       snapshot_image_x: null,
       snapshot_image_y: null,
+      snapshot_image_scale: null,
       snapshot_mood: null,
     })
 
@@ -106,6 +109,7 @@ describe('toDiaryCard', () => {
     ['image_layout', { image_layout: 'right' as const }],
     ['image_x', { image_x: 10 }],
     ['image_y', { image_y: 20 }],
+    ['image_scale', { image_scale: 1.2 }],
     ['mood', { mood: 'sad' }],
   ])('認証済みで %s が snapshot と異なる場合 has_unpublished_changes は true', (_field, overrides) => {
     const row = makeRow(overrides)
