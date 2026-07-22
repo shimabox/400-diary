@@ -17,6 +17,7 @@ erDiagram
         REAL image_x "画像X座標 (nullable)"
         REAL image_y "画像Y座標 (nullable)"
         REAL image_scale "画像表示倍率 0.5-1.5 (nullable)"
+        REAL image_rotation "画像回転角/度 -15〜15 (nullable)"
         TEXT background_color "HEX (#FFE4E1等)"
         TEXT mood "happy/calm/sad/angry/anxious/fun"
         TEXT diary_date "YYYY-MM-DD"
@@ -33,6 +34,7 @@ erDiagram
         REAL image_x
         REAL image_y
         REAL image_scale
+        REAL image_rotation
         TEXT background_color
         TEXT mood
         TEXT published_at

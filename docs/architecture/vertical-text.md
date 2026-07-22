@@ -126,6 +126,7 @@ flowchart TD
 - 画像はドラッグで自由に配置可能（`image_x`/`image_y` で座標を保存）
 - `image_x`/`image_y` が未設定の場合は `image_layout`（left/right）からデフォルト位置を導出
 - 画像サイズはスライダーまたはピンチ（指1本=移動、指2本=リサイズ）で 0.5〜1.5 倍に調整可能（`image_scale` で保存、null は 1.0 扱い）。表示サイズは自然サイズ（`naturalWidth`/`naturalHeight`）と倍率から render 中に導出され、obstacleRect → `computeSlots` の経路で回り込みが即座に組み直される
+- 画像はスライダーまたは2本指の回転で -15〜15° 傾けられる（`image_rotation` で保存、null は 0 扱い）。obstacleRect には回転後の外接矩形を渡すため、回り込みは矩形のまま成立する（±15° に絞っているのは矩形近似の角の空白を目立たせないため）
 - 日付ラベルは `image_layout` の反対側に配置
 
 ## 関連ファイル
