@@ -34,6 +34,7 @@ function makeSnapshot(): DiarySnapshot {
     image_x: null,
     image_y: null,
     image_scale: null,
+    image_rotation: null,
     background_color: '#FFFFFF',
     mood: 'happy',
     published_at: '2026-04-15 12:00:00',

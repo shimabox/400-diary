@@ -99,6 +99,19 @@ describe('createDiary', () => {
     expect(db.boundValues).toContain(1.2)
   })
 
+  test('image_rotation を指定できる', async () => {
+    const db = createMockDB({ first: { id: 'test-id-1234' } })
+
+    await createDiary(db, {
+      body: '本文',
+      diary_date: '2026-04-12',
+      background_color: '#FFE4E1',
+      image_rotation: -8,
+    })
+
+    expect(db.boundValues).toContain(-8)
+  })
+
   test('image_x と image_y のデフォルトは null', async () => {
     const db = createMockDB({ first: { id: 'test-id-1234' } })
 
@@ -108,9 +121,9 @@ describe('createDiary', () => {
       background_color: '#FFE4E1',
     })
 
-    // bind の引数: id, body, bg_color, image_layout, mood, diary_date, image_x, image_y, image_scale
+    // bind の引数: id, body, bg_color, image_layout, mood, diary_date, image_x, image_y, image_scale, image_rotation
     const nullCount = db.boundValues.filter((v) => v === null).length
-    expect(nullCount).toBeGreaterThanOrEqual(2) // mood=null, image_x=null, image_y=null, image_scale=null
+    expect(nullCount).toBeGreaterThanOrEqual(2) // mood, image_x, image_y, image_scale, image_rotation = null
   })
 })
 
@@ -194,6 +207,19 @@ describe('updateDiary', () => {
     await updateDiary(db2, 'abc', { image_scale: null })
     expect(db2.prepare).toHaveBeenCalledTimes(3)
   })
+
+  test('image_rotation を更新・リセットできる', async () => {
+    const diary = { id: 'abc', image_rotation: null }
+    const db = createMockDB({ first: diary })
+
+    await updateDiary(db, 'abc', { image_rotation: 12 })
+
+    expect(db.boundValues).toContain(12)
+
+    const db2 = createMockDB({ first: { id: 'abc', image_rotation: 12 } })
+    await updateDiary(db2, 'abc', { image_rotation: null })
+    expect(db2.prepare).toHaveBeenCalledTimes(3)
+  })
 })
 
 describe('publishDiary', () => {
@@ -206,6 +232,7 @@ describe('publishDiary', () => {
       image_x: null,
       image_y: null,
       image_scale: 1.2,
+      image_rotation: -8,
       background_color: '#FFE4E1',
       mood: null,
     }
@@ -216,6 +243,7 @@ describe('publishDiary', () => {
     expect(db.boundValues).toContain('本文')
     expect(db.boundValues).toContain('diaries/abc/image.jpg')
     expect(db.boundValues).toContain(1.2)
+    expect(db.boundValues).toContain(-8)
   })
 
   test('snapshot の INSERT と published_snapshot_id の UPDATE を batch で原子的に実行する', async () => {

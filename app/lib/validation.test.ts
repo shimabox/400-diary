@@ -220,6 +220,27 @@ describe('validateDiaryInput', () => {
     if (result.ok) expect(result.value.image_scale).toBeNull()
   })
 
+  test('image_rotation は -15〜15 の範囲内なら許可される', () => {
+    for (const rotation of [-15, 0, 15]) {
+      const result = validateDiaryInput({ image_rotation: rotation })
+      expect(result.ok).toBe(true)
+      if (result.ok) expect(result.value.image_rotation).toBe(rotation)
+    }
+  })
+
+  test('image_rotation が範囲外・数値以外なら失敗する', () => {
+    expect(validateDiaryInput({ image_rotation: -16 }).ok).toBe(false)
+    expect(validateDiaryInput({ image_rotation: 16 }).ok).toBe(false)
+    expect(validateDiaryInput({ image_rotation: 'NaN文字列' }).ok).toBe(false)
+    expect(validateDiaryInput({ image_rotation: Number.NaN }).ok).toBe(false)
+  })
+
+  test('image_rotation に null を渡すと許可される(未設定 = 0 扱い)', () => {
+    const result = validateDiaryInput({ image_rotation: null })
+    expect(result.ok).toBe(true)
+    if (result.ok) expect(result.value.image_rotation).toBeNull()
+  })
+
   test('全フィールドが正しい値なら成功する', () => {
     const result = validateDiaryInput(
       {
@@ -231,6 +252,7 @@ describe('validateDiaryInput', () => {
         image_x: 10,
         image_y: -5.5,
         image_scale: 1.2,
+        image_rotation: -8,
       },
       { requireBody: true, requireDate: true },
     )
@@ -245,6 +267,7 @@ describe('validateDiaryInput', () => {
         image_x: 10,
         image_y: -5.5,
         image_scale: 1.2,
+        image_rotation: -8,
       })
     }
   })
