@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'hono/jsx'
 import { PASTEL_COLORS } from '../lib/colors'
 import {
+  IMAGE_ROTATION_MAX,
+  IMAGE_ROTATION_MIN,
   IMAGE_SCALE_MAX,
   IMAGE_SCALE_MIN,
   MAX_BODY_LENGTH,
@@ -27,6 +29,7 @@ type Props = {
   initialImageX?: number | null
   initialImageY?: number | null
   initialImageScale?: number | null
+  initialImageRotation?: number | null
   diaryId?: string
   publishedAt?: string | null
 }
@@ -42,6 +45,7 @@ export default function VerticalEditor({
   initialImageX = null,
   initialImageY = null,
   initialImageScale = null,
+  initialImageRotation = null,
   diaryId,
   publishedAt: initialPublishedAt = null,
 }: Props) {
@@ -88,6 +92,9 @@ export default function VerticalEditor({
   const [imageX, setImageX] = useState<number | null>(initialImageX)
   const [imageY, setImageY] = useState<number | null>(initialImageY)
   const [imageScale, setImageScale] = useState<number | null>(initialImageScale)
+  const [imageRotation, setImageRotation] = useState<number | null>(
+    initialImageRotation,
+  )
 
   const {
     currentDiaryId,
@@ -109,6 +116,7 @@ export default function VerticalEditor({
     imageX,
     imageY,
     imageScale,
+    imageRotation,
   })
   const imageSrc = imagePreview ?? (imageKey ? `/api/images/${imageKey}` : null)
 
@@ -219,12 +227,14 @@ export default function VerticalEditor({
                   : null
               }
               imageScale={imageScale}
+              imageRotation={imageRotation}
               draggable={true}
               onPositionChange={(x, y) => {
                 setImageX(x)
                 setImageY(y)
               }}
               onScaleChange={setImageScale}
+              onRotationChange={setImageRotation}
             />
           </div>
         </div>
@@ -438,6 +448,40 @@ export default function VerticalEditor({
               }}
             >
               {Math.round((imageScale ?? 1) * 100)}%
+            </span>
+          </label>
+        )}
+
+        {imageSrc && (
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.25rem',
+              fontSize: '0.85rem',
+              color: '#666',
+            }}
+          >
+            回転
+            <input
+              type="range"
+              min={IMAGE_ROTATION_MIN}
+              max={IMAGE_ROTATION_MAX}
+              step={1}
+              value={imageRotation ?? 0}
+              onInput={(e) =>
+                setImageRotation(Number((e.target as HTMLInputElement).value))
+              }
+              style={{ width: '6rem' }}
+            />
+            <span
+              style={{
+                minWidth: '3em',
+                textAlign: 'right',
+                fontVariantNumeric: 'tabular-nums',
+              }}
+            >
+              {imageRotation ?? 0}°
             </span>
           </label>
         )}

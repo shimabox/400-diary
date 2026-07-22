@@ -4,7 +4,12 @@ import {
   prepareWithSegments,
 } from '@chenglou/pretext'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'hono/jsx'
-import { IMAGE_SCALE_MAX, IMAGE_SCALE_MIN } from '../lib/constants'
+import {
+  IMAGE_ROTATION_MAX,
+  IMAGE_ROTATION_MIN,
+  IMAGE_SCALE_MAX,
+  IMAGE_SCALE_MIN,
+} from '../lib/constants'
 import {
   adjustSlotsForDate,
   computeSlots,
@@ -37,6 +42,8 @@ type Props = {
   imagePosition?: { x: number; y: number } | null
   /** 画像の表示倍率（null は 1.0 扱い） */
   imageScale?: number | null
+  /** 画像の回転角/度（null は 0 扱い） */
+  imageRotation?: number | null
   /** 日付ラベル（画像の反対側に配置し、テキストが回り込む） */
   dateLabel?: string
   /** ドラッグで画像を移動可能にする */
@@ -45,6 +52,8 @@ type Props = {
   onPositionChange?: (x: number, y: number) => void
   /** ピンチによる倍率変更コールバック（draggable 時のみ有効） */
   onScaleChange?: (scale: number) => void
+  /** 2本指の回転による回転角変更コールバック（draggable 時のみ有効） */
+  onRotationChange?: (rotation: number) => void
 }
 
 export default function FlowText({
@@ -56,12 +65,15 @@ export default function FlowText({
   containerHeight,
   imagePosition,
   imageScale,
+  imageRotation,
   dateLabel,
   draggable = false,
   onPositionChange,
   onScaleChange,
+  onRotationChange,
 }: Props) {
   const scale = imageScale ?? 1
+  const rotation = imageRotation ?? 0
   const containerRef = useRef<HTMLDivElement>(null)
   const dateRef = useRef<HTMLDivElement>(null)
   const imgRef = useRef<HTMLImageElement>(null)
@@ -103,6 +115,19 @@ export default function FlowText({
     }
   }, [naturalSize, containerWidth, scale])
 
+  // 回転した画像を包む外接矩形。レイアウト(回り込み・ドラッグ範囲・タップ領域)は
+  // この矩形を基準にする。±15°程度の傾きなら矩形近似による角の空白は目立たない
+  const frameSize = useMemo<ImageSize | null>(() => {
+    if (!imageSize) return null
+    const rad = (rotation * Math.PI) / 180
+    const cos = Math.abs(Math.cos(rad))
+    const sin = Math.abs(Math.sin(rad))
+    return {
+      width: imageSize.width * cos + imageSize.height * sin,
+      height: imageSize.width * sin + imageSize.height * cos,
+    }
+  }, [imageSize, rotation])
+
   // 日付サイズを計測
   useEffect(() => {
     if (dateRef.current) {
@@ -128,28 +153,28 @@ export default function FlowText({
     return () => obs.disconnect()
   }, [])
 
-  // 画像の obstacleRect を計算
+  // 画像の obstacleRect を計算（回転時は外接矩形）
   const obstacleRect = useMemo<ObstacleRect>(() => {
-    if (!imageSize || !containerWidth)
+    if (!frameSize || !containerWidth)
       return { x: 0, y: 0, width: 0, height: 0 }
 
     if (imagePosition) {
-      // 保存済みの位置のまま拡大するとコンテナからはみ出し得るため、表示上は内側に丸める
+      // 保存済みの位置のまま拡大・回転するとコンテナからはみ出し得るため、表示上は内側に丸める
       const x = Math.max(
         0,
-        Math.min(imagePosition.x, containerWidth - imageSize.width),
+        Math.min(imagePosition.x, containerWidth - frameSize.width),
       )
       const y = Math.max(
         0,
-        Math.min(imagePosition.y, containerHeight - imageSize.height),
+        Math.min(imagePosition.y, containerHeight - frameSize.height),
       )
-      return { x, y, ...imageSize }
+      return { x, y, ...frameSize }
     }
 
     // imagePosition が未指定なら imageLayout から導出
-    const x = imageLayout === 'right' ? containerWidth - imageSize.width : 0
-    return { x, y: 0, ...imageSize }
-  }, [imageSize, imagePosition, imageLayout, containerWidth, containerHeight])
+    const x = imageLayout === 'right' ? containerWidth - frameSize.width : 0
+    return { x, y: 0, ...frameSize }
+  }, [frameSize, imagePosition, imageLayout, containerWidth, containerHeight])
 
   // 日付の表示位置（画像の反対側）
   const dateSide = imageLayout === 'right' ? 'left' : 'right'
@@ -200,7 +225,7 @@ export default function FlowText({
     dateSide,
   ])
 
-  // ドラッグ（指1本）とピンチ（指2本）の処理。
+  // ドラッグ（指1本）とピンチ（指2本: 距離=拡縮、角度=回転）の処理。
   // setPointerCapture で move/up が button に届くため、ハンドラはすべて button 側に置く
   const activePointers = useMemo(
     () => new Map<number, { x: number; y: number }>(),
@@ -211,9 +236,12 @@ export default function FlowText({
     offsetX: number
     offsetY: number
   } | null>(null)
-  const pinchRef = useRef<{ startDistance: number; startScale: number } | null>(
-    null,
-  )
+  const pinchRef = useRef<{
+    startDistance: number
+    startScale: number
+    startAngle: number
+    startRotation: number
+  } | null>(null)
 
   const handlePointerDown = useCallback(
     (e: PointerEvent) => {
@@ -224,13 +252,15 @@ export default function FlowText({
       target.setPointerCapture(e.pointerId)
       activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
 
-      if (activePointers.size === 2 && onScaleChange) {
+      if (activePointers.size === 2 && (onScaleChange || onRotationChange)) {
         // 2本目の指が触れたらピンチ開始。移動は中断する
         dragRef.current = null
         const [p1, p2] = [...activePointers.values()]
         pinchRef.current = {
           startDistance: Math.hypot(p1.x - p2.x, p1.y - p2.y),
           startScale: scale,
+          startAngle: Math.atan2(p2.y - p1.y, p2.x - p1.x),
+          startRotation: rotation,
         }
         return
       }
@@ -246,7 +276,15 @@ export default function FlowText({
         }
       }
     },
-    [draggable, onPositionChange, onScaleChange, scale, obstacleRect],
+    [
+      draggable,
+      onPositionChange,
+      onScaleChange,
+      onRotationChange,
+      scale,
+      rotation,
+      obstacleRect,
+    ],
   )
 
   const handlePointerMove = useCallback(
@@ -255,16 +293,30 @@ export default function FlowText({
       activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
 
       const pinch = pinchRef.current
-      if (pinch && activePointers.size >= 2 && onScaleChange) {
+      if (pinch && activePointers.size >= 2) {
         const [p1, p2] = [...activePointers.values()]
-        const distance = Math.hypot(p1.x - p2.x, p1.y - p2.y)
-        if (pinch.startDistance > 0) {
+
+        if (onScaleChange && pinch.startDistance > 0) {
+          const distance = Math.hypot(p1.x - p2.x, p1.y - p2.y)
           const next = (pinch.startScale * distance) / pinch.startDistance
           const clamped = Math.max(
             IMAGE_SCALE_MIN,
             Math.min(IMAGE_SCALE_MAX, next),
           )
           onScaleChange(Math.round(clamped * 100) / 100)
+        }
+
+        if (onRotationChange) {
+          const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x)
+          // atan2 の ±180° 境界をまたいでも連続になるよう差分を正規化する
+          let deltaDeg = ((angle - pinch.startAngle) * 180) / Math.PI
+          deltaDeg = ((deltaDeg + 540) % 360) - 180
+          const next = pinch.startRotation + deltaDeg
+          const clamped = Math.max(
+            IMAGE_ROTATION_MIN,
+            Math.min(IMAGE_ROTATION_MAX, next),
+          )
+          onRotationChange(Math.round(clamped))
         }
         return
       }
@@ -273,14 +325,14 @@ export default function FlowText({
       if (
         drag?.pointerId === e.pointerId &&
         onPositionChange &&
-        imageSize &&
+        frameSize &&
         containerRef.current
       ) {
         const rect = containerRef.current.getBoundingClientRect()
         const nx = e.clientX - rect.left - drag.offsetX
         const ny = e.clientY - rect.top - drag.offsetY
-        const maxX = containerWidth - imageSize.width
-        const maxY = containerHeight - imageSize.height
+        const maxX = containerWidth - frameSize.width
+        const maxY = containerHeight - frameSize.height
         onPositionChange(
           Math.max(0, Math.min(nx, maxX)),
           Math.max(0, Math.min(ny, maxY)),
@@ -289,8 +341,9 @@ export default function FlowText({
     },
     [
       onScaleChange,
+      onRotationChange,
       onPositionChange,
-      imageSize,
+      frameSize,
       containerWidth,
       containerHeight,
     ],
@@ -342,6 +395,13 @@ export default function FlowText({
             position: 'absolute',
             left: `${obstacleRect.x}px`,
             top: `${obstacleRect.y}px`,
+            // button は外接矩形サイズ。回転した img を中央に置き、タップ領域と
+            // レイアウト(回り込み)の基準を一致させる
+            width: frameSize ? `${frameSize.width}px` : 'auto',
+            height: frameSize ? `${frameSize.height}px` : 'auto',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
             padding: 0,
             border: 'none',
             background: 'none',
@@ -349,7 +409,7 @@ export default function FlowText({
             WebkitTapHighlightColor: 'transparent',
             outline: 'none',
             touchAction: draggable ? 'none' : 'auto',
-            visibility: imageSize ? 'visible' : 'hidden',
+            visibility: frameSize ? 'visible' : 'hidden',
           }}
         >
           <img
@@ -362,6 +422,7 @@ export default function FlowText({
               // 導出済みの表示サイズを明示指定する（サイズ確定前は非表示のため 'auto' で問題ない）
               width: imageSize ? `${imageSize.width}px` : 'auto',
               height: imageSize ? `${imageSize.height}px` : 'auto',
+              transform: rotation !== 0 ? `rotate(${rotation}deg)` : undefined,
               borderRadius: '12px',
               display: 'block',
               pointerEvents: draggable ? 'none' : 'auto',
