@@ -64,13 +64,15 @@ pnpm wrangler r2 bucket create 400-diary-images
 ✅ Created bucket '400-diary-images' with default storage class of Standard.
 ```
 
-### リモートDBにスキーマを適用
+### リモートDBにマイグレーションを適用
 
 ```
 pnpm run db:migrate:remote
 ```
 
-確認が求められるので `yes` を入力する。
+`wrangler d1 migrations apply` が未適用のマイグレーション（`db/migrations/`）だけを順に適用する。適用済みかどうかは D1 内の `d1_migrations` テーブルで管理されるため、何度実行しても安全。確認が求められるので `yes` を入力する。
+
+なお `pnpm run deploy` はビルド後にこのコマンドを自動で実行するため、通常のデプロイで個別に実行する必要はない（スキーマ変更を伴うデプロイでマイグレーションの適用漏れが起きないようにするため）。
 
 ### OGP画像用フォントをR2にアップロード
 

@@ -47,6 +47,7 @@ export default createRoute(async (c) => {
   const pubImageLayout = snapshot.image_layout as 'left' | 'right'
   const pubImageX = snapshot.image_x
   const pubImageY = snapshot.image_y
+  const pubImageScale = snapshot.image_scale
   const pubBgColor = snapshot.background_color
   const pubMood = snapshot.mood
   const description = pubBody.slice(0, 80)
@@ -148,6 +149,7 @@ export default createRoute(async (c) => {
                 ? { x: pubImageX, y: pubImageY }
                 : null
             }
+            imageScale={pubImageScale}
           />
         </div>
       </div>

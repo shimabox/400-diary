@@ -38,7 +38,7 @@ pnpm install
 # ローカル開発用の環境変数を設定
 cp .dev.vars.example .dev.vars
 
-# ローカル D1 にスキーマを適用
+# ローカル D1 にマイグレーションを適用
 pnpm run db:migrate:local
 
 # OGP画像用フォントをローカル R2 にアップロード（初回のみ）
@@ -60,8 +60,8 @@ pnpm run dev
 | `pnpm run format` | Biome によるフォーマット |
 | `pnpm run build` | 型チェック + ビルド |
 | `pnpm run deploy` | ビルド + Cloudflare Pages へデプロイ |
-| `pnpm run db:migrate:local` | ローカル D1 にスキーマ適用 |
-| `pnpm run db:migrate:remote` | リモート D1 にスキーマ適用 |
+| `pnpm run db:migrate:local` | ローカル D1 に未適用マイグレーションを適用 |
+| `pnpm run db:migrate:remote` | リモート D1 に未適用マイグレーションを適用 |
 
 ## アーキテクチャ
 

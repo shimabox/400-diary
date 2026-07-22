@@ -65,6 +65,7 @@ export default createRoute(async (c) => {
           initialImageKey={diary.image_key}
           initialImageX={diary.image_x}
           initialImageY={diary.image_y}
+          initialImageScale={diary.image_scale}
           diaryId={diary.id}
           publishedAt={diary.published_at}
         />

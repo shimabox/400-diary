@@ -199,6 +199,27 @@ describe('validateDiaryInput', () => {
     }
   })
 
+  test('image_scale は 0.5〜1.5 の範囲内なら許可される', () => {
+    for (const scale of [0.5, 1, 1.5]) {
+      const result = validateDiaryInput({ image_scale: scale })
+      expect(result.ok).toBe(true)
+      if (result.ok) expect(result.value.image_scale).toBe(scale)
+    }
+  })
+
+  test('image_scale が範囲外・数値以外なら失敗する', () => {
+    expect(validateDiaryInput({ image_scale: 0.49 }).ok).toBe(false)
+    expect(validateDiaryInput({ image_scale: 1.51 }).ok).toBe(false)
+    expect(validateDiaryInput({ image_scale: 'NaN文字列' }).ok).toBe(false)
+    expect(validateDiaryInput({ image_scale: Number.NaN }).ok).toBe(false)
+  })
+
+  test('image_scale に null を渡すと許可される(未設定 = 1.0 扱い)', () => {
+    const result = validateDiaryInput({ image_scale: null })
+    expect(result.ok).toBe(true)
+    if (result.ok) expect(result.value.image_scale).toBeNull()
+  })
+
   test('全フィールドが正しい値なら成功する', () => {
     const result = validateDiaryInput(
       {
@@ -209,6 +230,7 @@ describe('validateDiaryInput', () => {
         mood: 'happy',
         image_x: 10,
         image_y: -5.5,
+        image_scale: 1.2,
       },
       { requireBody: true, requireDate: true },
     )
@@ -222,6 +244,7 @@ describe('validateDiaryInput', () => {
         mood: 'happy',
         image_x: 10,
         image_y: -5.5,
+        image_scale: 1.2,
       })
     }
   })

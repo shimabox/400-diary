@@ -4,6 +4,7 @@ import {
   prepareWithSegments,
 } from '@chenglou/pretext'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'hono/jsx'
+import { IMAGE_SCALE_MAX, IMAGE_SCALE_MIN } from '../lib/constants'
 import {
   adjustSlotsForDate,
   computeSlots,
@@ -20,6 +21,11 @@ type ImageSize = {
   height: number
 }
 
+// 倍率 1.0 のときの基準枠。自然サイズをこの枠に収めたサイズが倍率 1.0 の表示サイズになり、
+// imageScale はそこへ乗算される（枠より小さい画像は自然サイズが基準）
+const IMAGE_BASE_MAX_WIDTH_PERCENT = 30
+const IMAGE_BASE_MAX_HEIGHT_PX = 256
+
 type Props = {
   text: string
   fontSize: number
@@ -29,12 +35,16 @@ type Props = {
   containerHeight: number
   /** 画像の位置（指定時は imageLayout より優先） */
   imagePosition?: { x: number; y: number } | null
+  /** 画像の表示倍率（null は 1.0 扱い） */
+  imageScale?: number | null
   /** 日付ラベル（画像の反対側に配置し、テキストが回り込む） */
   dateLabel?: string
   /** ドラッグで画像を移動可能にする */
   draggable?: boolean
   /** ドラッグによる位置変更コールバック */
   onPositionChange?: (x: number, y: number) => void
+  /** ピンチによる倍率変更コールバック（draggable 時のみ有効） */
+  onScaleChange?: (scale: number) => void
 }
 
 export default function FlowText({
@@ -45,14 +55,17 @@ export default function FlowText({
   imageSrc,
   containerHeight,
   imagePosition,
+  imageScale,
   dateLabel,
   draggable = false,
   onPositionChange,
+  onScaleChange,
 }: Props) {
+  const scale = imageScale ?? 1
   const containerRef = useRef<HTMLDivElement>(null)
   const dateRef = useRef<HTMLDivElement>(null)
   const imgRef = useRef<HTMLImageElement>(null)
-  const [imageSize, setImageSize] = useState<ImageSize | null>(null)
+  const [naturalSize, setNaturalSize] = useState<ImageSize | null>(null)
   const [dateSize, setDateSize] = useState<{
     width: number
     height: number
@@ -62,16 +75,33 @@ export default function FlowText({
 
   const handleImageLoad = useCallback((e: Event) => {
     const img = e.target as HTMLImageElement
-    setImageSize({ width: img.offsetWidth, height: img.offsetHeight })
+    setNaturalSize({ width: img.naturalWidth, height: img.naturalHeight })
   }, [])
 
   // ref callback: ハイドレーション時に画像が読み込み済みならサイズを即取得
   const imgCallbackRef = useCallback((img: HTMLImageElement | null) => {
     imgRef.current = img
     if (img?.complete && img.naturalWidth > 0) {
-      setImageSize({ width: img.offsetWidth, height: img.offsetHeight })
+      setNaturalSize({ width: img.naturalWidth, height: img.naturalHeight })
     }
   }, [])
+
+  // 表示サイズは自然サイズから render 中に導出する。
+  // 「倍率1.0時に基準枠(幅30%/高さ256px)へ収まるサイズ」を基準に倍率を乗算するため、
+  // 基準枠より小さい画像でも倍率どおりに拡縮される
+  const imageSize = useMemo<ImageSize | null>(() => {
+    if (!naturalSize || !containerWidth) return null
+    const baseFit = Math.min(
+      1,
+      (containerWidth * (IMAGE_BASE_MAX_WIDTH_PERCENT / 100)) /
+        naturalSize.width,
+      IMAGE_BASE_MAX_HEIGHT_PX / naturalSize.height,
+    )
+    return {
+      width: naturalSize.width * baseFit * scale,
+      height: naturalSize.height * baseFit * scale,
+    }
+  }, [naturalSize, containerWidth, scale])
 
   // 日付サイズを計測
   useEffect(() => {
@@ -104,13 +134,22 @@ export default function FlowText({
       return { x: 0, y: 0, width: 0, height: 0 }
 
     if (imagePosition) {
-      return { ...imagePosition, ...imageSize }
+      // 保存済みの位置のまま拡大するとコンテナからはみ出し得るため、表示上は内側に丸める
+      const x = Math.max(
+        0,
+        Math.min(imagePosition.x, containerWidth - imageSize.width),
+      )
+      const y = Math.max(
+        0,
+        Math.min(imagePosition.y, containerHeight - imageSize.height),
+      )
+      return { x, y, ...imageSize }
     }
 
     // imagePosition が未指定なら imageLayout から導出
     const x = imageLayout === 'right' ? containerWidth - imageSize.width : 0
     return { x, y: 0, ...imageSize }
-  }, [imageSize, imagePosition, imageLayout, containerWidth])
+  }, [imageSize, imagePosition, imageLayout, containerWidth, containerHeight])
 
   // 日付の表示位置（画像の反対側）
   const dateSide = imageLayout === 'right' ? 'left' : 'right'
@@ -161,51 +200,107 @@ export default function FlowText({
     dateSide,
   ])
 
-  // ドラッグ処理
+  // ドラッグ（指1本）とピンチ（指2本）の処理。
+  // setPointerCapture で move/up が button に届くため、ハンドラはすべて button 側に置く
+  const activePointers = useMemo(
+    () => new Map<number, { x: number; y: number }>(),
+    [],
+  )
+  const dragRef = useRef<{
+    pointerId: number
+    offsetX: number
+    offsetY: number
+  } | null>(null)
+  const pinchRef = useRef<{ startDistance: number; startScale: number } | null>(
+    null,
+  )
+
   const handlePointerDown = useCallback(
     (e: PointerEvent) => {
-      if (!draggable || !onPositionChange) return
+      if (!draggable) return
       e.preventDefault()
 
       const target = e.currentTarget as HTMLElement
       target.setPointerCapture(e.pointerId)
+      activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
 
-      const containerEl = containerRef.current
-      if (!containerEl || !imageSize) return
-      const rect = containerEl.getBoundingClientRect()
+      if (activePointers.size === 2 && onScaleChange) {
+        // 2本目の指が触れたらピンチ開始。移動は中断する
+        dragRef.current = null
+        const [p1, p2] = [...activePointers.values()]
+        pinchRef.current = {
+          startDistance: Math.hypot(p1.x - p2.x, p1.y - p2.y),
+          startScale: scale,
+        }
+        return
+      }
 
-      const offsetX = e.clientX - rect.left - obstacleRect.x
-      const offsetY = e.clientY - rect.top - obstacleRect.y
+      if (activePointers.size === 1 && onPositionChange) {
+        const containerEl = containerRef.current
+        if (!containerEl) return
+        const rect = containerEl.getBoundingClientRect()
+        dragRef.current = {
+          pointerId: e.pointerId,
+          offsetX: e.clientX - rect.left - obstacleRect.x,
+          offsetY: e.clientY - rect.top - obstacleRect.y,
+        }
+      }
+    },
+    [draggable, onPositionChange, onScaleChange, scale, obstacleRect],
+  )
 
-      const maxX = containerWidth - imageSize.width
-      const maxY = containerHeight - imageSize.height
+  const handlePointerMove = useCallback(
+    (e: PointerEvent) => {
+      if (!activePointers.has(e.pointerId)) return
+      activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
 
-      const onPointerMove = (ev: globalThis.PointerEvent) => {
-        const nx = ev.clientX - rect.left - offsetX
-        const ny = ev.clientY - rect.top - offsetY
+      const pinch = pinchRef.current
+      if (pinch && activePointers.size >= 2 && onScaleChange) {
+        const [p1, p2] = [...activePointers.values()]
+        const distance = Math.hypot(p1.x - p2.x, p1.y - p2.y)
+        if (pinch.startDistance > 0) {
+          const next = (pinch.startScale * distance) / pinch.startDistance
+          const clamped = Math.max(
+            IMAGE_SCALE_MIN,
+            Math.min(IMAGE_SCALE_MAX, next),
+          )
+          onScaleChange(Math.round(clamped * 100) / 100)
+        }
+        return
+      }
+
+      const drag = dragRef.current
+      if (
+        drag?.pointerId === e.pointerId &&
+        onPositionChange &&
+        imageSize &&
+        containerRef.current
+      ) {
+        const rect = containerRef.current.getBoundingClientRect()
+        const nx = e.clientX - rect.left - drag.offsetX
+        const ny = e.clientY - rect.top - drag.offsetY
+        const maxX = containerWidth - imageSize.width
+        const maxY = containerHeight - imageSize.height
         onPositionChange(
           Math.max(0, Math.min(nx, maxX)),
           Math.max(0, Math.min(ny, maxY)),
         )
       }
-
-      const onPointerUp = () => {
-        window.removeEventListener('pointermove', onPointerMove)
-        window.removeEventListener('pointerup', onPointerUp)
-      }
-
-      window.addEventListener('pointermove', onPointerMove)
-      window.addEventListener('pointerup', onPointerUp)
     },
     [
-      draggable,
+      onScaleChange,
       onPositionChange,
       imageSize,
-      obstacleRect,
       containerWidth,
       containerHeight,
     ],
   )
+
+  const handlePointerEnd = useCallback((e: PointerEvent) => {
+    activePointers.delete(e.pointerId)
+    if (activePointers.size < 2) pinchRef.current = null
+    if (dragRef.current?.pointerId === e.pointerId) dragRef.current = null
+  }, [])
 
   return (
     <div
@@ -240,11 +335,13 @@ export default function FlowText({
           type="button"
           onClick={draggable ? undefined : () => setShowViewer(true)}
           onPointerDown={draggable ? handlePointerDown : undefined}
+          onPointerMove={draggable ? handlePointerMove : undefined}
+          onPointerUp={draggable ? handlePointerEnd : undefined}
+          onPointerCancel={draggable ? handlePointerEnd : undefined}
           style={{
             position: 'absolute',
             left: `${obstacleRect.x}px`,
             top: `${obstacleRect.y}px`,
-            maxWidth: '30%',
             padding: 0,
             border: 'none',
             background: 'none',
@@ -262,9 +359,9 @@ export default function FlowText({
             fetchpriority="high"
             onLoad={handleImageLoad}
             style={{
-              maxWidth: '100%',
-              maxHeight: '256px',
-              objectFit: 'cover',
+              // 導出済みの表示サイズを明示指定する（サイズ確定前は非表示のため 'auto' で問題ない）
+              width: imageSize ? `${imageSize.width}px` : 'auto',
+              height: imageSize ? `${imageSize.height}px` : 'auto',
               borderRadius: '12px',
               display: 'block',
               pointerEvents: draggable ? 'none' : 'auto',

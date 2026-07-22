@@ -1,6 +1,7 @@
--- 現在のスキーマの参照用スナップショット。DBへの適用はこのファイルではなく
--- db/migrations/ を wrangler d1 migrations apply（pnpm run db:migrate:local / :remote）
--- で行う。スキーマ変更時はマイグレーションファイルの追加とあわせてここも更新すること。
+-- ベースライン: wrangler d1 migrations 導入以前のスキーマ。
+-- 適用済みのDBでも安全に再実行できるよう IF NOT EXISTS にしている。
+-- 以降のスキーマ変更はこのディレクトリに新しいマイグレーションファイルを追加し、
+-- `pnpm run db:migrate:local` / `pnpm run db:migrate:remote` で適用する。
 
 -- diaries: 下書き（常に最新の編集状態）
 CREATE TABLE IF NOT EXISTS diaries (
@@ -10,7 +11,6 @@ CREATE TABLE IF NOT EXISTS diaries (
   image_layout TEXT NOT NULL DEFAULT 'left', -- 画像配置 (left / right)
   image_x REAL,                        -- 画像X座標 (nullable: 未設定時はimage_layoutから導出)
   image_y REAL,                        -- 画像Y座標
-  image_scale REAL,                    -- 画像表示倍率 (0.5〜1.5, nullable: 未設定時は1.0)
   background_color TEXT NOT NULL,      -- HEX (#FFE4E1等)
   mood TEXT,                           -- 感情カテゴリ (happy/calm/sad/angry/anxious/fun)
   diary_date TEXT NOT NULL,            -- 対象日 (YYYY-MM-DD)
@@ -30,7 +30,6 @@ CREATE TABLE IF NOT EXISTS diary_snapshots (
   image_layout TEXT NOT NULL DEFAULT 'left',
   image_x REAL,
   image_y REAL,
-  image_scale REAL,
   background_color TEXT NOT NULL,
   mood TEXT,
   published_at TEXT NOT NULL DEFAULT (datetime('now'))
