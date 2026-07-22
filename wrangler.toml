@@ -7,6 +7,7 @@ pages_build_output_dir = "./dist"
 binding = "DB"
 database_name = "400-diary-db"
 database_id = "10653b09-9480-476f-8ed8-b75b8833d4de"
+migrations_dir = "db/migrations"
 
 [[r2_buckets]]
 binding = "BUCKET"
