@@ -98,35 +98,48 @@ export default function FlowText({
     }
   }, [])
 
-  // 表示サイズは自然サイズから render 中に導出する。
-  // 「倍率1.0時に基準枠(幅30%/高さ256px)へ収まるサイズ」を基準に倍率を乗算するため、
-  // 基準枠より小さい画像でも倍率どおりに拡縮される
-  const imageSize = useMemo<ImageSize | null>(() => {
-    if (!naturalSize || !containerWidth) return null
+  // 表示サイズ(imageSize)と回転後の外接矩形(frameSize)を自然サイズから render 中に導出する。
+  // - imageSize: 「倍率1.0時に基準枠(幅30%/高さ256px)へ収まるサイズ」× 倍率。
+  //   基準枠より小さい画像でも倍率どおりに拡縮される
+  // - frameSize: 回転した画像を包む外接矩形。レイアウト(回り込み・ドラッグ範囲・
+  //   タップ領域)の基準。±15°程度の傾きなら矩形近似による角の空白は目立たない
+  // 最大倍率×回転では外接矩形がコンテナ高(overflowY: hidden)を超えて画像が切れ得るため、
+  // その場合は保存値を変えずに表示上だけ両者を収まるサイズへ追加補正する
+  const { imageSize, frameSize } = useMemo<{
+    imageSize: ImageSize | null
+    frameSize: ImageSize | null
+  }>(() => {
+    if (!naturalSize || !containerWidth) {
+      return { imageSize: null, frameSize: null }
+    }
     const baseFit = Math.min(
       1,
       (containerWidth * (IMAGE_BASE_MAX_WIDTH_PERCENT / 100)) /
         naturalSize.width,
       IMAGE_BASE_MAX_HEIGHT_PX / naturalSize.height,
     )
-    return {
-      width: naturalSize.width * baseFit * scale,
-      height: naturalSize.height * baseFit * scale,
-    }
-  }, [naturalSize, containerWidth, scale])
+    const width = naturalSize.width * baseFit * scale
+    const height = naturalSize.height * baseFit * scale
 
-  // 回転した画像を包む外接矩形。レイアウト(回り込み・ドラッグ範囲・タップ領域)は
-  // この矩形を基準にする。±15°程度の傾きなら矩形近似による角の空白は目立たない
-  const frameSize = useMemo<ImageSize | null>(() => {
-    if (!imageSize) return null
     const rad = (rotation * Math.PI) / 180
     const cos = Math.abs(Math.cos(rad))
     const sin = Math.abs(Math.sin(rad))
+    const frameWidth = width * cos + height * sin
+    const frameHeight = width * sin + height * cos
+
+    const containFit = Math.min(
+      1,
+      containerWidth / frameWidth,
+      containerHeight / frameHeight,
+    )
     return {
-      width: imageSize.width * cos + imageSize.height * sin,
-      height: imageSize.width * sin + imageSize.height * cos,
+      imageSize: { width: width * containFit, height: height * containFit },
+      frameSize: {
+        width: frameWidth * containFit,
+        height: frameHeight * containFit,
+      },
     }
-  }, [imageSize, rotation])
+  }, [naturalSize, containerWidth, containerHeight, scale, rotation])
 
   // 日付サイズを計測
   useEffect(() => {
