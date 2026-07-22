@@ -48,7 +48,9 @@ export function toDiaryCard(
       row.image_layout !== row.snapshot_image_layout ||
       row.image_x !== row.snapshot_image_x ||
       row.image_y !== row.snapshot_image_y ||
-      row.image_scale !== row.snapshot_image_scale ||
+      // image_scale の null は表示上 1.0 と等価のため、正規化してから比較する
+      // (下書き=1.0 / snapshot=null のような見た目が同じ組み合わせを変更扱いにしない)
+      (row.image_scale ?? 1) !== (row.snapshot_image_scale ?? 1) ||
       row.mood !== row.snapshot_mood)
 
   return {

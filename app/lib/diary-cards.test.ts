@@ -102,6 +102,18 @@ describe('toDiaryCard', () => {
     expect(card?.body).toBe('公開本文') // 公開済みは常に snapshot の値を表示
   })
 
+  test('image_scale の 1.0 と null は表示が同じため変更扱いにしない', () => {
+    const row = makeRow({
+      body: '公開本文',
+      image_scale: 1,
+      snapshot_image_scale: null,
+    })
+
+    const card = toDiaryCard(row, true)
+
+    expect(card?.has_unpublished_changes).toBe(false)
+  })
+
   test.each([
     ['body', { body: '編集後の本文' }],
     ['background_color', { background_color: '#000000' }],
