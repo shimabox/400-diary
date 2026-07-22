@@ -10,6 +10,7 @@ import {
   IMAGE_SCALE_MAX,
   IMAGE_SCALE_MIN,
 } from '../lib/constants'
+import { computeImageFrame, type ImageSize } from '../lib/image-layout'
 import {
   adjustSlotsForDate,
   computeSlots,
@@ -20,16 +21,6 @@ import {
 type Segment = {
   text: string
 } & Slot
-
-type ImageSize = {
-  width: number
-  height: number
-}
-
-// 倍率 1.0 のときの基準枠。自然サイズをこの枠に収めたサイズが倍率 1.0 の表示サイズになり、
-// imageScale はそこへ乗算される（枠より小さい画像は自然サイズが基準）
-const IMAGE_BASE_MAX_WIDTH_PERCENT = 30
-const IMAGE_BASE_MAX_HEIGHT_PX = 256
 
 type Props = {
   text: string
@@ -99,12 +90,7 @@ export default function FlowText({
   }, [])
 
   // 表示サイズ(imageSize)と回転後の外接矩形(frameSize)を自然サイズから render 中に導出する。
-  // - imageSize: 「倍率1.0時に基準枠(幅30%/高さ256px)へ収まるサイズ」× 倍率。
-  //   基準枠より小さい画像でも倍率どおりに拡縮される
-  // - frameSize: 回転した画像を包む外接矩形。レイアウト(回り込み・ドラッグ範囲・
-  //   タップ領域)の基準。±15°程度の傾きなら矩形近似による角の空白は目立たない
-  // 最大倍率×回転では外接矩形がコンテナ高(overflowY: hidden)を超えて画像が切れ得るため、
-  // その場合は保存値を変えずに表示上だけ両者を収まるサイズへ追加補正する
+  // 計算の詳細と補正の理由は computeImageFrame (app/lib/image-layout.ts) を参照
   const { imageSize, frameSize } = useMemo<{
     imageSize: ImageSize | null
     frameSize: ImageSize | null
@@ -112,33 +98,12 @@ export default function FlowText({
     if (!naturalSize || !containerWidth) {
       return { imageSize: null, frameSize: null }
     }
-    const baseFit = Math.min(
-      1,
-      (containerWidth * (IMAGE_BASE_MAX_WIDTH_PERCENT / 100)) /
-        naturalSize.width,
-      IMAGE_BASE_MAX_HEIGHT_PX / naturalSize.height,
+    return computeImageFrame(
+      naturalSize,
+      { width: containerWidth, height: containerHeight },
+      scale,
+      rotation,
     )
-    const width = naturalSize.width * baseFit * scale
-    const height = naturalSize.height * baseFit * scale
-
-    const rad = (rotation * Math.PI) / 180
-    const cos = Math.abs(Math.cos(rad))
-    const sin = Math.abs(Math.sin(rad))
-    const frameWidth = width * cos + height * sin
-    const frameHeight = width * sin + height * cos
-
-    const containFit = Math.min(
-      1,
-      containerWidth / frameWidth,
-      containerHeight / frameHeight,
-    )
-    return {
-      imageSize: { width: width * containFit, height: height * containFit },
-      frameSize: {
-        width: frameWidth * containFit,
-        height: frameHeight * containFit,
-      },
-    }
   }, [naturalSize, containerWidth, containerHeight, scale, rotation])
 
   // 日付サイズを計測
