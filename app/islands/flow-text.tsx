@@ -3,14 +3,7 @@ import {
   layoutNextLine,
   prepareWithSegments,
 } from '@chenglou/pretext'
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'hono/jsx'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'hono/jsx'
 import { IMAGE_SCALE_MAX, IMAGE_SCALE_MIN } from '../lib/constants'
 import {
   adjustSlotsForDate,
@@ -28,7 +21,8 @@ type ImageSize = {
   height: number
 }
 
-// 倍率 1.0 のときの画像の最大サイズ。imageScale はこれに乗算される
+// 倍率 1.0 のときの基準枠。自然サイズをこの枠に収めたサイズが倍率 1.0 の表示サイズになり、
+// imageScale はそこへ乗算される（枠より小さい画像は自然サイズが基準）
 const IMAGE_BASE_MAX_WIDTH_PERCENT = 30
 const IMAGE_BASE_MAX_HEIGHT_PX = 256
 
@@ -71,7 +65,7 @@ export default function FlowText({
   const containerRef = useRef<HTMLDivElement>(null)
   const dateRef = useRef<HTMLDivElement>(null)
   const imgRef = useRef<HTMLImageElement>(null)
-  const [imageSize, setImageSize] = useState<ImageSize | null>(null)
+  const [naturalSize, setNaturalSize] = useState<ImageSize | null>(null)
   const [dateSize, setDateSize] = useState<{
     width: number
     height: number
@@ -81,25 +75,33 @@ export default function FlowText({
 
   const handleImageLoad = useCallback((e: Event) => {
     const img = e.target as HTMLImageElement
-    setImageSize({ width: img.offsetWidth, height: img.offsetHeight })
+    setNaturalSize({ width: img.naturalWidth, height: img.naturalHeight })
   }, [])
 
   // ref callback: ハイドレーション時に画像が読み込み済みならサイズを即取得
   const imgCallbackRef = useCallback((img: HTMLImageElement | null) => {
     imgRef.current = img
     if (img?.complete && img.naturalWidth > 0) {
-      setImageSize({ width: img.offsetWidth, height: img.offsetHeight })
+      setNaturalSize({ width: img.naturalWidth, height: img.naturalHeight })
     }
   }, [])
 
-  // 倍率変更で CSS の最大サイズが変わるため、ペイント前に実測し直して
-  // テキストの回り込み（obstacleRect → computeSlots）へ即時反映する
-  useLayoutEffect(() => {
-    const img = imgRef.current
-    if (img?.complete && img.naturalWidth > 0) {
-      setImageSize({ width: img.offsetWidth, height: img.offsetHeight })
+  // 表示サイズは自然サイズから render 中に導出する。
+  // 「倍率1.0時に基準枠(幅30%/高さ256px)へ収まるサイズ」を基準に倍率を乗算するため、
+  // 基準枠より小さい画像でも倍率どおりに拡縮される
+  const imageSize = useMemo<ImageSize | null>(() => {
+    if (!naturalSize || !containerWidth) return null
+    const baseFit = Math.min(
+      1,
+      (containerWidth * (IMAGE_BASE_MAX_WIDTH_PERCENT / 100)) /
+        naturalSize.width,
+      IMAGE_BASE_MAX_HEIGHT_PX / naturalSize.height,
+    )
+    return {
+      width: naturalSize.width * baseFit * scale,
+      height: naturalSize.height * baseFit * scale,
     }
-  }, [scale])
+  }, [naturalSize, containerWidth, scale])
 
   // 日付サイズを計測
   useEffect(() => {
@@ -340,7 +342,6 @@ export default function FlowText({
             position: 'absolute',
             left: `${obstacleRect.x}px`,
             top: `${obstacleRect.y}px`,
-            maxWidth: `${IMAGE_BASE_MAX_WIDTH_PERCENT * scale}%`,
             padding: 0,
             border: 'none',
             background: 'none',
@@ -358,9 +359,9 @@ export default function FlowText({
             fetchpriority="high"
             onLoad={handleImageLoad}
             style={{
-              maxWidth: '100%',
-              maxHeight: `${IMAGE_BASE_MAX_HEIGHT_PX * scale}px`,
-              objectFit: 'cover',
+              // 導出済みの表示サイズを明示指定する（サイズ確定前は非表示のため 'auto' で問題ない）
+              width: imageSize ? `${imageSize.width}px` : 'auto',
+              height: imageSize ? `${imageSize.height}px` : 'auto',
               borderRadius: '12px',
               display: 'block',
               pointerEvents: draggable ? 'none' : 'auto',
