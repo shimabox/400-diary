@@ -13,6 +13,7 @@ function makeRow(
     image_x: null,
     image_y: null,
     image_scale: null,
+    image_rotation: null,
     background_color: '#FFE4E1',
     mood: 'happy',
     diary_date: '2026-07-05',
@@ -27,6 +28,7 @@ function makeRow(
     snapshot_image_x: null,
     snapshot_image_y: null,
     snapshot_image_scale: null,
+    snapshot_image_rotation: null,
     snapshot_mood: 'happy',
     ...overrides,
   }
@@ -77,6 +79,7 @@ describe('toDiaryCard', () => {
       snapshot_image_x: null,
       snapshot_image_y: null,
       snapshot_image_scale: null,
+      snapshot_image_rotation: null,
       snapshot_mood: null,
     })
 
@@ -114,6 +117,18 @@ describe('toDiaryCard', () => {
     expect(card?.has_unpublished_changes).toBe(false)
   })
 
+  test('image_rotation の 0 と null は表示が同じため変更扱いにしない', () => {
+    const row = makeRow({
+      body: '公開本文',
+      image_rotation: 0,
+      snapshot_image_rotation: null,
+    })
+
+    const card = toDiaryCard(row, true)
+
+    expect(card?.has_unpublished_changes).toBe(false)
+  })
+
   test.each([
     ['body', { body: '編集後の本文' }],
     ['background_color', { background_color: '#000000' }],
@@ -122,6 +137,7 @@ describe('toDiaryCard', () => {
     ['image_x', { image_x: 10 }],
     ['image_y', { image_y: 20 }],
     ['image_scale', { image_scale: 1.2 }],
+    ['image_rotation', { image_rotation: -10 }],
     ['mood', { mood: 'sad' }],
   ])('認証済みで %s が snapshot と異なる場合 has_unpublished_changes は true', (_field, overrides) => {
     const row = makeRow(overrides)

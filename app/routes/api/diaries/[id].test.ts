@@ -58,6 +58,7 @@ function makeDiary(overrides: Partial<Diary> = {}): Diary {
     image_x: null,
     image_y: null,
     image_scale: null,
+    image_rotation: null,
     background_color: '#FFFFFF',
     mood: 'happy',
     diary_date: '2026-04-15',
@@ -78,6 +79,7 @@ function makeSnapshot(overrides: Partial<DiarySnapshot> = {}): DiarySnapshot {
     image_x: null,
     image_y: null,
     image_scale: null,
+    image_rotation: null,
     background_color: '#EEEEEE',
     mood: 'calm',
     published_at: '2026-04-15 12:00:00',
@@ -325,6 +327,13 @@ describe('PUT /api/diaries/:id バリデーション', () => {
   test('image_scale が範囲外の場合は400を返す', async () => {
     const app = await createApp(true)
     const res = await putJSON(app, { image_scale: 0.1 })
+
+    expect(res.status).toBe(400)
+  })
+
+  test('image_rotation が範囲外の場合は400を返す', async () => {
+    const app = await createApp(true)
+    const res = await putJSON(app, { image_rotation: -90 })
 
     expect(res.status).toBe(400)
   })

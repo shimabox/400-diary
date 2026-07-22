@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS diaries (
   image_x REAL,                        -- 画像X座標 (nullable: 未設定時はimage_layoutから導出)
   image_y REAL,                        -- 画像Y座標
   image_scale REAL,                    -- 画像表示倍率 (0.5〜1.5, nullable: 未設定時は1.0)
+  image_rotation REAL,                 -- 画像回転角/度 (-15〜15, nullable: 未設定時は0)
   background_color TEXT NOT NULL,      -- HEX (#FFE4E1等)
   mood TEXT,                           -- 感情カテゴリ (happy/calm/sad/angry/anxious/fun)
   diary_date TEXT NOT NULL,            -- 対象日 (YYYY-MM-DD)
@@ -31,6 +32,7 @@ CREATE TABLE IF NOT EXISTS diary_snapshots (
   image_x REAL,
   image_y REAL,
   image_scale REAL,
+  image_rotation REAL,
   background_color TEXT NOT NULL,
   mood TEXT,
   published_at TEXT NOT NULL DEFAULT (datetime('now'))

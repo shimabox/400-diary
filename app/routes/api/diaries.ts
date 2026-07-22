@@ -81,6 +81,7 @@ export const POST = createRoute(requireAuth, async (c) => {
     image_x: input.image_x,
     image_y: input.image_y,
     image_scale: input.image_scale,
+    image_rotation: input.image_rotation,
   })
 
   return c.json(diary, 201)

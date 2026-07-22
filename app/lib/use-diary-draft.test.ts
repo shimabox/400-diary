@@ -15,6 +15,7 @@ function makeDraft(overrides: Partial<DiaryDraft> = {}): DiaryDraft {
     imageX: null,
     imageY: null,
     imageScale: null,
+    imageRotation: null,
     mood: null,
     ...overrides,
   }
@@ -31,6 +32,7 @@ function makeOptions(
     imageX: null,
     imageY: null,
     imageScale: null,
+    imageRotation: null,
     mood: null,
     ...overrides,
   }
@@ -104,6 +106,7 @@ describe('useDiaryDraft', () => {
         imageX: 12,
         imageY: 34,
         imageScale: 1.2,
+        imageRotation: -8,
         mood: 'happy',
       }),
     )
@@ -119,6 +122,7 @@ describe('useDiaryDraft', () => {
       image_x: 12,
       image_y: 34,
       image_scale: 1.2,
+      image_rotation: -8,
     })
   })
 
@@ -143,6 +147,7 @@ describe('useDiaryDraft', () => {
       image_x: null,
       image_y: null,
       image_scale: null,
+      image_rotation: null,
     })
   })
 
