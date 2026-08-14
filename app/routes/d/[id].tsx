@@ -125,6 +125,10 @@ export default createRoute(async (c) => {
           height: '480px',
           overflowX: 'auto',
           overflowY: 'hidden',
+          // 縦書きは右→左に読むため RTL スクロールにする。FlowText が全文を
+          // 収めるために幅を拡張したとき、はみ出しが左へ伸びてスクロールで
+          // 読め、画像読み込み後に幅が広がっても右端（文頭）に固定される
+          direction: 'rtl',
         }}
         id="diary-scroll"
         class="hide-scrollbar"

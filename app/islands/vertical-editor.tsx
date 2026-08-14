@@ -208,6 +208,10 @@ export default function VerticalEditor({
             height: '480px',
             overflowX: 'auto',
             overflowY: 'hidden',
+            // 縦書きは右→左に読むため RTL スクロールにする。FlowText が全文を
+            // 収めるために幅を拡張したとき、はみ出しが左へ伸びてスクロールで
+            // 読め、初期表示・拡張時とも右端（文頭）に固定される
+            direction: 'rtl',
           }}
           ref={previewScrollRef}
           class="hide-scrollbar"
