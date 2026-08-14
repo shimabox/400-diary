@@ -60,6 +60,51 @@ export function computeSlots(
   return slots
 }
 
+export type DateRect = {
+  side: 'left' | 'right'
+  width: number
+  height: number
+}
+
+/**
+ * 幅を extraCols 列ぶん左へ拡張した状態のスロットを計算する。
+ *
+ * 縦書きテキストは右端が読み始めなので、拡張後も右端を基準に保つ必要がある。
+ * そのため障害物（画像）と右寄せ日付は拡張量だけ x をずらして右端からの
+ * 距離を維持し、左寄せ日付は拡張後の左端（= 文末側のコーナー）に置く。
+ */
+export function computeExtendedSlots(
+  containerSize: ContainerSize,
+  fontSize: number,
+  lineHeight: number,
+  obstacleRect: ObstacleRect,
+  extraCols: number,
+  dateRect: DateRect | null,
+): Slot[] {
+  const colWidth = fontSize * lineHeight
+  const delta = extraCols * colWidth
+  const width = containerSize.width + delta
+
+  let slots = computeSlots(
+    { width, height: containerSize.height },
+    fontSize,
+    lineHeight,
+    { ...obstacleRect, x: obstacleRect.x + delta },
+  )
+
+  if (dateRect) {
+    const dateX = dateRect.side === 'right' ? width - dateRect.width : 0
+    slots = adjustSlotsForDate(
+      slots,
+      { x: dateX, width: dateRect.width, height: dateRect.height },
+      colWidth,
+      fontSize,
+    )
+  }
+
+  return slots
+}
+
 /**
  * 日付ラベル領域と重なるスロットを補正する。
  * 日付は常に y=0 のコーナーにあるため、重なるスロットの上部を削る。

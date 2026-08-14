@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { adjustSlotsForDate, computeSlots } from './layout'
+import {
+  adjustSlotsForDate,
+  computeExtendedSlots,
+  computeSlots,
+} from './layout'
 
 const container = { width: 648, height: 500 }
 const fontSize = 18
@@ -102,6 +106,134 @@ describe('computeSlots', () => {
       expect(slot.y).toBe(0)
       expect(slot.height).toBe(container.height)
     }
+  })
+})
+
+describe('computeExtendedSlots', () => {
+  const obstacle = { x: 400, y: 0, width: 128, height: 150 }
+
+  it('extraCols=0 なら computeSlots と同じ結果になる', () => {
+    const extended = computeExtendedSlots(
+      container,
+      fontSize,
+      lineHeight,
+      obstacle,
+      0,
+      null,
+    )
+    const base = computeSlots(container, fontSize, lineHeight, obstacle)
+    expect(extended).toEqual(base)
+  })
+
+  it('extraCols 列ぶんスロットが左に追加される', () => {
+    const base = computeExtendedSlots(
+      container,
+      fontSize,
+      lineHeight,
+      obstacle,
+      0,
+      null,
+    )
+    const extended = computeExtendedSlots(
+      container,
+      fontSize,
+      lineHeight,
+      obstacle,
+      3,
+      null,
+    )
+
+    expect(extended).toHaveLength(base.length + 3)
+    // 追加された列は全高スロット
+    const addedCols = extended.filter((s) => s.x < colWidth * 3)
+    expect(addedCols.length).toBeGreaterThanOrEqual(3)
+  })
+
+  it('障害物は右端からの距離を保つ（元のレイアウトが delta だけシフトする）', () => {
+    const extraCols = 2
+    const delta = extraCols * colWidth
+    const base = computeSlots(container, fontSize, lineHeight, obstacle)
+    const extended = computeExtendedSlots(
+      container,
+      fontSize,
+      lineHeight,
+      obstacle,
+      extraCols,
+      null,
+    )
+
+    // 障害物で分割されたスロット（y > 0）の x が delta シフトで一致する
+    const splitXs = (slots: { x: number; y: number }[]) =>
+      slots.filter((s) => s.y > 0).map((s) => s.x)
+    const shifted = splitXs(base).map((x) => x + delta)
+    const actual = splitXs(extended)
+    expect(actual).toHaveLength(shifted.length)
+    for (let i = 0; i < shifted.length; i++) {
+      expect(actual[i]).toBeCloseTo(shifted[i], 6)
+    }
+  })
+
+  it('右寄せ日付は拡張後の右端に張り付く', () => {
+    const extraCols = 2
+    const delta = extraCols * colWidth
+    const dateRect = { side: 'right' as const, width: 100, height: 40 }
+    const extended = computeExtendedSlots(
+      container,
+      fontSize,
+      lineHeight,
+      { x: 0, y: 0, width: 0, height: 0 },
+      extraCols,
+      dateRect,
+    )
+
+    // 拡張後の右端付近の列は日付ぶん上部が削られている
+    const dateBottom = dateRect.height + fontSize * 2
+    const rightmost = extended.reduce((a, b) => (a.x > b.x ? a : b))
+    expect(rightmost.x + colWidth).toBeGreaterThan(
+      container.width + delta - dateRect.width,
+    )
+    expect(rightmost.y).toBe(dateBottom)
+  })
+
+  it('左寄せ日付は拡張後の左端（文末側）に張り付く', () => {
+    const extraCols = 2
+    const dateRect = { side: 'left' as const, width: 100, height: 40 }
+    const extended = computeExtendedSlots(
+      container,
+      fontSize,
+      lineHeight,
+      { x: 0, y: 0, width: 0, height: 0 },
+      extraCols,
+      dateRect,
+    )
+
+    const dateBottom = dateRect.height + fontSize * 2
+    const leftmost = extended.reduce((a, b) => (a.x < b.x ? a : b))
+    expect(leftmost.x).toBeLessThan(dateRect.width)
+    expect(leftmost.y).toBe(dateBottom)
+
+    // 元の左端（現在は文中）の列は日付の影響を受けない
+    const midCols = extended.filter(
+      (s) => s.x > dateRect.width + fontSize * 2 + colWidth,
+    )
+    for (const slot of midCols) {
+      expect(slot.y).toBe(0)
+    }
+  })
+
+  it('拡張により総スロット高さ（テキスト容量）が単調に増える', () => {
+    const capacity = (extraCols: number) =>
+      computeExtendedSlots(
+        container,
+        fontSize,
+        lineHeight,
+        obstacle,
+        extraCols,
+        null,
+      ).reduce((sum, s) => sum + s.height, 0)
+
+    expect(capacity(1)).toBeGreaterThan(capacity(0))
+    expect(capacity(5)).toBeGreaterThan(capacity(1))
   })
 })
 
