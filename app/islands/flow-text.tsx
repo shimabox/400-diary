@@ -1,8 +1,4 @@
-import {
-  type LayoutCursor,
-  layoutNextLine,
-  prepareWithSegments,
-} from '@chenglou/pretext'
+import { layoutNextLine, prepareWithSegments } from '@chenglou/pretext'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'hono/jsx'
 import {
   IMAGE_ROTATION_MAX,
@@ -10,16 +6,9 @@ import {
   IMAGE_SCALE_MAX,
   IMAGE_SCALE_MIN,
 } from '../lib/constants'
+import { type FlowSegment, flowTextWithExtension } from '../lib/flow-layout'
 import { computeImageFrame, type ImageSize } from '../lib/image-layout'
-import {
-  computeExtendedSlots,
-  type ObstacleRect,
-  type Slot,
-} from '../lib/layout'
-
-type Segment = {
-  text: string
-} & Slot
+import type { ObstacleRect } from '../lib/layout'
 
 type Props = {
   text: string
@@ -169,51 +158,24 @@ export default function FlowText({
     [text, fontSize],
   )
 
-  // computeExtendedSlots + 日付補正でスロットを計算し、テキストを流し込む。
-  // 画像（障害物）が大きく全文が収まらない場合は、全文が置けるまで列を
-  // 左へ追加してキャンバス幅を拡張する（extraWidth）。コンテナは横スクロール
-  // できるので、拡張分はスクロールで読める
+  // flowTextWithExtension（app/lib/flow-layout.ts）でスロットを計算して
+  // テキストを流し込む。画像（障害物）が大きく全文が収まらない場合は、
+  // 全文が置けるまで列を左へ追加してキャンバス幅が拡張される（extraWidth）。
+  // コンテナは横スクロールできるので、拡張分はスクロールで読める
   const { segments, extraWidth } = useMemo(() => {
     if (!containerWidth || containerWidth < 100) {
-      return { segments: [] as Segment[], extraWidth: 0 }
+      return { segments: [] as FlowSegment[], extraWidth: 0 }
     }
 
-    const containerSize = { width: containerWidth, height: containerHeight }
-    const dateRect = dateSize ? { side: dateSide, ...dateSize } : null
-
-    // 無限ループ保険。1スロットには最低1文字置けるため「文字数 + 改行数」が
-    // 必要スロット数の真の上限になる。改行は1つで列を1本消費し、語単位の
-    // 折返しがあるため文字数ベースの列容量見積もりは上限にならない。
-    // 全文が収まる幅には必ず到達するので、成功条件は exhausted のみ
-    const lineBreaks = (text.match(/\n/g) ?? []).length
-    const maxExtraCols = text.length + lineBreaks + 1
-
-    for (let extraCols = 0; ; extraCols++) {
-      const { slots, delta } = computeExtendedSlots(
-        containerSize,
-        fontSize,
-        lineHeight,
-        obstacleRect,
-        extraCols,
-        dateRect,
-      )
-
-      const result: Segment[] = []
-      let cursor: LayoutCursor = { segmentIndex: 0, graphemeIndex: 0 }
-      for (const slot of slots) {
-        const line = layoutNextLine(prepared, cursor, slot.height)
-        if (!line) break
-        result.push({ text: line.text, ...slot })
-        cursor = line.end
-      }
-      // 残りテキストが無ければ全文が収まっている
-      const exhausted =
-        layoutNextLine(prepared, cursor, containerHeight) === null
-
-      if (exhausted || extraCols >= maxExtraCols) {
-        return { segments: result, extraWidth: delta }
-      }
-    }
+    return flowTextWithExtension(
+      text,
+      { width: containerWidth, height: containerHeight },
+      fontSize,
+      lineHeight,
+      obstacleRect,
+      dateSize ? { side: dateSide, ...dateSize } : null,
+      (cursor, maxHeight) => layoutNextLine(prepared, cursor, maxHeight),
+    )
   }, [
     text,
     prepared,
