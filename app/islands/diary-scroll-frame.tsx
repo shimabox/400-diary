@@ -6,11 +6,12 @@ const CANVAS_MIN_WIDTH = 880
 const CANVAS_HEIGHT = 416
 const FONT_SIZE = 17.6
 const LINE_HEIGHT = 2
-// フレームの横 padding。最大幅はこの padding 込みでキャンバス最小幅が
-// ちょうど収まる幅にする。固定値（例: 960px）にすると常に数 px はみ出し、
-// 続きが無くてもフェードが出てしまう
-const FRAME_PADDING_X = '2.6rem'
-const FRAME_MAX_WIDTH = `calc(${CANVAS_MIN_WIDTH}px + 2 * ${FRAME_PADDING_X})`
+// フレームの横 padding。ページ側の各カラムは maxWidth 960px なので、
+// キャンバス最小幅 880px + padding がちょうど 960px に収まる 2.5rem にする
+// （2.6rem だと中身が 963.2px になり、続きが無くても常に 3.2px はみ出して
+// フェードが出てしまう。root の font-size は global.css で 16px 固定）
+const FRAME_PADDING_X = '2.5rem'
+const FRAME_MAX_WIDTH = '960px'
 
 type Props = {
   bgColor: string
@@ -116,7 +117,9 @@ export default function DiaryScrollFrame({
           />
         </div>
       </div>
-      {/* スクロールバーを隠しているため、左にまだ続きがあるときはフェードで示す */}
+      {/* スクロールバーを隠しているため、左にまだ続きがあるときはフェードで示す。
+          背景色と同色のグラデーションでは背景に溶けて気づけないため、
+          どの背景色でも見える中立な影にしている */}
       <div
         aria-hidden="true"
         style={{
@@ -124,9 +127,10 @@ export default function DiaryScrollFrame({
           left: 0,
           top: 0,
           bottom: 0,
-          width: '56px',
+          width: '48px',
           borderRadius: '12px 0 0 12px',
-          background: `linear-gradient(to right, ${bgColor}, transparent)`,
+          background:
+            'linear-gradient(to right, rgba(0, 0, 0, 0.14), transparent)',
           opacity: showFade ? 1 : 0,
           transition: 'opacity 0.25s',
           pointerEvents: 'none',
