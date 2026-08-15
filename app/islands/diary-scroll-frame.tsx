@@ -117,9 +117,7 @@ export default function DiaryScrollFrame({
           />
         </div>
       </div>
-      {/* スクロールバーを隠しているため、左にまだ続きがあるときはフェードで示す。
-          背景色と同色のグラデーションでは背景に溶けて気づけないため、
-          どの背景色でも見える中立な影にしている */}
+      {/* スクロールバーを隠しているため、左にまだ続きがあるときはフェードで示す */}
       <div
         aria-hidden="true"
         style={{
@@ -127,10 +125,9 @@ export default function DiaryScrollFrame({
           left: 0,
           top: 0,
           bottom: 0,
-          width: '48px',
+          width: '56px',
           borderRadius: '12px 0 0 12px',
-          background:
-            'linear-gradient(to right, rgba(0, 0, 0, 0.14), transparent)',
+          background: `linear-gradient(to right, ${bgColor}, transparent)`,
           opacity: showFade ? 1 : 0,
           transition: 'opacity 0.25s',
           pointerEvents: 'none',
