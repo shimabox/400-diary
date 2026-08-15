@@ -162,9 +162,9 @@ export default function FlowText({
   // テキストを流し込む。画像（障害物）が大きく全文が収まらない場合は、
   // 全文が置けるまで列を左へ追加してキャンバス幅が拡張される（extraWidth）。
   // コンテナは横スクロールできるので、拡張分はスクロールで読める
-  const { segments, extraWidth } = useMemo(() => {
+  const { segments, extraWidth, truncated } = useMemo(() => {
     if (!containerWidth || containerWidth < 100) {
-      return { segments: [] as FlowSegment[], extraWidth: 0 }
+      return { segments: [] as FlowSegment[], extraWidth: 0, truncated: false }
     }
 
     return flowTextWithExtension(
@@ -187,6 +187,17 @@ export default function FlowText({
     dateSize,
     dateSide,
   ])
+
+  // 安全弁到達（= 全文を配置できない不変条件崩れ）は通常入力では起きない
+  // 想定。部分結果の描画は続けるが、無音で文字が欠けたままにならないよう
+  // 明示的にエラーログで検知可能にする
+  useEffect(() => {
+    if (truncated) {
+      console.error(
+        'FlowText: 拡張の安全弁に到達し、テキストが途中で打ち切られました',
+      )
+    }
+  }, [truncated])
 
   // 拡張量の変化を親（スクロールフレーム等）へ通知する。コールバックの
   // 同一性変化で発火しないよう ref 経由で参照する

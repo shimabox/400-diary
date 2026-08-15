@@ -24,7 +24,8 @@ export type LayoutLine = (
  * スロットにテキストを流し込み、全文が収まらなければ収まるまで列を
  * 左へ追加してキャンバス幅を拡張する（FlowText から切り出した純ロジック）。
  *
- * 返り値の extraWidth は拡張量（px）。
+ * 返り値の extraWidth は拡張量（px）。truncated が true の場合は安全弁に
+ * 到達して全文を配置できておらず、segments は部分結果。
  */
 export function flowTextWithExtension(
   text: string,
@@ -34,7 +35,7 @@ export function flowTextWithExtension(
   obstacleRect: ObstacleRect,
   dateRect: DateRect | null,
   layoutLine: LayoutLine,
-): { segments: FlowSegment[]; extraWidth: number } {
+): { segments: FlowSegment[]; extraWidth: number; truncated: boolean } {
   // 無限ループ保険。1スロットには最低1文字置けるため「文字数 + 改行数」が
   // 必要スロット数の真の上限になる。改行は1つで列を1本消費し、語単位の
   // 折返しがあるため文字数ベースの列容量見積もりは上限にならない。
@@ -63,8 +64,14 @@ export function flowTextWithExtension(
     // 残りテキストが無ければ全文が収まっている
     const exhausted = layoutLine(cursor, containerSize.height) === null
 
-    if (exhausted || extraCols >= maxExtraCols) {
-      return { segments: result, extraWidth: delta }
+    if (exhausted) {
+      return { segments: result, extraWidth: delta, truncated: false }
+    }
+    // ここに来るのは「1スロット最低1文字」の不変条件が崩れたときだけ。
+    // 描画を止めるより部分結果を出す方が読者にはましなので返しはするが、
+    // 正常結果と区別できるよう truncated を立てて呼び出し側に検知させる
+    if (extraCols >= maxExtraCols) {
+      return { segments: result, extraWidth: delta, truncated: true }
     }
   }
 }

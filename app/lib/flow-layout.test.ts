@@ -30,7 +30,7 @@ function makeCharLayouter(text: string): LayoutLine {
 describe('flowTextWithExtension', () => {
   it('障害物が無ければ拡張せず全文を流し込む', () => {
     const text = 'あ'.repeat(400)
-    const { segments, extraWidth } = flowTextWithExtension(
+    const { segments, extraWidth, truncated } = flowTextWithExtension(
       text,
       container,
       fontSize,
@@ -42,6 +42,7 @@ describe('flowTextWithExtension', () => {
 
     expect(segments.map((s) => s.text).join('')).toBe(text)
     expect(extraWidth).toBe(0)
+    expect(truncated).toBe(false)
   })
 
   it('改行の多い本文＋最大サイズの画像でも末尾まで文字が欠けない', () => {
@@ -53,7 +54,7 @@ describe('flowTextWithExtension', () => {
     // 末尾の複数行が黙って捨てられていた回帰ケース
     const text = `${'あ\n'.repeat(19)}あ`
 
-    const { segments, extraWidth } = flowTextWithExtension(
+    const { segments, extraWidth, truncated } = flowTextWithExtension(
       text,
       container,
       fontSize,
@@ -68,18 +69,19 @@ describe('flowTextWithExtension', () => {
     expect(segments.map((s) => s.text).join('')).toBe('あ'.repeat(20))
     // 全文を収めるために幅が拡張されていること
     expect(extraWidth).toBeGreaterThan(0)
+    expect(truncated).toBe(false)
   })
 
-  it('拡張しても収まらない場合は上限で打ち切って部分結果を返す', () => {
-    // layoutLine が常にテキストを残す（進捗しない）異常系でも
-    // 無限ループせず、それまでの結果を返す
+  it('拡張しても収まらない場合は truncated を立てて部分結果を返す', () => {
+    // layoutLine が常にテキストを残す（進捗しない）異常系でも無限ループせず
+    // 部分結果を返すが、正常な全文配置とは truncated で区別されること
     const text = 'あああ'
     const stuck: LayoutLine = (cursor) => ({
       text: '',
       end: cursor,
     })
 
-    const { segments } = flowTextWithExtension(
+    const { truncated } = flowTextWithExtension(
       text,
       container,
       fontSize,
@@ -89,6 +91,6 @@ describe('flowTextWithExtension', () => {
       stuck,
     )
 
-    expect(Array.isArray(segments)).toBe(true)
+    expect(truncated).toBe(true)
   })
 })
