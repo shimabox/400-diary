@@ -6,6 +6,11 @@ const CANVAS_MIN_WIDTH = 880
 const CANVAS_HEIGHT = 416
 const FONT_SIZE = 17.6
 const LINE_HEIGHT = 2
+// フレームの横 padding。最大幅はこの padding 込みでキャンバス最小幅が
+// ちょうど収まる幅にする。固定値（例: 960px）にすると常に数 px はみ出し、
+// 続きが無くてもフェードが出てしまう
+const FRAME_PADDING_X = '2.6rem'
+const FRAME_MAX_WIDTH = `calc(${CANVAS_MIN_WIDTH}px + 2 * ${FRAME_PADDING_X})`
 
 type Props = {
   bgColor: string
@@ -42,11 +47,13 @@ export default function DiaryScrollFrame({
   const [showFade, setShowFade] = useState(false)
 
   // 左（読み進める方向）にまだ見えていないコンテンツがあるか。
-  // rtl コンテナの scrollLeft は 0（右端）〜 -(scrollWidth - clientWidth)（左端）
+  // rtl コンテナの scrollLeft は 0（右端）〜 -(scrollWidth - clientWidth)（左端）。
+  // scrollWidth / clientWidth は整数に丸められ、小数 px のレイアウトでは続きが
+  // 無くても 1〜2px の差が出ることがあるため、その分は許容する
   const updateFade = useCallback(() => {
     const el = scrollRef.current
     if (!el) return
-    setShowFade(el.scrollWidth - el.clientWidth + el.scrollLeft > 1)
+    setShowFade(el.scrollWidth - el.clientWidth + el.scrollLeft > 2)
   }, [])
 
   useEffect(() => {
@@ -76,7 +83,9 @@ export default function DiaryScrollFrame({
   )
 
   return (
-    <div style={{ position: 'relative', maxWidth: '960px', width: '100%' }}>
+    <div
+      style={{ position: 'relative', maxWidth: FRAME_MAX_WIDTH, width: '100%' }}
+    >
       <div
         ref={scrollRef}
         class="hide-scrollbar"
@@ -86,7 +95,7 @@ export default function DiaryScrollFrame({
           backgroundRepeat: 'repeat',
           backgroundBlendMode: 'luminosity',
           borderRadius: '12px',
-          padding: '2rem 2.6rem',
+          padding: `2rem ${FRAME_PADDING_X}`,
           width: '100%',
           height: '480px',
           overflowX: 'auto',
