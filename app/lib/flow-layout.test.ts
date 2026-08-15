@@ -45,6 +45,25 @@ describe('flowTextWithExtension', () => {
     expect(truncated).toBe(false)
   })
 
+  it('容量ぴったりの本文は拡張されない（丸め誤差で列を失わない）', () => {
+    // 25列 × 23字 = 575字ちょうど。基底キャンバスが丸め誤差で24列に
+    // なっていると収まらず、無駄な拡張が起きてヒント/フェードが誤表示される
+    const capacity = 25 * Math.floor(416 / fontSize)
+    const text = 'あ'.repeat(capacity)
+    const { extraWidth, truncated } = flowTextWithExtension(
+      text,
+      container,
+      fontSize,
+      lineHeight,
+      { x: 0, y: 0, width: 0, height: 0 },
+      null,
+      makeCharLayouter(text),
+    )
+
+    expect(extraWidth).toBe(0)
+    expect(truncated).toBe(false)
+  })
+
   it('改行の多い本文＋最大サイズの画像でも末尾まで文字が欠けない', () => {
     // 正方形画像を150%にした最悪ケース: 384×384 の障害物が列の上下を
     // ほぼ塞ぎ、重なる列はスロットを1つも作れない（下の空きが1文字未満）

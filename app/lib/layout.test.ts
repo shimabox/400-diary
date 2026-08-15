@@ -98,6 +98,14 @@ describe('computeSlots', () => {
     ).toEqual([])
   })
 
+  it('浮動小数点の丸め誤差で列を取りこぼさない（880px / 35.2px = 25列）', () => {
+    // 実キャンバス寸法。880 / (17.6 * 2) は数学上ちょうど 25 だが、
+    // 浮動小数点では 24.999... になり floor で 1 列失われていた回帰ケース
+    const obstacle = { x: 0, y: 0, width: 0, height: 0 }
+    const slots = computeSlots({ width: 880, height: 416 }, 17.6, 2, obstacle)
+    expect(slots).toHaveLength(25)
+  })
+
   it('障害物がコンテナ外なら全列が全高スロットになる', () => {
     const obstacle = { x: -200, y: -200, width: 128, height: 150 }
     const slots = computeSlots(container, fontSize, lineHeight, obstacle)
