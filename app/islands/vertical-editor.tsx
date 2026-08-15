@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'hono/jsx'
+import { useState } from 'hono/jsx'
 import { PASTEL_COLORS } from '../lib/colors'
 import {
   IMAGE_ROTATION_MAX,
@@ -13,7 +13,7 @@ import { MOODS, type MoodKey } from '../lib/mood'
 import { useDiaryDraft } from '../lib/use-diary-draft'
 import { useSpeech } from '../lib/use-speech'
 import { useVerticalTextInput } from '../lib/use-vertical-text-input'
-import FlowText from './flow-text'
+import DiaryScrollFrame from './diary-scroll-frame'
 import ImageAttachmentEditor from './image-attachment-editor'
 
 const CELL = 2.0 // em – 1マスのサイズ（正方形）
@@ -56,7 +56,8 @@ export default function VerticalEditor({
     (initialMood as MoodKey) ?? null,
   )
   const [showPreview, setShowPreview] = useState(false)
-  const previewScrollRef = useRef<HTMLDivElement>(null)
+  // プレビューで画像が大きくキャンバス幅が拡張された（= 横スクロールで全文表示になる）か
+  const [previewExtended, setPreviewExtended] = useState(false)
   const {
     body,
     cellCount,
@@ -67,16 +68,6 @@ export default function VerticalEditor({
     isOver,
     textareaRef,
   } = useVerticalTextInput(initialBody)
-
-  // プレビュー表示時にスクロールを右端（文章の先頭）にセット
-  useEffect(() => {
-    if (showPreview && previewScrollRef.current) {
-      requestAnimationFrame(() => {
-        const el = previewScrollRef.current
-        if (el) el.scrollLeft = el.scrollWidth
-      })
-    }
-  }, [showPreview])
 
   const {
     isSupported: speechSupported,
@@ -194,54 +185,41 @@ export default function VerticalEditor({
       </div>
 
       {showPreview ? (
-        <div
-          style={{
-            position: 'relative',
-            background: bgColor,
-            backgroundImage: 'url(/images/background.webp)',
-            backgroundRepeat: 'repeat',
-            backgroundBlendMode: 'luminosity',
-            borderRadius: '12px',
-            padding: '2rem 2.6rem',
-            maxWidth: '960px',
-            width: '100%',
-            height: '480px',
-            overflowX: 'auto',
-            overflowY: 'hidden',
-            // 縦書きは右→左に読むため RTL スクロールにする。FlowText が全文を
-            // 収めるために幅を拡張したとき、はみ出しが左へ伸びてスクロールで
-            // 読め、初期表示・拡張時とも右端（文頭）に固定される
-            direction: 'rtl',
-          }}
-          ref={previewScrollRef}
-          class="hide-scrollbar"
-        >
-          <div style={{ minWidth: '880px' }}>
-            <FlowText
-              text={body}
-              fontSize={17.6}
-              lineHeight={2}
-              imageLayout={imageLayout}
-              imageSrc={imageSrc}
-              containerHeight={416}
-              dateLabel={date ? formatDiaryDate(date) : '----/--/--'}
-              imagePosition={
-                imageX != null && imageY != null
-                  ? { x: imageX, y: imageY }
-                  : null
-              }
-              imageScale={imageScale}
-              imageRotation={imageRotation}
-              draggable={true}
-              onPositionChange={(x, y) => {
-                setImageX(x)
-                setImageY(y)
+        <>
+          <DiaryScrollFrame
+            bgColor={bgColor}
+            text={body}
+            imageLayout={imageLayout}
+            imageSrc={imageSrc}
+            dateLabel={date ? formatDiaryDate(date) : '----/--/--'}
+            imagePosition={
+              imageX != null && imageY != null ? { x: imageX, y: imageY } : null
+            }
+            imageScale={imageScale}
+            imageRotation={imageRotation}
+            draggable={true}
+            onPositionChange={(x, y) => {
+              setImageX(x)
+              setImageY(y)
+            }}
+            onScaleChange={setImageScale}
+            onRotationChange={setImageRotation}
+            onExtraWidthChange={(extraWidth) =>
+              setPreviewExtended(extraWidth > 0)
+            }
+          />
+          {previewExtended && (
+            <p
+              style={{
+                margin: '0.5rem 0 0',
+                fontSize: '0.8rem',
+                color: '#888',
               }}
-              onScaleChange={setImageScale}
-              onRotationChange={setImageRotation}
-            />
-          </div>
-        </div>
+            >
+              画像が大きいため、全文は横スクロールで表示されます
+            </p>
+          )}
+        </>
       ) : (
         <div
           class="editor-grid"

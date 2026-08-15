@@ -44,6 +44,8 @@ type Props = {
   onScaleChange?: (scale: number) => void
   /** 2本指の回転による回転角変更コールバック（draggable 時のみ有効） */
   onRotationChange?: (rotation: number) => void
+  /** キャンバス幅の拡張量（px）が変わったときの通知（スクロールヒント表示用） */
+  onExtraWidthChange?: (extraWidth: number) => void
 }
 
 export default function FlowText({
@@ -61,6 +63,7 @@ export default function FlowText({
   onPositionChange,
   onScaleChange,
   onRotationChange,
+  onExtraWidthChange,
 }: Props) {
   const scale = imageScale ?? 1
   const rotation = imageRotation ?? 0
@@ -222,6 +225,14 @@ export default function FlowText({
     dateSize,
     dateSide,
   ])
+
+  // 拡張量の変化を親（スクロールフレーム等）へ通知する。コールバックの
+  // 同一性変化で発火しないよう ref 経由で参照する
+  const onExtraWidthChangeRef = useRef(onExtraWidthChange)
+  onExtraWidthChangeRef.current = onExtraWidthChange
+  useEffect(() => {
+    onExtraWidthChangeRef.current?.(extraWidth)
+  }, [extraWidth])
 
   // ドラッグ（指1本）とピンチ（指2本: 距離=拡縮、角度=回転）の処理。
   // setPointerCapture で move/up が button に届くため、ハンドラはすべて button 側に置く
