@@ -1,8 +1,4 @@
-import {
-  type LayoutCursor,
-  layoutNextLine,
-  prepareWithSegments,
-} from '@chenglou/pretext'
+import { layoutNextLine, prepareWithSegments } from '@chenglou/pretext'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'hono/jsx'
 import {
   IMAGE_ROTATION_MAX,
@@ -10,17 +6,9 @@ import {
   IMAGE_SCALE_MAX,
   IMAGE_SCALE_MIN,
 } from '../lib/constants'
+import { type FlowSegment, flowTextWithExtension } from '../lib/flow-layout'
 import { computeImageFrame, type ImageSize } from '../lib/image-layout'
-import {
-  adjustSlotsForDate,
-  computeSlots,
-  type ObstacleRect,
-  type Slot,
-} from '../lib/layout'
-
-type Segment = {
-  text: string
-} & Slot
+import type { ObstacleRect } from '../lib/layout'
 
 type Props = {
   text: string
@@ -45,6 +33,8 @@ type Props = {
   onScaleChange?: (scale: number) => void
   /** 2本指の回転による回転角変更コールバック（draggable 時のみ有効） */
   onRotationChange?: (rotation: number) => void
+  /** キャンバス幅の拡張量（px）が変わったときの通知（スクロールヒント表示用） */
+  onExtraWidthChange?: (extraWidth: number) => void
 }
 
 export default function FlowText({
@@ -62,6 +52,7 @@ export default function FlowText({
   onPositionChange,
   onScaleChange,
   onRotationChange,
+  onExtraWidthChange,
 }: Props) {
   const scale = imageScale ?? 1
   const rotation = imageRotation ?? 0
@@ -155,45 +146,39 @@ export default function FlowText({
   }, [frameSize, imagePosition, imageLayout, containerWidth, containerHeight])
 
   // 日付の表示位置（画像の反対側）
-  const dateSide = imageLayout === 'right' ? 'left' : 'right'
+  const dateSide: 'left' | 'right' = imageLayout === 'right' ? 'left' : 'right'
 
-  // computeSlots + 日付補正でスロットを計算し、テキストを流し込む
-  const segments = useMemo(() => {
-    if (!containerWidth || containerWidth < 100) return []
+  // テキスト計測（Intl.Segmenter + canvas measureText）は重いため、ドラッグ中に
+  // obstacleRect が毎フレーム変わってもここは再実行されないよう依存を分離する
+  const prepared = useMemo(
+    () =>
+      prepareWithSegments(text, `600 ${fontSize}px sans-serif`, {
+        whiteSpace: 'pre-wrap',
+      }),
+    [text, fontSize],
+  )
 
-    const font = `600 ${fontSize}px sans-serif`
-    const prepared = prepareWithSegments(text, font, {
-      whiteSpace: 'pre-wrap',
-    })
-
-    const containerSize = { width: containerWidth, height: containerHeight }
-    const colWidth = fontSize * lineHeight
-
-    let slots = computeSlots(containerSize, fontSize, lineHeight, obstacleRect)
-
-    // 日付ラベルによるスロット補正
-    if (dateSize) {
-      const dateX = dateSide === 'right' ? containerWidth - dateSize.width : 0
-      const dateRect = {
-        x: dateX,
-        width: dateSize.width,
-        height: dateSize.height,
-      }
-      slots = adjustSlotsForDate(slots, dateRect, colWidth, fontSize)
+  // flowTextWithExtension（app/lib/flow-layout.ts）でスロットを計算して
+  // テキストを流し込む。画像（障害物）が大きく全文が収まらない場合は、
+  // 全文が置けるまで列を左へ追加してキャンバス幅が拡張される（extraWidth）。
+  // コンテナは横スクロールできるので、拡張分はスクロールで読める
+  const { segments, extraWidth, truncated } = useMemo(() => {
+    if (!containerWidth || containerWidth < 100) {
+      return { segments: [] as FlowSegment[], extraWidth: 0, truncated: false }
     }
 
-    const result: Segment[] = []
-    let cursor: LayoutCursor = { segmentIndex: 0, graphemeIndex: 0 }
-    for (const slot of slots) {
-      const line = layoutNextLine(prepared, cursor, slot.height)
-      if (!line) break
-      result.push({ text: line.text, ...slot })
-      cursor = line.end
-    }
-
-    return result
+    return flowTextWithExtension(
+      text,
+      { width: containerWidth, height: containerHeight },
+      fontSize,
+      lineHeight,
+      obstacleRect,
+      dateSize ? { side: dateSide, ...dateSize } : null,
+      (cursor, maxHeight) => layoutNextLine(prepared, cursor, maxHeight),
+    )
   }, [
     text,
+    prepared,
     fontSize,
     lineHeight,
     containerWidth,
@@ -202,6 +187,25 @@ export default function FlowText({
     dateSize,
     dateSide,
   ])
+
+  // 安全弁到達（= 全文を配置できない不変条件崩れ）は通常入力では起きない
+  // 想定。部分結果の描画は続けるが、無音で文字が欠けたままにならないよう
+  // 明示的にエラーログで検知可能にする
+  useEffect(() => {
+    if (truncated) {
+      console.error(
+        'FlowText: 拡張の安全弁に到達し、テキストが途中で打ち切られました',
+      )
+    }
+  }, [truncated])
+
+  // 拡張量の変化を親（スクロールフレーム等）へ通知する。コールバックの
+  // 同一性変化で発火しないよう ref 経由で参照する
+  const onExtraWidthChangeRef = useRef(onExtraWidthChange)
+  onExtraWidthChangeRef.current = onExtraWidthChange
+  useEffect(() => {
+    onExtraWidthChangeRef.current?.(extraWidth)
+  }, [extraWidth])
 
   // ドラッグ（指1本）とピンチ（指2本: 距離=拡縮、角度=回転）の処理。
   // setPointerCapture で move/up が button に届くため、ハンドラはすべて button 側に置く
@@ -249,6 +253,9 @@ export default function FlowText({
         const rect = containerEl.getBoundingClientRect()
         dragRef.current = {
           pointerId: e.pointerId,
+          // 画像はキャンバス内で extraWidth だけ右に描画されるが、キャンバス自体が
+          // 右端アンカーで extraWidth だけ左にずれるため、画面上の位置は
+          // ルート基準で obstacleRect.x のままになる
           offsetX: e.clientX - rect.left - obstacleRect.x,
           offsetY: e.clientY - rect.top - obstacleRect.y,
         }
@@ -342,130 +349,150 @@ export default function FlowText({
         height: `${containerHeight}px`,
       }}
     >
-      {/* 日付 */}
-      {dateLabel && (
-        <div
-          ref={dateRef}
-          style={{
-            position: 'absolute',
-            top: 0,
-            right: dateSide === 'right' ? 0 : 'auto',
-            left: dateSide === 'left' ? 0 : 'auto',
-            fontSize: '2rem',
-            color: '#555',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {dateLabel}
-        </div>
-      )}
-
-      {/* 画像 */}
-      {imageSrc && (
-        <button
-          type="button"
-          onClick={draggable ? undefined : () => setShowViewer(true)}
-          onPointerDown={draggable ? handlePointerDown : undefined}
-          onPointerMove={draggable ? handlePointerMove : undefined}
-          onPointerUp={draggable ? handlePointerEnd : undefined}
-          onPointerCancel={draggable ? handlePointerEnd : undefined}
-          style={{
-            position: 'absolute',
-            left: `${obstacleRect.x}px`,
-            top: `${obstacleRect.y}px`,
-            // button は外接矩形サイズ。回転した img を中央に置き、タップ領域と
-            // レイアウト(回り込み)の基準を一致させる
-            width: frameSize ? `${frameSize.width}px` : 'auto',
-            height: frameSize ? `${frameSize.height}px` : 'auto',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 0,
-            border: 'none',
-            background: 'none',
-            cursor: draggable ? 'grab' : 'pointer',
-            WebkitTapHighlightColor: 'transparent',
-            outline: 'none',
-            touchAction: draggable ? 'none' : 'auto',
-            visibility: frameSize ? 'visible' : 'hidden',
-          }}
-        >
-          <img
-            ref={imgCallbackRef}
-            src={imageSrc}
-            alt="日記の写真"
-            fetchpriority="high"
-            onLoad={handleImageLoad}
+      {/* 描画キャンバス。全文が収まらないときは containerWidth より広くなり、
+          右端（文頭）アンカーなのではみ出しは左へ伸びる。スクロールコンテナが
+          direction: rtl のため左へのはみ出しはスクロールで読め、初期表示は
+          文頭に固定される。内側は ltr に戻して座標・テキストの向きを保つ */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          right: 0,
+          width: containerWidth ? `${containerWidth + extraWidth}px` : '100%',
+          height: '100%',
+          direction: 'ltr',
+        }}
+      >
+        {/* 日付。左寄せ時は拡張後も元のキャンバス左端（= 初期表示の左端）に
+            留めて、スクロールしなくても日付が見えることを保つ */}
+        {dateLabel && (
+          <div
+            ref={dateRef}
             style={{
-              // 導出済みの表示サイズを明示指定する（サイズ確定前は非表示のため 'auto' で問題ない）
-              width: imageSize ? `${imageSize.width}px` : 'auto',
-              height: imageSize ? `${imageSize.height}px` : 'auto',
-              transform: rotation !== 0 ? `rotate(${rotation}deg)` : undefined,
-              borderRadius: '12px',
-              display: 'block',
-              pointerEvents: draggable ? 'none' : 'auto',
+              position: 'absolute',
+              top: 0,
+              right: dateSide === 'right' ? 0 : 'auto',
+              left: dateSide === 'left' ? `${extraWidth}px` : 'auto',
+              fontSize: '2rem',
+              color: '#555',
+              whiteSpace: 'nowrap',
             }}
-          />
-        </button>
-      )}
+          >
+            {dateLabel}
+          </div>
+        )}
 
-      {/* 画像ビューワー */}
-      {showViewer && imageSrc && (
-        <button
-          type="button"
-          onClick={() => setShowViewer(false)}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') setShowViewer(false)
-          }}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 9999,
-            background: 'rgba(0, 0, 0, 0.85)',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            cursor: 'pointer',
-            border: 'none',
-            padding: 0,
-            width: '100%',
-            height: '100%',
-          }}
-        >
-          <img
-            src={imageSrc}
-            alt="日記の写真"
+        {/* 画像 */}
+        {imageSrc && (
+          <button
+            type="button"
+            onClick={draggable ? undefined : () => setShowViewer(true)}
+            onPointerDown={draggable ? handlePointerDown : undefined}
+            onPointerMove={draggable ? handlePointerMove : undefined}
+            onPointerUp={draggable ? handlePointerEnd : undefined}
+            onPointerCancel={draggable ? handlePointerEnd : undefined}
             style={{
-              maxWidth: '90vw',
-              maxHeight: '90vh',
-              objectFit: 'contain',
-              borderRadius: '8px',
+              position: 'absolute',
+              // 幅拡張時も右端（文頭）からの距離を保つよう extraWidth だけずらす
+              left: `${obstacleRect.x + extraWidth}px`,
+              top: `${obstacleRect.y}px`,
+              // button は外接矩形サイズ。回転した img を中央に置き、タップ領域と
+              // レイアウト(回り込み)の基準を一致させる
+              width: frameSize ? `${frameSize.width}px` : 'auto',
+              height: frameSize ? `${frameSize.height}px` : 'auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 0,
+              border: 'none',
+              background: 'none',
+              cursor: draggable ? 'grab' : 'pointer',
+              WebkitTapHighlightColor: 'transparent',
+              outline: 'none',
+              touchAction: draggable ? 'none' : 'auto',
+              visibility: frameSize ? 'visible' : 'hidden',
             }}
-          />
-        </button>
-      )}
+          >
+            <img
+              ref={imgCallbackRef}
+              src={imageSrc}
+              alt="日記の写真"
+              fetchpriority="high"
+              onLoad={handleImageLoad}
+              style={{
+                // 導出済みの表示サイズを明示指定する（サイズ確定前は非表示のため 'auto' で問題ない）
+                width: imageSize ? `${imageSize.width}px` : 'auto',
+                height: imageSize ? `${imageSize.height}px` : 'auto',
+                transform:
+                  rotation !== 0 ? `rotate(${rotation}deg)` : undefined,
+                borderRadius: '12px',
+                display: 'block',
+                pointerEvents: draggable ? 'none' : 'auto',
+              }}
+            />
+          </button>
+        )}
 
-      {/* テキスト列 */}
-      {segments.map((seg, i) => (
-        <div
-          key={`${i}-${seg.x}`}
-          style={{
-            position: 'absolute',
-            left: `${seg.x}px`,
-            top: `${seg.y}px`,
-            width: `${fontSize * lineHeight}px`,
-            height: `${seg.height}px`,
-            writingMode: 'vertical-rl',
-            whiteSpace: 'pre-wrap',
-            fontSize: `${fontSize}px`,
-            lineHeight: String(lineHeight),
-            fontWeight: 600,
-            overflow: 'hidden',
-          }}
-        >
-          {seg.text}
-        </div>
-      ))}
+        {/* 画像ビューワー */}
+        {showViewer && imageSrc && (
+          <button
+            type="button"
+            onClick={() => setShowViewer(false)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') setShowViewer(false)
+            }}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 9999,
+              background: 'rgba(0, 0, 0, 0.85)',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              cursor: 'pointer',
+              border: 'none',
+              padding: 0,
+              width: '100%',
+              height: '100%',
+            }}
+          >
+            <img
+              src={imageSrc}
+              alt="日記の写真"
+              style={{
+                maxWidth: '90vw',
+                maxHeight: '90vh',
+                objectFit: 'contain',
+                borderRadius: '8px',
+              }}
+            />
+          </button>
+        )}
+
+        {/* テキスト列。スロットは右端からの列順で並ぶためインデックスが
+            安定キーになる。x をキーに含めると幅拡張で全列の x がシフトした
+            瞬間に全列が unmount/remount されてしまう */}
+        {segments.map((seg, i) => (
+          <div
+            key={i}
+            style={{
+              position: 'absolute',
+              left: `${seg.x}px`,
+              top: `${seg.y}px`,
+              width: `${fontSize * lineHeight}px`,
+              height: `${seg.height}px`,
+              writingMode: 'vertical-rl',
+              whiteSpace: 'pre-wrap',
+              fontSize: `${fontSize}px`,
+              lineHeight: String(lineHeight),
+              fontWeight: 600,
+              overflow: 'hidden',
+            }}
+          >
+            {seg.text}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { adjustSlotsForDate, computeSlots } from './layout'
+import {
+  adjustSlotsForDate,
+  computeExtendedSlots,
+  computeSlots,
+} from './layout'
 
 const container = { width: 648, height: 500 }
 const fontSize = 18
@@ -94,6 +98,14 @@ describe('computeSlots', () => {
     ).toEqual([])
   })
 
+  it('浮動小数点の丸め誤差で列を取りこぼさない（880px / 35.2px = 25列）', () => {
+    // 実キャンバス寸法。880 / (17.6 * 2) は数学上ちょうど 25 だが、
+    // 浮動小数点では 24.999... になり floor で 1 列失われていた回帰ケース
+    const obstacle = { x: 0, y: 0, width: 0, height: 0 }
+    const slots = computeSlots({ width: 880, height: 416 }, 17.6, 2, obstacle)
+    expect(slots).toHaveLength(25)
+  })
+
   it('障害物がコンテナ外なら全列が全高スロットになる', () => {
     const obstacle = { x: -200, y: -200, width: 128, height: 150 }
     const slots = computeSlots(container, fontSize, lineHeight, obstacle)
@@ -102,6 +114,158 @@ describe('computeSlots', () => {
       expect(slot.y).toBe(0)
       expect(slot.height).toBe(container.height)
     }
+  })
+})
+
+describe('computeExtendedSlots', () => {
+  const obstacle = { x: 400, y: 0, width: 128, height: 150 }
+
+  it('extraCols=0 なら computeSlots と同じ結果になる', () => {
+    const { slots, delta } = computeExtendedSlots(
+      container,
+      fontSize,
+      lineHeight,
+      obstacle,
+      0,
+      null,
+    )
+    const base = computeSlots(container, fontSize, lineHeight, obstacle)
+    expect(slots).toEqual(base)
+    expect(delta).toBe(0)
+  })
+
+  it('拡張量 delta（px）を返す', () => {
+    const { delta } = computeExtendedSlots(
+      container,
+      fontSize,
+      lineHeight,
+      obstacle,
+      3,
+      null,
+    )
+    expect(delta).toBeCloseTo(3 * colWidth, 6)
+  })
+
+  it('extraCols 列ぶんスロットが左に追加される', () => {
+    const { slots: base } = computeExtendedSlots(
+      container,
+      fontSize,
+      lineHeight,
+      obstacle,
+      0,
+      null,
+    )
+    const { slots: extended } = computeExtendedSlots(
+      container,
+      fontSize,
+      lineHeight,
+      obstacle,
+      3,
+      null,
+    )
+
+    expect(extended).toHaveLength(base.length + 3)
+    // 追加された列は全高スロット
+    const addedCols = extended.filter((s) => s.x < colWidth * 3)
+    expect(addedCols.length).toBeGreaterThanOrEqual(3)
+  })
+
+  it('障害物は右端からの距離を保つ（元のレイアウトが delta だけシフトする）', () => {
+    const extraCols = 2
+    const delta = extraCols * colWidth
+    const base = computeSlots(container, fontSize, lineHeight, obstacle)
+    const { slots: extended } = computeExtendedSlots(
+      container,
+      fontSize,
+      lineHeight,
+      obstacle,
+      extraCols,
+      null,
+    )
+
+    // 障害物で分割されたスロット（y > 0）の x が delta シフトで一致する
+    const splitXs = (slots: { x: number; y: number }[]) =>
+      slots.filter((s) => s.y > 0).map((s) => s.x)
+    const shifted = splitXs(base).map((x) => x + delta)
+    const actual = splitXs(extended)
+    expect(actual).toHaveLength(shifted.length)
+    for (let i = 0; i < shifted.length; i++) {
+      expect(actual[i]).toBeCloseTo(shifted[i], 6)
+    }
+  })
+
+  it('右寄せ日付は拡張後の右端に張り付く', () => {
+    const extraCols = 2
+    const delta = extraCols * colWidth
+    const dateRect = { side: 'right' as const, width: 100, height: 40 }
+    const { slots: extended } = computeExtendedSlots(
+      container,
+      fontSize,
+      lineHeight,
+      { x: 0, y: 0, width: 0, height: 0 },
+      extraCols,
+      dateRect,
+    )
+
+    // 拡張後の右端付近の列は日付ぶん上部が削られている
+    const dateBottom = dateRect.height + fontSize * 2
+    const rightmost = extended.reduce((a, b) => (a.x > b.x ? a : b))
+    expect(rightmost.x + colWidth).toBeGreaterThan(
+      container.width + delta - dateRect.width,
+    )
+    expect(rightmost.y).toBe(dateBottom)
+  })
+
+  it('左寄せ日付は拡張後も元のキャンバス左端（初期表示内）に留まる', () => {
+    const extraCols = 5
+    const delta = extraCols * colWidth
+    const margin = fontSize * 2
+    const dateRect = { side: 'left' as const, width: 100, height: 40 }
+    const { slots } = computeExtendedSlots(
+      container,
+      fontSize,
+      lineHeight,
+      { x: 0, y: 0, width: 0, height: 0 },
+      extraCols,
+      dateRect,
+    )
+
+    const dateBottom = dateRect.height + margin
+
+    // 元のキャンバス左端（x = delta）にある日付と重なる列は上部が削られる
+    const dateCols = slots.filter(
+      (s) =>
+        s.x < delta + dateRect.width + margin &&
+        s.x + colWidth > delta - margin,
+    )
+    expect(dateCols.length).toBeGreaterThan(0)
+    for (const slot of dateCols) {
+      expect(slot.y).toBe(dateBottom)
+    }
+
+    // 拡張で追加された日付より左の列は全高のまま
+    // （= 日付は拡張後の左端へ移動せず、初期表示内に残る）
+    const leftOfDate = slots.filter((s) => s.x + colWidth <= delta - margin)
+    expect(leftOfDate.length).toBeGreaterThan(0)
+    for (const slot of leftOfDate) {
+      expect(slot.y).toBe(0)
+      expect(slot.height).toBe(container.height)
+    }
+  })
+
+  it('拡張により総スロット高さ（テキスト容量）が単調に増える', () => {
+    const capacity = (extraCols: number) =>
+      computeExtendedSlots(
+        container,
+        fontSize,
+        lineHeight,
+        obstacle,
+        extraCols,
+        null,
+      ).slots.reduce((sum, s) => sum + s.height, 0)
+
+    expect(capacity(1)).toBeGreaterThan(capacity(0))
+    expect(capacity(5)).toBeGreaterThan(capacity(1))
   })
 })
 

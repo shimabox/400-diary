@@ -1,5 +1,5 @@
 import { createRoute } from '~/factory'
-import FlowText from '../../islands/flow-text'
+import DiaryScrollFrame from '../../islands/diary-scroll-frame'
 import MoodMarker from '../../islands/mood-marker'
 import { DEFAULT_APP_NAME } from '../../lib/constants'
 import { getDiaryWithSnapshot } from '../../lib/db'
@@ -111,50 +111,20 @@ export default createRoute(async (c) => {
         </div>
       </div>
 
-      <div
-        style={{
-          position: 'relative',
-          background: pubBgColor,
-          backgroundImage: 'url(/images/background.webp)',
-          backgroundRepeat: 'repeat',
-          backgroundBlendMode: 'luminosity',
-          borderRadius: '12px',
-          padding: '2rem 2.6rem',
-          maxWidth: '960px',
-          width: '100%',
-          height: '480px',
-          overflowX: 'auto',
-          overflowY: 'hidden',
-        }}
-        id="diary-scroll"
-        class="hide-scrollbar"
-        // 縦書き本文は右→左に流れるため、初期表示は右端（=文頭）を見せたい。
-        // かつてはここに直接インラインスクリプトを置いていたが、CSP の script-src
-        // から 'unsafe-inline' を排除するためクライアントバンドル側
-        // （app/spa-navigation.ts の alignScrollToEnd）に処理を移した。
-        // 初回ロードは app/client.ts から、SPA ナビゲーション後は
-        // spa-navigation.ts の navigate() から呼ばれる。
-        data-scroll-align="end"
-      >
-        <div style={{ minWidth: '880px' }}>
-          <FlowText
-            text={pubBody}
-            fontSize={17.6}
-            lineHeight={2}
-            imageLayout={pubImageLayout}
-            imageSrc={pubImageKey ? `/api/images/${pubImageKey}` : null}
-            containerHeight={416}
-            dateLabel={dateLabel}
-            imagePosition={
-              pubImageX != null && pubImageY != null
-                ? { x: pubImageX, y: pubImageY }
-                : null
-            }
-            imageScale={pubImageScale}
-            imageRotation={pubImageRotation}
-          />
-        </div>
-      </div>
+      <DiaryScrollFrame
+        bgColor={pubBgColor}
+        text={pubBody}
+        imageLayout={pubImageLayout}
+        imageSrc={pubImageKey ? `/api/images/${pubImageKey}` : null}
+        dateLabel={dateLabel}
+        imagePosition={
+          pubImageX != null && pubImageY != null
+            ? { x: pubImageX, y: pubImageY }
+            : null
+        }
+        imageScale={pubImageScale}
+        imageRotation={pubImageRotation}
+      />
     </div>,
     {
       title: `${dateLabel} の日記 — ${appName}`,
