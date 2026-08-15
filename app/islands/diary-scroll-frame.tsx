@@ -11,6 +11,9 @@ const LINE_HEIGHT = 2
 // （2.6rem だと中身が 963.2px になり、続きが無くても常に 3.2px はみ出して
 // フェードが出てしまう。root の font-size は global.css で 16px 固定）
 const FRAME_PADDING_X = '2.5rem'
+// FRAME_PADDING_X の px 換算（root font-size は 16px 固定）。
+// 幅拡張時にスクロール領域を左へ広げ、左端の余白を右端と揃えるのに使う
+const FRAME_PADDING_X_PX = 40
 const FRAME_MAX_WIDTH = '960px'
 
 type Props = {
@@ -46,6 +49,7 @@ export default function DiaryScrollFrame({
 }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [showFade, setShowFade] = useState(false)
+  const [extraWidth, setExtraWidth] = useState(0)
 
   // 左（読み進める方向）にまだ見えていないコンテンツがあるか。
   // rtl コンテナの scrollLeft は 0（右端）〜 -(scrollWidth - clientWidth)（左端）。
@@ -73,15 +77,16 @@ export default function DiaryScrollFrame({
 
   const onExtraWidthChangeRef = useRef(onExtraWidthChange)
   onExtraWidthChangeRef.current = onExtraWidthChange
-  const handleExtraWidthChange = useCallback(
-    (extraWidth: number) => {
-      // キャンバス幅が変わっても scroll イベントは発火しないため、
-      // ここで scrollWidth を測り直す（DOM 反映後に呼ばれる）
-      updateFade()
-      onExtraWidthChangeRef.current?.(extraWidth)
-    },
-    [updateFade],
-  )
+  const handleExtraWidthChange = useCallback((width: number) => {
+    setExtraWidth(width)
+    onExtraWidthChangeRef.current?.(width)
+  }, [])
+
+  // キャンバス幅が変わっても scroll イベントは発火しないため、拡張量の変化
+  // （スペーサー込みの DOM 反映後）に scrollWidth を測り直す
+  useEffect(() => {
+    updateFade()
+  }, [extraWidth, updateFade])
 
   return (
     <div
@@ -107,7 +112,9 @@ export default function DiaryScrollFrame({
           direction: 'rtl',
         }}
       >
-        <div style={{ minWidth: `${CANVAS_MIN_WIDTH}px` }}>
+        <div
+          style={{ minWidth: `${CANVAS_MIN_WIDTH}px`, position: 'relative' }}
+        >
           <FlowText
             {...flowTextProps}
             fontSize={FONT_SIZE}
@@ -115,6 +122,22 @@ export default function DiaryScrollFrame({
             containerHeight={CANVAS_HEIGHT}
             onExtraWidthChange={handleExtraWidthChange}
           />
+          {/* 幅拡張時、スクロール領域は拡張キャンバスの左端で終わり、左端まで
+              スクロールすると文末が枠にぴったり付いてしまう。右端の padding と
+              同じ余白が左端にも残るよう、スクロール領域を padding ぶんだけ
+              左へ広げる不可視のスペーサー */}
+          {extraWidth > 0 && (
+            <div
+              aria-hidden="true"
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: `${-(extraWidth + FRAME_PADDING_X_PX)}px`,
+                width: '1px',
+                height: '1px',
+              }}
+            />
+          )}
         </div>
       </div>
       {/* スクロールバーを隠しているため、左にまだ続きがあるときはフェードで示す */}
