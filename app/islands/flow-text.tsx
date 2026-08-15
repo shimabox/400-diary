@@ -173,10 +173,12 @@ export default function FlowText({
     const containerSize = { width: containerWidth, height: containerHeight }
     const dateRect = dateSize ? { side: dateSide, ...dateSize } : null
 
-    // 全高スロットだけで全文が収まる列数が追加列数の上限（安全弁）
-    const maxExtraCols = Math.ceil(
-      text.length / Math.max(1, Math.floor(containerHeight / fontSize)),
-    )
+    // 無限ループ保険。1スロットには最低1文字置けるため「文字数 + 改行数」が
+    // 必要スロット数の真の上限になる。改行は1つで列を1本消費し、語単位の
+    // 折返しがあるため文字数ベースの列容量見積もりは上限にならない。
+    // 全文が収まる幅には必ず到達するので、成功条件は exhausted のみ
+    const lineBreaks = (text.match(/\n/g) ?? []).length
+    const maxExtraCols = text.length + lineBreaks + 1
 
     for (let extraCols = 0; ; extraCols++) {
       const { slots, delta } = computeExtendedSlots(
@@ -190,20 +192,15 @@ export default function FlowText({
 
       const result: Segment[] = []
       let cursor: LayoutCursor = { segmentIndex: 0, graphemeIndex: 0 }
-      let exhausted = false
       for (const slot of slots) {
         const line = layoutNextLine(prepared, cursor, slot.height)
-        if (!line) {
-          exhausted = true
-          break
-        }
+        if (!line) break
         result.push({ text: line.text, ...slot })
         cursor = line.end
       }
-      // スロットを使い切った場合、残りテキストの有無を確認する
-      if (!exhausted) {
-        exhausted = layoutNextLine(prepared, cursor, containerHeight) === null
-      }
+      // 残りテキストが無ければ全文が収まっている
+      const exhausted =
+        layoutNextLine(prepared, cursor, containerHeight) === null
 
       if (exhausted || extraCols >= maxExtraCols) {
         return { segments: result, extraWidth: delta }
