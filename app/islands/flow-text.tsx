@@ -156,6 +156,16 @@ export default function FlowText({
   // 日付の表示位置（画像の反対側）
   const dateSide: 'left' | 'right' = imageLayout === 'right' ? 'left' : 'right'
 
+  // テキスト計測（Intl.Segmenter + canvas measureText）は重いため、ドラッグ中に
+  // obstacleRect が毎フレーム変わってもここは再実行されないよう依存を分離する
+  const prepared = useMemo(
+    () =>
+      prepareWithSegments(text, `600 ${fontSize}px sans-serif`, {
+        whiteSpace: 'pre-wrap',
+      }),
+    [text, fontSize],
+  )
+
   // computeExtendedSlots + 日付補正でスロットを計算し、テキストを流し込む。
   // 画像（障害物）が大きく全文が収まらない場合は、全文が置けるまで列を
   // 左へ追加してキャンバス幅を拡張する（extraWidth）。コンテナは横スクロール
@@ -164,11 +174,6 @@ export default function FlowText({
     if (!containerWidth || containerWidth < 100) {
       return { segments: [] as Segment[], extraWidth: 0 }
     }
-
-    const font = `600 ${fontSize}px sans-serif`
-    const prepared = prepareWithSegments(text, font, {
-      whiteSpace: 'pre-wrap',
-    })
 
     const containerSize = { width: containerWidth, height: containerHeight }
     const dateRect = dateSize ? { side: dateSide, ...dateSize } : null
@@ -208,6 +213,7 @@ export default function FlowText({
     }
   }, [
     text,
+    prepared,
     fontSize,
     lineHeight,
     containerWidth,
@@ -479,10 +485,12 @@ export default function FlowText({
           </button>
         )}
 
-        {/* テキスト列 */}
+        {/* テキスト列。スロットは右端からの列順で並ぶためインデックスが
+            安定キーになる。x をキーに含めると幅拡張で全列の x がシフトした
+            瞬間に全列が unmount/remount されてしまう */}
         {segments.map((seg, i) => (
           <div
-            key={`${i}-${seg.x}`}
+            key={i}
             style={{
               position: 'absolute',
               left: `${seg.x}px`,
