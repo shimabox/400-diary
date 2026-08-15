@@ -70,8 +70,12 @@ export type DateRect = {
  * 幅を extraCols 列ぶん左へ拡張した状態のスロットを計算する。
  *
  * 縦書きテキストは右端が読み始めなので、拡張後も右端を基準に保つ必要がある。
- * そのため障害物（画像）と右寄せ日付は拡張量だけ x をずらして右端からの
- * 距離を維持し、左寄せ日付は拡張後の左端（= 文末側のコーナー）に置く。
+ * そのため障害物（画像）と右寄せ日付は拡張量 delta だけ x をずらして右端からの
+ * 距離を維持する。左寄せ日付は拡張後も元のキャンバス左端（x = delta）に留め、
+ * 拡張してもスクロールなしで日付が見えることを保つ。
+ *
+ * 返り値の delta は拡張量（px）。描画側のキャンバス幅計算と式を共有するために
+ * ここで一緒に返す。
  */
 export function computeExtendedSlots(
   containerSize: ContainerSize,
@@ -80,7 +84,7 @@ export function computeExtendedSlots(
   obstacleRect: ObstacleRect,
   extraCols: number,
   dateRect: DateRect | null,
-): Slot[] {
+): { slots: Slot[]; delta: number } {
   const colWidth = fontSize * lineHeight
   const delta = extraCols * colWidth
   const width = containerSize.width + delta
@@ -93,7 +97,7 @@ export function computeExtendedSlots(
   )
 
   if (dateRect) {
-    const dateX = dateRect.side === 'right' ? width - dateRect.width : 0
+    const dateX = dateRect.side === 'right' ? width - dateRect.width : delta
     slots = adjustSlotsForDate(
       slots,
       { x: dateX, width: dateRect.width, height: dateRect.height },
@@ -102,7 +106,7 @@ export function computeExtendedSlots(
     )
   }
 
-  return slots
+  return { slots, delta }
 }
 
 /**

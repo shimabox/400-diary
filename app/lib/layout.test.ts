@@ -113,7 +113,7 @@ describe('computeExtendedSlots', () => {
   const obstacle = { x: 400, y: 0, width: 128, height: 150 }
 
   it('extraCols=0 なら computeSlots と同じ結果になる', () => {
-    const extended = computeExtendedSlots(
+    const { slots, delta } = computeExtendedSlots(
       container,
       fontSize,
       lineHeight,
@@ -122,11 +122,24 @@ describe('computeExtendedSlots', () => {
       null,
     )
     const base = computeSlots(container, fontSize, lineHeight, obstacle)
-    expect(extended).toEqual(base)
+    expect(slots).toEqual(base)
+    expect(delta).toBe(0)
+  })
+
+  it('拡張量 delta（px）を返す', () => {
+    const { delta } = computeExtendedSlots(
+      container,
+      fontSize,
+      lineHeight,
+      obstacle,
+      3,
+      null,
+    )
+    expect(delta).toBeCloseTo(3 * colWidth, 6)
   })
 
   it('extraCols 列ぶんスロットが左に追加される', () => {
-    const base = computeExtendedSlots(
+    const { slots: base } = computeExtendedSlots(
       container,
       fontSize,
       lineHeight,
@@ -134,7 +147,7 @@ describe('computeExtendedSlots', () => {
       0,
       null,
     )
-    const extended = computeExtendedSlots(
+    const { slots: extended } = computeExtendedSlots(
       container,
       fontSize,
       lineHeight,
@@ -153,7 +166,7 @@ describe('computeExtendedSlots', () => {
     const extraCols = 2
     const delta = extraCols * colWidth
     const base = computeSlots(container, fontSize, lineHeight, obstacle)
-    const extended = computeExtendedSlots(
+    const { slots: extended } = computeExtendedSlots(
       container,
       fontSize,
       lineHeight,
@@ -177,7 +190,7 @@ describe('computeExtendedSlots', () => {
     const extraCols = 2
     const delta = extraCols * colWidth
     const dateRect = { side: 'right' as const, width: 100, height: 40 }
-    const extended = computeExtendedSlots(
+    const { slots: extended } = computeExtendedSlots(
       container,
       fontSize,
       lineHeight,
@@ -195,10 +208,12 @@ describe('computeExtendedSlots', () => {
     expect(rightmost.y).toBe(dateBottom)
   })
 
-  it('左寄せ日付は拡張後の左端（文末側）に張り付く', () => {
-    const extraCols = 2
+  it('左寄せ日付は拡張後も元のキャンバス左端（初期表示内）に留まる', () => {
+    const extraCols = 5
+    const delta = extraCols * colWidth
+    const margin = fontSize * 2
     const dateRect = { side: 'left' as const, width: 100, height: 40 }
-    const extended = computeExtendedSlots(
+    const { slots } = computeExtendedSlots(
       container,
       fontSize,
       lineHeight,
@@ -207,17 +222,26 @@ describe('computeExtendedSlots', () => {
       dateRect,
     )
 
-    const dateBottom = dateRect.height + fontSize * 2
-    const leftmost = extended.reduce((a, b) => (a.x < b.x ? a : b))
-    expect(leftmost.x).toBeLessThan(dateRect.width)
-    expect(leftmost.y).toBe(dateBottom)
+    const dateBottom = dateRect.height + margin
 
-    // 元の左端（現在は文中）の列は日付の影響を受けない
-    const midCols = extended.filter(
-      (s) => s.x > dateRect.width + fontSize * 2 + colWidth,
+    // 元のキャンバス左端（x = delta）にある日付と重なる列は上部が削られる
+    const dateCols = slots.filter(
+      (s) =>
+        s.x < delta + dateRect.width + margin &&
+        s.x + colWidth > delta - margin,
     )
-    for (const slot of midCols) {
+    expect(dateCols.length).toBeGreaterThan(0)
+    for (const slot of dateCols) {
+      expect(slot.y).toBe(dateBottom)
+    }
+
+    // 拡張で追加された日付より左の列は全高のまま
+    // （= 日付は拡張後の左端へ移動せず、初期表示内に残る）
+    const leftOfDate = slots.filter((s) => s.x + colWidth <= delta - margin)
+    expect(leftOfDate.length).toBeGreaterThan(0)
+    for (const slot of leftOfDate) {
       expect(slot.y).toBe(0)
+      expect(slot.height).toBe(container.height)
     }
   })
 
@@ -230,7 +254,7 @@ describe('computeExtendedSlots', () => {
         obstacle,
         extraCols,
         null,
-      ).reduce((sum, s) => sum + s.height, 0)
+      ).slots.reduce((sum, s) => sum + s.height, 0)
 
     expect(capacity(1)).toBeGreaterThan(capacity(0))
     expect(capacity(5)).toBeGreaterThan(capacity(1))

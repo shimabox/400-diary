@@ -171,7 +171,6 @@ export default function FlowText({
     })
 
     const containerSize = { width: containerWidth, height: containerHeight }
-    const colWidth = fontSize * lineHeight
     const dateRect = dateSize ? { side: dateSide, ...dateSize } : null
 
     // 全高スロットだけで全文が収まる列数が追加列数の上限（安全弁）
@@ -180,7 +179,7 @@ export default function FlowText({
     )
 
     for (let extraCols = 0; ; extraCols++) {
-      const slots = computeExtendedSlots(
+      const { slots, delta } = computeExtendedSlots(
         containerSize,
         fontSize,
         lineHeight,
@@ -207,7 +206,7 @@ export default function FlowText({
       }
 
       if (exhausted || extraCols >= maxExtraCols) {
-        return { segments: result, extraWidth: extraCols * colWidth }
+        return { segments: result, extraWidth: delta }
       }
     }
   }, [
@@ -377,7 +376,8 @@ export default function FlowText({
           direction: 'ltr',
         }}
       >
-        {/* 日付 */}
+        {/* 日付。左寄せ時は拡張後も元のキャンバス左端（= 初期表示の左端）に
+            留めて、スクロールしなくても日付が見えることを保つ */}
         {dateLabel && (
           <div
             ref={dateRef}
@@ -385,7 +385,7 @@ export default function FlowText({
               position: 'absolute',
               top: 0,
               right: dateSide === 'right' ? 0 : 'auto',
-              left: dateSide === 'left' ? 0 : 'auto',
+              left: dateSide === 'left' ? `${extraWidth}px` : 'auto',
               fontSize: '2rem',
               color: '#555',
               whiteSpace: 'nowrap',
