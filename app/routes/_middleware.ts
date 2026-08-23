@@ -69,7 +69,8 @@ const authMiddleware = createMiddleware<AppEnv>(async (c, next) => {
   if (import.meta.env.DEV && c.env.DEV_AUTH_BYPASS === 'true') {
     c.set('isAuthenticated', true)
 
-    return next()
+    await next()
+    return
   }
 
   const token =
@@ -80,12 +81,13 @@ const authMiddleware = createMiddleware<AppEnv>(async (c, next) => {
   if (!teamDomain || !aud) {
     c.set('isAuthenticated', false)
 
-    return next()
+    await next()
+    return
   }
 
   const isAuthenticated = await verifyAccess(token, teamDomain, aud)
   c.set('isAuthenticated', isAuthenticated)
-  return next()
+  await next()
 })
 
 export default [secureHeadersMiddleware, authMiddleware]
