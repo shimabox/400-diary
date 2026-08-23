@@ -149,13 +149,17 @@ export default function FlowText({
   const dateSide: 'left' | 'right' = imageLayout === 'right' ? 'left' : 'right'
 
   // テキスト計測（Intl.Segmenter + canvas measureText）は重いため、ドラッグ中に
-  // obstacleRect が毎フレーム変わってもここは再実行されないよう依存を分離する
+  // obstacleRect が毎フレーム変わってもここは再実行されないよう依存を分離する。
+  // canvas はブラウザにしか無く、SSR（Workers）で呼ぶと例外になるため、
+  // コンテナ幅が計測されるまで（= クライアントで mount するまで）は計測しない
   const prepared = useMemo(
     () =>
-      prepareWithSegments(text, `600 ${fontSize}px sans-serif`, {
-        whiteSpace: 'pre-wrap',
-      }),
-    [text, fontSize],
+      containerWidth
+        ? prepareWithSegments(text, `600 ${fontSize}px sans-serif`, {
+            whiteSpace: 'pre-wrap',
+          })
+        : null,
+    [text, fontSize, containerWidth],
   )
 
   // flowTextWithExtension（app/lib/flow-layout.ts）でスロットを計算して
@@ -163,7 +167,7 @@ export default function FlowText({
   // 全文が置けるまで列を左へ追加してキャンバス幅が拡張される（extraWidth）。
   // コンテナは横スクロールできるので、拡張分はスクロールで読める
   const { segments, extraWidth, truncated } = useMemo(() => {
-    if (!containerWidth || containerWidth < 100) {
+    if (!prepared || !containerWidth || containerWidth < 100) {
       return { segments: [] as FlowSegment[], extraWidth: 0, truncated: false }
     }
 
