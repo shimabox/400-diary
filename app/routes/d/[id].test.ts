@@ -14,6 +14,8 @@ type CapturedHead = {
   title?: string
   description?: string
   preloadImage?: string
+  /** SSR された body の HTML */
+  body?: string
 }
 
 async function createApp(captured: CapturedHead[]) {
@@ -32,8 +34,14 @@ async function createApp(captured: CapturedHead[]) {
   app.use(
     '*',
     // @ts-expect-error -- テスト用に head 引数をキャプチャする簡易 renderer
-    jsxRenderer(({ ogImage, title, description, preloadImage }) => {
-      captured.push({ ogImage, title, description, preloadImage })
+    jsxRenderer(({ children, ogImage, title, description, preloadImage }) => {
+      captured.push({
+        ogImage,
+        title,
+        description,
+        preloadImage,
+        body: String(children),
+      })
       return new Response('ok')
     }),
   )
@@ -112,5 +120,28 @@ describe('GET /d/:id', () => {
     await app.request('/d/diary-1')
 
     expect(captured[0]?.ogImage).toBe('/api/og/diary-1?v=snap_new999')
+  })
+
+  // スクロールフレームは island で、SSR では <honox-island> ラッパーに包まれる。
+  // ラッパーは幅を持たないため、ページの縦 flex（alignItems: center）の直接の
+  // flex item にするとキャンバスの最小幅まで膨らみ、フレームの width: 100% が
+  // ビューポートではなくその幅を参照して横スクロールできなくなる（回帰）。
+  // ラッパーを幅 100%（最大 960px）のブロックで包んでいることを HTML で確認する
+  test('スクロールフレームが幅 100% のブロックに包まれ、狭い画面で横スクロールできる', async () => {
+    const { getDiaryWithSnapshot } = await import('~/lib/db')
+    vi.mocked(getDiaryWithSnapshot).mockResolvedValueOnce(makeResult())
+
+    const captured: CapturedHead[] = []
+    const app = await createApp(captured)
+    await app.request('/d/diary-1')
+
+    const body = captured[0]?.body ?? ''
+    // DiaryScrollFrame のルート要素（テストでは island 変換が無いので直接描画される）
+    const frameRoot =
+      '<div style="position:relative;max-width:960px;width:100%">'
+    expect(body).toContain(frameRoot)
+    expect(body).toContain(
+      `<div style="max-width:960px;width:100%">${frameRoot}`,
+    )
   })
 })
