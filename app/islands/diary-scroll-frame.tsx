@@ -51,14 +51,23 @@ export default function DiaryScrollFrame({
   const [showFade, setShowFade] = useState(false)
   const [extraWidth, setExtraWidth] = useState(0)
 
-  // 左（読み進める方向）にまだ見えていないコンテンツがあるか。
-  // rtl コンテナの scrollLeft は 0（右端）〜 -(scrollWidth - clientWidth)（左端）。
-  // scrollWidth / clientWidth は整数に丸められ、小数 px のレイアウトでは続きが
-  // 無くても 1〜2px の差が出ることがあるため、その分は許容する
+  // 左（読み進める方向）にまだ見えていない本文・画像があるか。
+  // 用紙（キャンバス最小幅 880px）は狭い画面では枠より広いため、スクロール余地の
+  // 有無で判定すると本文が収まっていても常にフェードが出てしまう。そこで
+  // 文字列や画像そのものの左端が、枠の内側（padding を除いた表示領域）の
+  // 左端より左にあるときだけ「続きがある」とみなす。
+  // レイアウトは小数 px で、丸めで 1〜2px の差が出ることがあるため、その分は許容する
   const updateFade = useCallback(() => {
     const el = scrollRef.current
     if (!el) return
-    setShowFade(el.scrollWidth - el.clientWidth + el.scrollLeft > 2)
+    const visibleLeft = el.getBoundingClientRect().left + FRAME_PADDING_X_PX
+    let contentLeft = Number.POSITIVE_INFINITY
+    for (const node of el.querySelectorAll<HTMLElement>(
+      'div[style*="vertical-rl"], img',
+    )) {
+      contentLeft = Math.min(contentLeft, node.getBoundingClientRect().left)
+    }
+    setShowFade(contentLeft < visibleLeft - 2)
   }, [])
 
   useEffect(() => {
@@ -66,12 +75,22 @@ export default function DiaryScrollFrame({
     if (!el) return
     updateFade()
     el.addEventListener('scroll', updateFade, { passive: true })
-    // ビューポート変化（clientWidth の変化）にも追随する
-    const obs = new ResizeObserver(updateFade)
-    obs.observe(el)
+    // ビューポート変化（枠の幅の変化）にも追随する
+    const resizeObs = new ResizeObserver(updateFade)
+    resizeObs.observe(el)
+    // 本文の列や画像は絶対配置で、描画・再配置されても scroll / resize は
+    // 発火しないため、DOM の変化を監視して測り直す
+    const mutationObs = new MutationObserver(updateFade)
+    mutationObs.observe(el, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['style'],
+    })
     return () => {
       el.removeEventListener('scroll', updateFade)
-      obs.disconnect()
+      resizeObs.disconnect()
+      mutationObs.disconnect()
     }
   }, [updateFade])
 
@@ -81,12 +100,6 @@ export default function DiaryScrollFrame({
     setExtraWidth(width)
     onExtraWidthChangeRef.current?.(width)
   }, [])
-
-  // キャンバス幅が変わっても scroll イベントは発火しないため、拡張量の変化
-  // （スペーサー込みの DOM 反映後）に scrollWidth を測り直す
-  useEffect(() => {
-    updateFade()
-  }, [extraWidth, updateFade])
 
   return (
     <div
