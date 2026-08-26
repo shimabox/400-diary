@@ -191,7 +191,7 @@ sequenceDiagram
 flowchart LR
     A[ソースコード] --> B["vite build --mode client"]
     A --> C["vite build"]
-    B --> D["dist/static/client.js<br/>dist/static/assets/global.css"]
+    B --> D["dist/static/assets/client-[hash].js"]
     C --> E["dist/_worker.js"]
     D & E --> F["wrangler pages deploy dist"]
     F --> G[Cloudflare Pages]
