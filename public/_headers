@@ -12,8 +12,11 @@
 # 出力し、HTML が常に最新のファイル名を参照する (honox の <Script> が manifest
 # から解決)。固定名だったころはデフォルト TTL (max-age=14400) の間、旧バンドルと
 # そこから参照される旧チャンクが使われ続け、デプロイが反映されない事象があった。
-# Cloudflare Pages は旧デプロイのアセットも残すため、読み込み済みの旧バンドルが
-# 旧 hash チャンクを参照できなくなる事故は起きない。
+# デプロイ前から開きっぱなしのタブ (SPA 遷移でメモリ上の旧バンドルを使い続ける)
+# は保証対象外。Cloudflare Pages の旧デプロイのアセットは「いつでも消える
+# 可能性がある」とされており、旧バンドルが未取得の旧 hash チャンクを遅延ロード
+# すると 404 になりうる。
+# https://developers.cloudflare.com/pages/configuration/serving-pages/#asset-retention
 
 /static/assets/*
   Cache-Control: public, max-age=31536000, immutable
