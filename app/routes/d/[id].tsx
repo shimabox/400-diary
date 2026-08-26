@@ -111,20 +111,27 @@ export default createRoute(async (c) => {
         </div>
       </div>
 
-      <DiaryScrollFrame
-        bgColor={pubBgColor}
-        text={pubBody}
-        imageLayout={pubImageLayout}
-        imageSrc={pubImageKey ? `/api/images/${pubImageKey}` : null}
-        dateLabel={dateLabel}
-        imagePosition={
-          pubImageX != null && pubImageY != null
-            ? { x: pubImageX, y: pubImageY }
-            : null
-        }
-        imageScale={pubImageScale}
-        imageRotation={pubImageRotation}
-      />
+      {/* island のラッパー要素（honox-island）は幅を持たないため、直接 flex item に
+          置くと中身のキャンバス幅（880px + padding）まで膨らみ、フレームの
+          width: 100% がその幅を参照してスクロール余地が消える（狭い画面で
+          横スクロールできなくなる）。ヘッダーと同じ幅のブロックで包んで、
+          ビューポート幅を基準にフレーム幅が決まるようにする */}
+      <div style={{ maxWidth: '960px', width: '100%' }}>
+        <DiaryScrollFrame
+          bgColor={pubBgColor}
+          text={pubBody}
+          imageLayout={pubImageLayout}
+          imageSrc={pubImageKey ? `/api/images/${pubImageKey}` : null}
+          dateLabel={dateLabel}
+          imagePosition={
+            pubImageX != null && pubImageY != null
+              ? { x: pubImageX, y: pubImageY }
+              : null
+          }
+          imageScale={pubImageScale}
+          imageRotation={pubImageRotation}
+        />
+      </div>
     </div>,
     {
       title: `${dateLabel} の日記 — ${appName}`,
