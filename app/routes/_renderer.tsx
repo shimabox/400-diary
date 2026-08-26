@@ -24,6 +24,12 @@ export default jsxRenderer(
             name="viewport"
             content="width=device-width, initial-scale=1.0"
           />
+          {/* ダークモード非対応のページは、アルゴリズム暗転を有効にした
+              Android WebView が端末のダーク設定時に色を機械的に反転する。
+              用紙は背景画像で明るいまま文字色だけ反転して読めなくなるため、
+              ライト固定を明示して自動暗転を禁止する。global.css の
+              :root { color-scheme: only light } と対にする */}
+          <meta name="color-scheme" content="only light" />
           <title>{pageTitle}</title>
           {description && (
             <>

@@ -6,6 +6,12 @@
   padding: 0;
 }
 
+/* ライト固定。ブラウザ（Android WebView の強制暗転など）による自動暗転を
+   明示的に禁止する。_renderer.tsx の <meta name="color-scheme"> と対 */
+:root {
+  color-scheme: only light;
+}
+
 html {
   font-family: "Klee One", "游明朝", "YuMincho", serif;
   font-size: 16px;
