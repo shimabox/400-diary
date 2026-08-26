@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'hono/jsx'
+import { hasContentBeyondLeft } from '../lib/scroll-fade'
 import FlowText from './flow-text'
 
 // 日記キャンバスの寸法。エディタのプレビューと公開ページで共有する
@@ -54,20 +55,17 @@ export default function DiaryScrollFrame({
   // 左（読み進める方向）にまだ見えていない本文・画像があるか。
   // 用紙（キャンバス最小幅 880px）は狭い画面では枠より広いため、スクロール余地の
   // 有無で判定すると本文が収まっていても常にフェードが出てしまう。そこで
-  // 文字列や画像そのものの左端が、枠の内側（padding を除いた表示領域）の
-  // 左端より左にあるときだけ「続きがある」とみなす。
-  // レイアウトは小数 px で、丸めで 1〜2px の差が出ることがあるため、その分は許容する
+  // 文字列の列や画像そのものの左端を測り、枠の内側（padding を除いた表示領域）
+  // の左端より左にあるときだけ「続きがある」とみなす（判定は hasContentBeyondLeft）
   const updateFade = useCallback(() => {
     const el = scrollRef.current
     if (!el) return
     const visibleLeft = el.getBoundingClientRect().left + FRAME_PADDING_X_PX
-    let contentLeft = Number.POSITIVE_INFINITY
-    for (const node of el.querySelectorAll<HTMLElement>(
-      'div[style*="vertical-rl"], img',
-    )) {
-      contentLeft = Math.min(contentLeft, node.getBoundingClientRect().left)
-    }
-    setShowFade(contentLeft < visibleLeft - 2)
+    const contentLefts = Array.from(
+      el.querySelectorAll<HTMLElement>('div[style*="vertical-rl"], img'),
+      (node) => node.getBoundingClientRect().left,
+    )
+    setShowFade(hasContentBeyondLeft(visibleLeft, contentLefts))
   }, [])
 
   useEffect(() => {
