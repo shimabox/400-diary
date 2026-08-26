@@ -372,6 +372,7 @@ export default function FlowText({
         {dateLabel && (
           <div
             ref={dateRef}
+            data-date-label
             style={{
               position: 'absolute',
               top: 0,

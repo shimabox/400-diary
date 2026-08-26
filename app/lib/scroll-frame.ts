@@ -24,3 +24,24 @@ export function hasContentBeyondLeft(
   }
   return contentLeft < visibleLeft - tolerancePx
 }
+
+/**
+ * 横スクロールフレームで、ユーザーがスクロールして到達できる幅。
+ *
+ * 用紙（キャンバス）の右端（文頭）から、本文の列・画像・日付のうち最も
+ * 左にあるものの左端までの距離。用紙の残りの余白はスクロール対象にしない。
+ * 本文も画像も無ければ 0。
+ *
+ * @param canvasRight 用紙の右端の画面座標
+ * @param contentLefts 本文の列や画像それぞれの左端の画面座標
+ */
+export function computeContentExtent(
+  canvasRight: number,
+  contentLefts: readonly number[],
+): number {
+  let extent = 0
+  for (const left of contentLefts) {
+    extent = Math.max(extent, canvasRight - left)
+  }
+  return extent
+}

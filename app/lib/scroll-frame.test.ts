@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { hasContentBeyondLeft } from './scroll-fade'
+import { computeContentExtent, hasContentBeyondLeft } from './scroll-frame'
 
 describe('hasContentBeyondLeft', () => {
   test('本文も画像も無ければ続きは無い', () => {
@@ -27,5 +27,23 @@ describe('hasContentBeyondLeft', () => {
   test('許容幅は指定できる', () => {
     expect(hasContentBeyondLeft(56, [50], 10)).toBe(false)
     expect(hasContentBeyondLeft(56, [50], 0)).toBe(true)
+  })
+})
+
+describe('computeContentExtent', () => {
+  test('本文も画像も無ければ 0', () => {
+    expect(computeContentExtent(1000, [])).toBe(0)
+  })
+
+  test('最も左にある要素の左端までの距離になる', () => {
+    expect(computeContentExtent(1000, [900, 296, 500])).toBe(704)
+  })
+
+  test('用紙の右端より右にある要素は 0 として扱う', () => {
+    expect(computeContentExtent(1000, [1200])).toBe(0)
+  })
+
+  test('キャンバス拡張で用紙の左端より左に列があればその分も含む', () => {
+    expect(computeContentExtent(1000, [-140])).toBe(1140)
   })
 })
