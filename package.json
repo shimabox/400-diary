@@ -7,7 +7,7 @@
     "dev": "vite",
     "typecheck": "tsc --noEmit",
     "prebuild": "npm run copy:wasm",
-    "build": "npm run typecheck && rm -rf dist && vite build --mode client && vite build",
+    "build": "npm run typecheck && rm -rf dist && vite build --mode client && node scripts/verify-client-manifest.mjs && vite build",
     "deploy": "npm run build && npm run db:migrate:remote && wrangler pages deploy dist --commit-message=\"$(git rev-parse --short HEAD)\"",
     "test": "vitest run",
     "lint": "biome check .",
