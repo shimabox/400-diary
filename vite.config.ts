@@ -58,7 +58,12 @@ export default defineConfig(({ mode }) => {
           // することで _headers のキャッシュ規則を単純化できる)。
           input: ['/app/client.ts'],
           output: {
-            entryFileNames: 'static/client.js',
+            // エントリもハッシュ付きにして /static/assets/ 配下に出す。固定名だと
+            // ブラウザ側の HTTP キャッシュ（本番ドメインでは max-age=14400）が
+            // 切れるまで旧バンドルが使われ、その中に焼き込まれた旧チャンクの
+            // ハッシュ経由で island の修正がデプロイ後も反映されない。
+            // HTML 側は honox の <Script> が manifest からファイル名を解決する
+            entryFileNames: 'static/assets/[name]-[hash].js',
             chunkFileNames: 'static/assets/[name]-[hash].js',
             assetFileNames: 'static/assets/[name]-[hash].[ext]',
           },
