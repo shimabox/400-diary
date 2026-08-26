@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'hono/jsx'
-import { hasContentBeyondLeft } from '../lib/scroll-fade'
+import { computeContentExtent, hasContentBeyondLeft } from '../lib/scroll-frame'
 import FlowText from './flow-text'
 
 // 日記キャンバスの寸法。エディタのプレビューと公開ページで共有する
@@ -13,7 +13,7 @@ const LINE_HEIGHT = 2
 // フェードが出てしまう。root の font-size は global.css で 16px 固定）
 const FRAME_PADDING_X = '2.5rem'
 // FRAME_PADDING_X の px 換算（root font-size は 16px 固定）。
-// 幅拡張時にスクロール領域を左へ広げ、左端の余白を右端と揃えるのに使う
+// 枠の表示領域（padding の内側）の左端を求めるのに使う
 const FRAME_PADDING_X_PX = 40
 const FRAME_MAX_WIDTH = '960px'
 
@@ -49,53 +49,72 @@ export default function DiaryScrollFrame({
   ...flowTextProps
 }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null)
+  const canvasHostRef = useRef<HTMLDivElement>(null)
   const [showFade, setShowFade] = useState(false)
-  const [extraWidth, setExtraWidth] = useState(0)
+  // スクロールで到達できる幅（用紙の右端から本文・画像・日付の左端まで）。
+  // 計測前は用紙の幅にしておき、SSR / 初回描画で見た目が変わらないようにする
+  const [scrollExtent, setScrollExtent] = useState<number | null>(null)
 
-  // 左（読み進める方向）にまだ見えていない本文・画像があるか。
-  // 用紙（キャンバス最小幅 880px）は狭い画面では枠より広いため、スクロール余地の
-  // 有無で判定すると本文が収まっていても常にフェードが出てしまう。そこで
-  // 文字列の列や画像そのものの左端を測り、枠の内側（padding を除いた表示領域）
-  // の左端より左にあるときだけ「続きがある」とみなす（判定は hasContentBeyondLeft）
-  const updateFade = useCallback(() => {
+  // 用紙（キャンバス最小幅 880px）は右側 20 列に本文を流し込み、狭い画面では
+  // 枠より広い。本文が収まっていても用紙の左の余白までスクロールできて
+  // しまうのを避けるため、本文の列・画像・日付そのものの左端を測り、
+  // そこまでをスクロール可能な幅（クリップ領域の幅）にする。
+  // 左フェードも同じ実測値から、枠の内側（padding を除いた表示領域）の
+  // 左端より左に本文・画像があるときだけ出す
+  const measure = useCallback(() => {
     const el = scrollRef.current
-    if (!el) return
-    const visibleLeft = el.getBoundingClientRect().left + FRAME_PADDING_X_PX
+    const host = canvasHostRef.current
+    if (!el || !host) return
     const contentLefts = Array.from(
-      el.querySelectorAll<HTMLElement>('div[style*="vertical-rl"], img'),
+      host.querySelectorAll<HTMLElement>(
+        'div[style*="vertical-rl"], img, [data-date-label]',
+      ),
       (node) => node.getBoundingClientRect().left,
     )
+    const visibleLeft = el.getBoundingClientRect().left + FRAME_PADDING_X_PX
     setShowFade(hasContentBeyondLeft(visibleLeft, contentLefts))
+    // クリップ領域は in-flow なので、スクロール終端（左端）にはスクロール
+    // コンテナ自身の padding が残る。右端と同じ余白になるため、ここでは足さない
+    // 小数 px の切り捨てで端が欠けないよう切り上げる
+    const extent = Math.ceil(
+      computeContentExtent(host.getBoundingClientRect().right, contentLefts),
+    )
+    setScrollExtent((prev) => (prev === extent ? prev : extent))
   }, [])
 
   useEffect(() => {
     const el = scrollRef.current
-    if (!el) return
-    updateFade()
-    el.addEventListener('scroll', updateFade, { passive: true })
+    const host = canvasHostRef.current
+    if (!el || !host) return
+    measure()
+    el.addEventListener('scroll', measure, { passive: true })
     // ビューポート変化（枠の幅の変化）にも追随する
-    const resizeObs = new ResizeObserver(updateFade)
+    const resizeObs = new ResizeObserver(measure)
     resizeObs.observe(el)
     // 本文の列や画像は絶対配置で、描画・再配置されても scroll / resize は
-    // 発火しないため、DOM の変化を監視して測り直す
-    const mutationObs = new MutationObserver(updateFade)
-    mutationObs.observe(el, {
+    // 発火しないため、用紙内の DOM の変化を監視して測り直す
+    const mutationObs = new MutationObserver(measure)
+    mutationObs.observe(host, {
       childList: true,
       subtree: true,
       attributes: true,
       attributeFilter: ['style'],
     })
+    // Web フォントの適用で日付や文字列の幅が変わっても DOM は変化しないため、
+    // フォントの読み込み完了でも測り直す
+    document.fonts.ready.then(measure)
+    document.fonts.addEventListener('loadingdone', measure)
     return () => {
-      el.removeEventListener('scroll', updateFade)
+      el.removeEventListener('scroll', measure)
       resizeObs.disconnect()
       mutationObs.disconnect()
+      document.fonts.removeEventListener('loadingdone', measure)
     }
-  }, [updateFade])
+  }, [measure])
 
   const onExtraWidthChangeRef = useRef(onExtraWidthChange)
   onExtraWidthChangeRef.current = onExtraWidthChange
   const handleExtraWidthChange = useCallback((width: number) => {
-    setExtraWidth(width)
     onExtraWidthChangeRef.current?.(width)
   }, [])
 
@@ -123,32 +142,31 @@ export default function DiaryScrollFrame({
           direction: 'rtl',
         }}
       >
+        {/* クリップ領域。ユーザーがスクロールできるのはこの幅まで。用紙
+            （下の要素）は 880px 固定で rtl のため右揃えになり、余白側の
+            はみ出しは overflow: hidden で切り捨てられてスクロール対象にならない */}
         <div
-          style={{ minWidth: `${CANVAS_MIN_WIDTH}px`, position: 'relative' }}
+          style={{
+            width:
+              scrollExtent == null
+                ? `${CANVAS_MIN_WIDTH}px`
+                : `${scrollExtent}px`,
+            height: `${CANVAS_HEIGHT}px`,
+            overflow: 'hidden',
+          }}
         >
-          <FlowText
-            {...flowTextProps}
-            fontSize={FONT_SIZE}
-            lineHeight={LINE_HEIGHT}
-            containerHeight={CANVAS_HEIGHT}
-            onExtraWidthChange={handleExtraWidthChange}
-          />
-          {/* 幅拡張時、スクロール領域は拡張キャンバスの左端で終わり、左端まで
-              スクロールすると文末が枠にぴったり付いてしまう。右端の padding と
-              同じ余白が左端にも残るよう、スクロール領域を padding ぶんだけ
-              左へ広げる不可視のスペーサー */}
-          {extraWidth > 0 && (
-            <div
-              aria-hidden="true"
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: `${-(extraWidth + FRAME_PADDING_X_PX)}px`,
-                width: '1px',
-                height: '1px',
-              }}
+          <div
+            ref={canvasHostRef}
+            style={{ width: `${CANVAS_MIN_WIDTH}px`, position: 'relative' }}
+          >
+            <FlowText
+              {...flowTextProps}
+              fontSize={FONT_SIZE}
+              lineHeight={LINE_HEIGHT}
+              containerHeight={CANVAS_HEIGHT}
+              onExtraWidthChange={handleExtraWidthChange}
             />
-          )}
+          </div>
         </div>
       </div>
       {/* スクロールバーを隠しているため、左にまだ続きがあるときはフェードで示す */}
