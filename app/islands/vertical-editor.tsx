@@ -15,6 +15,7 @@ import { useSpeech } from '../lib/use-speech'
 import { useVerticalTextInput } from '../lib/use-vertical-text-input'
 import DiaryScrollFrame from './diary-scroll-frame'
 import ImageAttachmentEditor from './image-attachment-editor'
+import ThemeToggle from './theme-toggle'
 
 const CELL = 2.0 // em – 1マスのサイズ（正方形）
 
@@ -136,7 +137,19 @@ export default function VerticalEditor({
           marginBottom: '1rem',
         }}
       >
-        {title && <h1 style={{ fontSize: '1.2rem', margin: 0 }}>{title}</h1>}
+        {title && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'baseline',
+              gap: '1rem',
+              fontSize: '0.85rem',
+            }}
+          >
+            <h1 style={{ fontSize: '1.2rem', margin: 0 }}>{title}</h1>
+            <ThemeToggle />
+          </div>
+        )}
         <div
           style={{
             display: 'flex',

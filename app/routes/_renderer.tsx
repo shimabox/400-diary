@@ -2,6 +2,7 @@ import { jsxRenderer, useRequestContext } from 'hono/jsx-renderer'
 import { Script } from 'honox/server'
 import type { AppEnv } from '~/factory'
 import { DEFAULT_APP_NAME } from '~/lib/constants'
+import { THEME_INLINE_SCRIPT } from '~/lib/theme'
 import globalCss from '~/styles/global.css?inline'
 
 export default jsxRenderer(
@@ -29,6 +30,9 @@ export default jsxRenderer(
               色を反転し、用紙は背景画像で明るいまま文字色だけ反転して読めなくなる。
               配色は global.css のトークンで自前に切り替える */}
           <meta name="color-scheme" content="light dark" />
+          {/* 保存した配色を初回描画から反映する。CSP はこのスクリプトの
+              ハッシュのみを許可する（app/lib/theme.ts） */}
+          <script dangerouslySetInnerHTML={{ __html: THEME_INLINE_SCRIPT }} />
           <title>{pageTitle}</title>
           {description && (
             <>

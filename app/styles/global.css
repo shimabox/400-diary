@@ -30,9 +30,10 @@
   --shadow: rgba(0, 0, 0, 0.15);
 }
 
-/* ダーク配色。OS 設定に従う */
+/* ダーク配色。明示の選択（<html data-theme>、app/lib/theme.ts）があればそれを、
+   無ければ OS 設定に従う */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #1b1a18;
     --fg: #e8e4dc;
     --fg-muted: #b3ada2;
@@ -49,6 +50,66 @@
     --heat-none: #5d5a53;
     --shadow: rgba(0, 0, 0, 0.6);
   }
+}
+
+:root[data-theme="dark"] {
+  --bg: #1b1a18;
+  --fg: #e8e4dc;
+  --fg-muted: #b3ada2;
+  --fg-subtle: #7f7a70;
+  --border: #45423d;
+  --border-strong: #6a665f;
+  --surface: #262522;
+  --accent-bg: #e8e4dc;
+  --on-accent: #1b1a18;
+  --disabled-bg: #45423d;
+  --danger: #e5716a;
+  --success: #5dbb63;
+  --heat-empty: #2c2b28;
+  --heat-none: #5d5a53;
+  --shadow: rgba(0, 0, 0, 0.6);
+}
+
+/* 切り替えボタンで配色を変えたときだけ、地と用紙の色をじんわり移らせる。
+   クラスは app/lib/theme.ts が切り替えの間だけ付ける */
+:root {
+  /* 切り替えの所要時間（app/lib/theme.ts の THEME_TRANSITION_MS と揃える）と、
+     文字色を切り替える時点（その半分） */
+  --td: 0.7s;
+  --td-half: 0.35s;
+}
+.theme-transition,
+.theme-transition *,
+.theme-transition *::before,
+.theme-transition *::after {
+  /* インラインで transition を持つ要素（一覧カードの transform 等）でも
+     色を動かすため、切り替え中だけ !important で上書きする。
+     文字色は背景と同時にクロスフェードすると中間で背景と同じ明るさになり
+     文字が一瞬消えて点滅に見えるため、背景が半分ほど移った時点で
+     一気に切り替える（steps） */
+  /* biome-ignore lint/complexity/noImportantStyles: 上記コメント参照 */
+  transition-property: background-color, color, border-color !important;
+  /* biome-ignore lint/complexity/noImportantStyles: 上記コメント参照 */
+  transition-duration: var(--td), var(--td-half), var(--td) !important;
+  /* biome-ignore lint/complexity/noImportantStyles: 上記コメント参照 */
+  transition-timing-function: ease, steps(1, end), ease !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .theme-transition,
+  .theme-transition *,
+  .theme-transition *::before,
+  .theme-transition *::after {
+    /* biome-ignore lint/complexity/noImportantStyles: 上の指定を打ち消すため */
+    transition: none !important;
+  }
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
 }
 
 /* 用紙。背景色は利用者が選んだ色（--paper-color、各要素のインラインで指定）で、
@@ -69,7 +130,7 @@
    用紙をライトのままにする */
 @supports (color: oklch(from red l c h)) {
   @media (prefers-color-scheme: dark) {
-    :root :is(.paper, .paper-frame) {
+    :root:not([data-theme="light"]) :is(.paper, .paper-frame) {
       --paper-bg: oklch(from var(--paper-color) 0.36 calc(c * 1.5) h);
       --paper-fg: #cfc9bd;
       --paper-muted: #b8b2a6;
@@ -77,6 +138,15 @@
       --paper-blend: multiply;
       --paper-scheme: dark;
     }
+  }
+
+  :root[data-theme="dark"] :is(.paper, .paper-frame) {
+    --paper-bg: oklch(from var(--paper-color) 0.36 calc(c * 1.5) h);
+    --paper-fg: #cfc9bd;
+    --paper-muted: #b8b2a6;
+    --paper-line: rgba(255, 255, 255, 0.1);
+    --paper-blend: multiply;
+    --paper-scheme: dark;
   }
 }
 
