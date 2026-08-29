@@ -37,11 +37,11 @@ export default function ConfirmDialog({
         top: '50%',
         left: '50%',
         transform: 'translate(-50%, -50%)',
-        border: '1px solid #ccc',
+        border: '1px solid var(--border)',
         borderRadius: '8px',
         padding: '1.5rem',
         maxWidth: '320px',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+        boxShadow: '0 4px 12px var(--shadow)',
       }}
     >
       <p
@@ -62,7 +62,7 @@ export default function ConfirmDialog({
           onClick={onCancel}
           style={{
             padding: '0.4rem 1rem',
-            border: '1px solid #999',
+            border: '1px solid var(--border-strong)',
             borderRadius: '4px',
             background: 'transparent',
             fontSize: '0.85rem',
@@ -76,10 +76,10 @@ export default function ConfirmDialog({
           onClick={onConfirm}
           style={{
             padding: '0.4rem 1rem',
-            border: '1px solid #c0392b',
+            border: '1px solid var(--danger)',
             borderRadius: '4px',
-            background: '#c0392b',
-            color: '#fff',
+            background: 'var(--danger)',
+            color: 'var(--on-accent)',
             fontSize: '0.85rem',
             cursor: 'pointer',
           }}

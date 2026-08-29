@@ -137,8 +137,7 @@ describe('GET /d/:id', () => {
 
     const body = captured[0]?.body ?? ''
     // DiaryScrollFrame のルート要素（テストでは island 変換が無いので直接描画される）
-    const frameRoot =
-      '<div style="position:relative;max-width:960px;width:100%">'
+    const frameRoot = '<div class="paper-frame"'
     expect(body).toContain(frameRoot)
     expect(body).toContain(
       `<div style="max-width:960px;width:100%">${frameRoot}`,

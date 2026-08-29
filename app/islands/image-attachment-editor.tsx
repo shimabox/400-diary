@@ -105,7 +105,7 @@ export default function ImageAttachmentEditor({
         <label
           style={{
             padding: '0.2rem 0.5rem',
-            border: '1px solid #999',
+            border: '1px solid var(--border-strong)',
             borderRadius: '4px',
             fontSize: '0.85rem',
             cursor: 'pointer',
@@ -127,8 +127,8 @@ export default function ImageAttachmentEditor({
             style={{
               padding: '0.2rem 0.5rem',
               background: 'transparent',
-              color: '#c0392b',
-              border: '1px solid #c0392b',
+              color: 'var(--danger)',
+              border: '1px solid var(--danger)',
               borderRadius: '4px',
               fontSize: '0.85rem',
               cursor: 'pointer',
@@ -142,7 +142,7 @@ export default function ImageAttachmentEditor({
         <p
           role="alert"
           style={{
-            color: '#c0392b',
+            color: 'var(--danger)',
             fontSize: '0.85rem',
             marginTop: '0.5rem',
           }}

@@ -373,13 +373,13 @@ export default function FlowText({
           <div
             ref={dateRef}
             data-date-label
+            class="paper-muted"
             style={{
               position: 'absolute',
               top: 0,
               right: dateSide === 'right' ? 0 : 'auto',
               left: dateSide === 'left' ? `${extraWidth}px` : 'auto',
               fontSize: '2rem',
-              color: '#555',
               whiteSpace: 'nowrap',
             }}
           >
