@@ -6,17 +6,175 @@
   padding: 0;
 }
 
-/* ライト固定。ブラウザ（Android WebView の強制暗転など）による自動暗転を
-   明示的に禁止する。_renderer.tsx の <meta name="color-scheme"> と対 */
+/* ページの「地」の配色。用紙（日記本文の枠・編集グリッド）は利用者が選んだ
+   背景色と本文色 #333 で固定し、ここでは扱わない。
+   ライト / ダーク両対応を宣言し（_renderer.tsx の <meta name="color-scheme"> と対）、
+   ブラウザによる自動暗転ではなく自前の配色を使う */
 :root {
-  color-scheme: only light;
+  color-scheme: light dark;
+
+  --bg: #faf9f6;
+  --fg: #333;
+  --fg-muted: #666;
+  --fg-subtle: #999;
+  --border: #ccc;
+  --border-strong: #999;
+  --surface: #fff;
+  --accent-bg: #333;
+  --on-accent: #fff;
+  --disabled-bg: #ccc;
+  --danger: #c0392b;
+  --success: #2e7d32;
+  --heat-empty: #ebedf0;
+  --heat-none: #bdbdbd;
+  --shadow: rgba(0, 0, 0, 0.15);
+}
+
+/* ダーク配色。明示の選択（<html data-theme>、app/lib/theme.ts）があればそれを、
+   無ければ OS 設定に従う */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1b1a18;
+    --fg: #e8e4dc;
+    --fg-muted: #b3ada2;
+    --fg-subtle: #7f7a70;
+    --border: #45423d;
+    --border-strong: #6a665f;
+    --surface: #262522;
+    --accent-bg: #e8e4dc;
+    --on-accent: #1b1a18;
+    --disabled-bg: #45423d;
+    --danger: #e5716a;
+    --success: #5dbb63;
+    --heat-empty: #2c2b28;
+    --heat-none: #5d5a53;
+    --shadow: rgba(0, 0, 0, 0.6);
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #1b1a18;
+  --fg: #e8e4dc;
+  --fg-muted: #b3ada2;
+  --fg-subtle: #7f7a70;
+  --border: #45423d;
+  --border-strong: #6a665f;
+  --surface: #262522;
+  --accent-bg: #e8e4dc;
+  --on-accent: #1b1a18;
+  --disabled-bg: #45423d;
+  --danger: #e5716a;
+  --success: #5dbb63;
+  --heat-empty: #2c2b28;
+  --heat-none: #5d5a53;
+  --shadow: rgba(0, 0, 0, 0.6);
+}
+
+/* 切り替えボタンで配色を変えたときだけ、地と用紙の色をじんわり移らせる。
+   クラスは app/lib/theme.ts が切り替えの間だけ付ける */
+:root {
+  /* 切り替えの所要時間（app/lib/theme.ts の THEME_TRANSITION_MS と揃える）と、
+     文字色を切り替える時点（その半分） */
+  --td: 0.7s;
+  --td-half: 0.35s;
+}
+.theme-transition,
+.theme-transition *,
+.theme-transition *::before,
+.theme-transition *::after {
+  /* インラインで transition を持つ要素（一覧カードの transform 等）でも
+     色を動かすため、切り替え中だけ !important で上書きする。
+     文字色は背景と同時にクロスフェードすると中間で背景と同じ明るさになり
+     文字が一瞬消えて点滅に見えるため、背景が半分ほど移った時点で
+     一気に切り替える（steps） */
+  /* biome-ignore lint/complexity/noImportantStyles: 上記コメント参照 */
+  transition-property: background-color, color, border-color !important;
+  /* biome-ignore lint/complexity/noImportantStyles: 上記コメント参照 */
+  transition-duration: var(--td), var(--td-half), var(--td) !important;
+  /* biome-ignore lint/complexity/noImportantStyles: 上記コメント参照 */
+  transition-timing-function: ease, steps(1, end), ease !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .theme-transition,
+  .theme-transition *,
+  .theme-transition *::before,
+  .theme-transition *::after {
+    /* biome-ignore lint/complexity/noImportantStyles: 上の指定を打ち消すため */
+    transition: none !important;
+  }
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+/* 用紙。背景色は利用者が選んだ色（--paper-color、各要素のインラインで指定）で、
+   紙テクスチャと合成して本文を描く。ページの配色（--fg 等）は継承させず、
+   用紙専用のトークンで扱う */
+.paper,
+.paper-frame {
+  --paper-bg: var(--paper-color);
+  --paper-fg: #333;
+  --paper-muted: #555;
+  --paper-line: rgba(0, 0, 0, 0.08);
+  --paper-blend: luminosity;
+  --paper-scheme: light;
+}
+
+/* ダークでは、選んだ色の色相・彩度を保ったまま明度を落として「夜の紙」にし、
+   本文を明色にする。相対色構文（oklch(from …)）が使えないブラウザでは
+   用紙をライトのままにする */
+@supports (color: oklch(from red l c h)) {
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) :is(.paper, .paper-frame) {
+      --paper-bg: oklch(from var(--paper-color) 0.36 calc(c * 1.5) h);
+      --paper-fg: #cfc9bd;
+      --paper-muted: #b8b2a6;
+      --paper-line: rgba(255, 255, 255, 0.1);
+      --paper-blend: multiply;
+      --paper-scheme: dark;
+    }
+  }
+
+  :root[data-theme="dark"] :is(.paper, .paper-frame) {
+    --paper-bg: oklch(from var(--paper-color) 0.36 calc(c * 1.5) h);
+    --paper-fg: #cfc9bd;
+    --paper-muted: #b8b2a6;
+    --paper-line: rgba(255, 255, 255, 0.1);
+    --paper-blend: multiply;
+    --paper-scheme: dark;
+  }
+}
+
+.paper {
+  color-scheme: var(--paper-scheme);
+  color: var(--paper-fg);
+  background-color: var(--paper-bg);
+  background-image: url(/images/background.webp);
+  background-repeat: repeat;
+  background-blend-mode: var(--paper-blend);
+}
+.paper .paper-muted {
+  color: var(--paper-muted);
+}
+/* 編集グリッドはテクスチャ無しの無地 */
+.editor-grid.paper {
+  background-image: none;
+}
+/* 用紙の枠。左端フェードは用紙と同じ色で消えていく */
+.paper-fade {
+  background: linear-gradient(to right, var(--paper-bg), transparent);
 }
 
 html {
   font-family: "Klee One", "游明朝", "YuMincho", serif;
   font-size: 16px;
-  color: #333;
-  background-color: #faf9f6;
+  color: var(--fg);
+  background-color: var(--bg);
 }
 
 body {

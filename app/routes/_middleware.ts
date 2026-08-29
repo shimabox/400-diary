@@ -4,6 +4,7 @@ import { secureHeaders } from 'hono/secure-headers'
 import type { AppEnv } from '~/factory'
 import { verifyAccess } from '../lib/auth'
 import { HEATMAP_SCROLL_INLINE_SCRIPT_HASH } from '../lib/heatmap-scroll-inline'
+import { THEME_INLINE_SCRIPT_HASH } from '../lib/theme'
 
 // セキュリティヘッダー。CSP は以下の外部リソース/インライン利用を壊さないように設計している:
 // - Google Fonts: スタイルシートは https://fonts.googleapis.com（_renderer.tsx）、
@@ -18,6 +19,8 @@ import { HEATMAP_SCROLL_INLINE_SCRIPT_HASH } from '../lib/heatmap-scroll-inline'
 //   実行してちらつきを抑える」ことが目的のため外部化できない。'unsafe-inline' で全許可する
 //   代わりに、このスクリプト（静的文字列）の SHA-256 ハッシュのみを本番の script-src で
 //   個別許可する。ハッシュとスクリプト本体の整合は heatmap-scroll-inline.test.ts が検証する
+//   ※ 同様に _renderer.tsx の配色適用スクリプト（app/lib/theme.ts）も、保存した配色を
+//   初回描画から反映してちらつきを抑えるためインラインのままとし、ハッシュで許可する
 // - インラインスタイル（style 属性 / <style> タグでの global.css インライン化）を多用しているため
 //   style-src にも 'unsafe-inline' が必須
 // - dev サーバー(vite)は HMR クライアントを読み込むためのインラインスクリプト
@@ -41,7 +44,7 @@ const secureHeadersMiddleware = createMiddleware<AppEnv>(async (c, next) => {
         // ハッシュを付けず、本番のみハッシュで calendar-view のインラインスクリプトを許可する
         ...(import.meta.env.DEV
           ? ["'unsafe-inline'"]
-          : [HEATMAP_SCROLL_INLINE_SCRIPT_HASH]),
+          : [HEATMAP_SCROLL_INLINE_SCRIPT_HASH, THEME_INLINE_SCRIPT_HASH]),
       ],
       styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       // data: はフォント置換系のブラウザ拡張が data URI フォントを注入するのを

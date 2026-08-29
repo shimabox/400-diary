@@ -32,8 +32,8 @@ export default function DeleteDiaryButton({ diaryId }: Props) {
         style={{
           padding: '0.3rem 0.8rem',
           background: 'transparent',
-          color: '#c0392b',
-          border: '1px solid #c0392b',
+          color: 'var(--danger)',
+          border: '1px solid var(--danger)',
           borderRadius: '4px',
           fontSize: '0.85rem',
           cursor: 'pointer',
@@ -45,7 +45,7 @@ export default function DeleteDiaryButton({ diaryId }: Props) {
         <p
           role="alert"
           style={{
-            color: '#c0392b',
+            color: 'var(--danger)',
             fontSize: '0.85rem',
             marginTop: '0.5rem',
           }}

@@ -244,17 +244,14 @@ export default function DiaryList({
               flexDirection: 'column',
               flexShrink: 0,
               width: '168px',
-              background: diary.background_color,
-              backgroundImage: 'url(/images/background.webp)',
-              backgroundRepeat: 'repeat',
-              backgroundBlendMode: 'luminosity',
+              '--paper-color': diary.background_color,
               borderRadius: '8px',
               padding: '1rem 0.8rem',
               transition: 'transform 0.15s',
               overflow: 'hidden',
               position: 'relative',
             }}
-            class="diary-card"
+            class="diary-card paper"
           >
             {isAuthenticated && diary.is_draft && (
               <span
@@ -289,11 +286,11 @@ export default function DiaryList({
               </span>
             )}
             <time
+              class="paper-muted"
               style={{
                 display: 'flex',
                 justifyContent: 'center',
                 fontSize: '1rem',
-                color: '#666',
                 marginBottom: '0.8rem',
                 flexShrink: 0,
               }}

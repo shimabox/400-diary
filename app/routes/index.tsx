@@ -1,6 +1,7 @@
 import { createRoute } from '~/factory'
 import CalendarView from '../islands/calendar-view'
 import DiaryList from '../islands/diary-list'
+import ThemeToggle from '../islands/theme-toggle'
 import { DEFAULT_APP_NAME } from '../lib/constants'
 import {
   getDiaryDateRange,
@@ -86,10 +87,10 @@ export default createRoute(async (c) => {
                 href="/api/export"
                 style={{
                   padding: '0.4rem 0.75rem',
-                  border: '1px solid #595959',
+                  border: '1px solid var(--fg-muted)',
                   borderRadius: '4px',
                   fontSize: '0.9rem',
-                  color: '#595959',
+                  color: 'var(--fg-muted)',
                   whiteSpace: 'nowrap',
                 }}
               >
@@ -99,7 +100,7 @@ export default createRoute(async (c) => {
                 href="/new"
                 style={{
                   padding: '0.4rem 0.75rem',
-                  border: '1px solid #333',
+                  border: '1px solid var(--fg)',
                   borderRadius: '4px',
                   fontSize: '0.9rem',
                   whiteSpace: 'nowrap',
@@ -126,7 +127,7 @@ export default createRoute(async (c) => {
             style={{
               textAlign: 'center',
               padding: '3rem 1rem',
-              color: '#999',
+              color: 'var(--fg-subtle)',
             }}
           >
             <p style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>
@@ -163,7 +164,7 @@ export default createRoute(async (c) => {
             href="https://x.com/shimabox"
             target="_blank"
             rel="noopener noreferrer"
-            style={{ color: '#595959' }}
+            style={{ color: 'var(--fg-muted)' }}
           >
             X
           </a>
@@ -171,13 +172,14 @@ export default createRoute(async (c) => {
             href="https://github.com/shimabox/400-diary"
             target="_blank"
             rel="noopener noreferrer"
-            style={{ color: '#595959' }}
+            style={{ color: 'var(--fg-muted)' }}
           >
             GitHub
           </a>
-          <a href="/rss.xml" style={{ color: '#595959' }}>
+          <a href="/rss.xml" style={{ color: 'var(--fg-muted)' }}>
             RSS
           </a>
+          <ThemeToggle />
         </footer>
       </div>
     </div>,

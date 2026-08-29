@@ -28,7 +28,7 @@ export default createRoute(async (c) => {
           href="/"
           style={{
             padding: '0.4rem 1rem',
-            border: '1px solid #333',
+            border: '1px solid var(--fg)',
             borderRadius: '4px',
             fontSize: '0.9rem',
           }}
@@ -99,7 +99,7 @@ export default createRoute(async (c) => {
                 href={`/edit/${diary.id}`}
                 style={{
                   padding: '0.3rem 0.8rem',
-                  border: '1px solid #333',
+                  border: '1px solid var(--fg)',
                   borderRadius: '4px',
                   fontSize: '0.85rem',
                 }}

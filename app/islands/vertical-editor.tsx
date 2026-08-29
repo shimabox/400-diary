@@ -15,6 +15,7 @@ import { useSpeech } from '../lib/use-speech'
 import { useVerticalTextInput } from '../lib/use-vertical-text-input'
 import DiaryScrollFrame from './diary-scroll-frame'
 import ImageAttachmentEditor from './image-attachment-editor'
+import ThemeToggle from './theme-toggle'
 
 const CELL = 2.0 // em – 1マスのサイズ（正方形）
 
@@ -117,7 +118,7 @@ export default function VerticalEditor({
         <p
           role="alert"
           style={{
-            color: '#c0392b',
+            color: 'var(--danger)',
             marginBottom: '0.75rem',
             fontSize: '0.9rem',
           }}
@@ -136,7 +137,19 @@ export default function VerticalEditor({
           marginBottom: '1rem',
         }}
       >
-        {title && <h1 style={{ fontSize: '1.2rem', margin: 0 }}>{title}</h1>}
+        {title && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'baseline',
+              gap: '1rem',
+              fontSize: '0.85rem',
+            }}
+          >
+            <h1 style={{ fontSize: '1.2rem', margin: 0 }}>{title}</h1>
+            <ThemeToggle />
+          </div>
+        )}
         <div
           style={{
             display: 'flex',
@@ -154,9 +167,9 @@ export default function VerticalEditor({
               fontFamily: 'inherit',
               fontSize: '0.95rem',
               padding: '0.4rem 0.6rem',
-              border: '1px solid #ccc',
+              border: '1px solid var(--border)',
               borderRadius: '4px',
-              background: '#fff',
+              background: 'var(--surface)',
             }}
           />
           <div style={{ display: 'flex', gap: '0.2rem', flexWrap: 'wrap' }}>
@@ -172,7 +185,7 @@ export default function VerticalEditor({
                   width: '1.5rem',
                   height: '1.5rem',
                   padding: '0',
-                  border: '1px solid #ccc',
+                  border: '1px solid var(--border)',
                   borderRadius: '50%',
                   background: color,
                   cursor: 'pointer',
@@ -213,7 +226,7 @@ export default function VerticalEditor({
               style={{
                 margin: '0.5rem 0 0',
                 fontSize: '0.8rem',
-                color: '#888',
+                color: 'var(--fg-subtle)',
               }}
             >
               画像が大きいため、全文は横スクロールで表示されます
@@ -222,10 +235,10 @@ export default function VerticalEditor({
         </>
       ) : (
         <div
-          class="editor-grid"
+          class="editor-grid paper"
           style={{
             position: 'relative',
-            background: bgColor,
+            '--paper-color': bgColor,
             borderRadius: '8px',
             padding: '1.5rem',
             overflow: 'hidden',
@@ -242,7 +255,7 @@ export default function VerticalEditor({
                 width: `calc(${COLS * CELL}em - 1px)`,
                 height: `${ROWS * CELL}em`,
                 pointerEvents: 'none',
-                backgroundImage: `repeating-linear-gradient(to left, transparent, transparent calc(${CELL}em - 1px), rgba(0,0,0,0.08) calc(${CELL}em - 1px), rgba(0,0,0,0.08) ${CELL}em), repeating-linear-gradient(to bottom, transparent, transparent calc(${CELL}em - 1px), rgba(0,0,0,0.08) calc(${CELL}em - 1px), rgba(0,0,0,0.08) ${CELL}em)`,
+                backgroundImage: `repeating-linear-gradient(to left, transparent, transparent calc(${CELL}em - 1px), var(--paper-line) calc(${CELL}em - 1px), var(--paper-line) ${CELL}em), repeating-linear-gradient(to bottom, transparent, transparent calc(${CELL}em - 1px), var(--paper-line) calc(${CELL}em - 1px), var(--paper-line) ${CELL}em)`,
               }}
             />
             <textarea
@@ -268,7 +281,7 @@ export default function VerticalEditor({
                 border: 'none',
                 outline: 'none',
                 resize: 'none',
-                color: '#333',
+                color: 'inherit',
                 fontWeight: 600,
                 position: 'relative',
               }}
@@ -322,10 +335,10 @@ export default function VerticalEditor({
               }}
               style={{
                 padding: '0.3rem 0.6rem',
-                border: `1px solid ${isListening ? '#c0392b' : '#ccc'}`,
+                border: `1px solid ${isListening ? 'var(--danger)' : 'var(--border)'}`,
                 borderRadius: '6px',
-                background: isListening ? '#c0392b' : 'transparent',
-                color: isListening ? '#fff' : '#666',
+                background: isListening ? 'var(--danger)' : 'transparent',
+                color: isListening ? 'var(--on-accent)' : 'var(--fg-muted)',
                 cursor: 'pointer',
                 fontSize: '0.85rem',
                 animation: isListening ? 'pulse 1.5s infinite' : 'none',
@@ -334,7 +347,7 @@ export default function VerticalEditor({
               {isListening ? '録音中...' : '音声入力'}
             </button>
             {transcript && (
-              <span style={{ fontSize: '0.8rem', color: '#999' }}>
+              <span style={{ fontSize: '0.8rem', color: 'var(--fg-subtle)' }}>
                 {transcript}
               </span>
             )}
@@ -355,7 +368,7 @@ export default function VerticalEditor({
         <span
           style={{
             fontSize: '0.85rem',
-            color: isOver ? '#c0392b' : '#888',
+            color: isOver ? 'var(--danger)' : 'var(--fg-subtle)',
             fontWeight: isOver ? 'bold' : 'normal',
           }}
         >
@@ -371,10 +384,12 @@ export default function VerticalEditor({
             }}
             style={{
               padding: '0.2rem 0.5rem',
-              border: '1px solid #ccc',
+              border: '1px solid var(--border)',
               borderRadius: '4px 0 0 4px',
-              background: imageLayout === 'left' ? '#333' : '#fff',
-              color: imageLayout === 'left' ? '#fff' : '#666',
+              background:
+                imageLayout === 'left' ? 'var(--accent-bg)' : 'var(--surface)',
+              color:
+                imageLayout === 'left' ? 'var(--on-accent)' : 'var(--fg-muted)',
               cursor: 'pointer',
             }}
           >
@@ -389,10 +404,14 @@ export default function VerticalEditor({
             }}
             style={{
               padding: '0.2rem 0.5rem',
-              border: '1px solid #ccc',
+              border: '1px solid var(--border)',
               borderRadius: '0 4px 4px 0',
-              background: imageLayout === 'right' ? '#333' : '#fff',
-              color: imageLayout === 'right' ? '#fff' : '#666',
+              background:
+                imageLayout === 'right' ? 'var(--accent-bg)' : 'var(--surface)',
+              color:
+                imageLayout === 'right'
+                  ? 'var(--on-accent)'
+                  : 'var(--fg-muted)',
               cursor: 'pointer',
             }}
           >
@@ -407,7 +426,7 @@ export default function VerticalEditor({
               alignItems: 'center',
               gap: '0.25rem',
               fontSize: '0.85rem',
-              color: '#666',
+              color: 'var(--fg-muted)',
             }}
           >
             画像サイズ
@@ -441,7 +460,7 @@ export default function VerticalEditor({
               alignItems: 'center',
               gap: '0.25rem',
               fontSize: '0.85rem',
-              color: '#666',
+              color: 'var(--fg-muted)',
             }}
           >
             回転
@@ -479,10 +498,10 @@ export default function VerticalEditor({
           href="/"
           style={{
             padding: '0.3rem 0.8rem',
-            border: '1px solid #ccc',
+            border: '1px solid var(--border)',
             borderRadius: '4px',
             fontSize: '0.85rem',
-            color: '#666',
+            color: 'var(--fg-muted)',
           }}
         >
           一覧へ
@@ -492,10 +511,10 @@ export default function VerticalEditor({
             href={`/d/${savedId}`}
             style={{
               padding: '0.3rem 0.8rem',
-              border: '1px solid #ccc',
+              border: '1px solid var(--border)',
               borderRadius: '4px',
               fontSize: '0.85rem',
-              color: '#666',
+              color: 'var(--fg-muted)',
             }}
           >
             公開ページを見る
@@ -506,10 +525,10 @@ export default function VerticalEditor({
           onClick={() => setShowPreview(!showPreview)}
           style={{
             padding: '0.3rem 0.8rem',
-            border: '1px solid #ccc',
+            border: '1px solid var(--border)',
             borderRadius: '4px',
-            background: showPreview ? '#333' : '#fff',
-            color: showPreview ? '#fff' : '#666',
+            background: showPreview ? 'var(--accent-bg)' : 'var(--surface)',
+            color: showPreview ? 'var(--on-accent)' : 'var(--fg-muted)',
             cursor: 'pointer',
             fontSize: '0.85rem',
           }}
@@ -522,8 +541,9 @@ export default function VerticalEditor({
           disabled={saving || isOver}
           style={{
             padding: '0.3rem 1rem',
-            background: saving || isOver ? '#ccc' : '#333',
-            color: '#fff',
+            background:
+              saving || isOver ? 'var(--disabled-bg)' : 'var(--accent-bg)',
+            color: 'var(--on-accent)',
             border: 'none',
             borderRadius: '4px',
             fontSize: '0.85rem',
@@ -538,8 +558,8 @@ export default function VerticalEditor({
             disabled={publishing || saving}
             style={{
               padding: '0.3rem 1rem',
-              background: publishing ? '#ccc' : '#2e7d32',
-              color: '#fff',
+              background: publishing ? 'var(--disabled-bg)' : 'var(--success)',
+              color: 'var(--on-accent)',
               border: 'none',
               borderRadius: '4px',
               fontSize: '0.85rem',

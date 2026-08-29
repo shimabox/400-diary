@@ -49,10 +49,10 @@ function formatDateKey(year: number, month: number, day: number): string {
 }
 
 function getCellColor(entry: Entry | undefined): string {
-  if (!entry) return '#ebedf0'
+  if (!entry) return 'var(--heat-empty)'
   const mood = getMoodByKey(entry.mood)
   if (mood) return mood.color
-  return '#bdbdbd'
+  return 'var(--heat-none)'
 }
 
 export default function CalendarView({
@@ -195,10 +195,10 @@ function HeatmapView({
             href={`/?year=${year - 1}`}
             style={{
               padding: '0.3rem 0.8rem',
-              border: '1px solid #ccc',
+              border: '1px solid var(--border)',
               borderRadius: '4px',
               fontSize: '0.9rem',
-              color: '#666',
+              color: 'var(--fg-muted)',
             }}
           >
             {year - 1}
@@ -212,10 +212,10 @@ function HeatmapView({
             href={`/?year=${year + 1}`}
             style={{
               padding: '0.3rem 0.8rem',
-              border: '1px solid #ccc',
+              border: '1px solid var(--border)',
               borderRadius: '4px',
               fontSize: '0.9rem',
-              color: '#666',
+              color: 'var(--fg-muted)',
             }}
           >
             {year + 1}
@@ -256,7 +256,7 @@ function HeatmapView({
                 gridRow: 1,
                 gridColumn: mp.col + 1,
                 fontSize: '10px',
-                color: '#666',
+                color: 'var(--fg-muted)',
                 background: 'none',
                 border: 'none',
                 padding: '4px 6px 8px',
@@ -279,7 +279,7 @@ function HeatmapView({
                 gridRow: i + 2,
                 gridColumn: totalWeeks + 1,
                 fontSize: '9px',
-                color: '#999',
+                color: 'var(--fg-subtle)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'flex-start',
@@ -422,8 +422,8 @@ function MoodLegend() {
               transform: 'translateX(-50%)',
               marginBottom: '4px',
               padding: '2px 6px',
-              background: '#333',
-              color: '#fff',
+              background: 'var(--accent-bg)',
+              color: 'var(--on-accent)',
               borderRadius: '3px',
               fontSize: '0.7rem',
               whiteSpace: 'nowrap',
@@ -482,10 +482,10 @@ function MonthView({
             onClick={onPrevMonth}
             style={{
               padding: '0.3rem 0.8rem',
-              border: '1px solid #ccc',
+              border: '1px solid var(--border)',
               borderRadius: '4px',
               fontSize: '0.9rem',
-              color: '#666',
+              color: 'var(--fg-muted)',
               background: 'none',
               cursor: 'pointer',
             }}
@@ -504,10 +504,10 @@ function MonthView({
             onClick={onNextMonth}
             style={{
               padding: '0.3rem 0.8rem',
-              border: '1px solid #ccc',
+              border: '1px solid var(--border)',
               borderRadius: '4px',
               fontSize: '0.9rem',
-              color: '#666',
+              color: 'var(--fg-muted)',
               background: 'none',
               cursor: 'pointer',
             }}
@@ -536,7 +536,7 @@ function MonthView({
             style={{
               textAlign: 'center',
               fontSize: '0.8rem',
-              color: '#999',
+              color: 'var(--fg-subtle)',
               padding: '0.3rem 0',
             }}
           >
@@ -566,6 +566,7 @@ function MonthView({
                   borderRadius: '4px',
                   background: bgColor,
                   fontSize: '0.9rem',
+                  // 気分の色はライト固定のため、ページの配色に関わらず暗い文字にする
                   color: '#333',
                   fontWeight: 'bold',
                 }}
@@ -583,7 +584,7 @@ function MonthView({
                 borderRadius: '4px',
                 background: bgColor,
                 fontSize: '0.9rem',
-                color: '#999',
+                color: 'var(--fg-subtle)',
               }}
             >
               {day}
@@ -599,10 +600,10 @@ function MonthView({
           onClick={onBack}
           style={{
             padding: '0.4rem 1rem',
-            border: '1px solid #ccc',
+            border: '1px solid var(--border)',
             borderRadius: '4px',
             fontSize: '0.9rem',
-            color: '#666',
+            color: 'var(--fg-muted)',
             background: 'none',
             cursor: 'pointer',
           }}

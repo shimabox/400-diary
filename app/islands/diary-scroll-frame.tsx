@@ -120,16 +120,21 @@ export default function DiaryScrollFrame({
 
   return (
     <div
-      style={{ position: 'relative', maxWidth: FRAME_MAX_WIDTH, width: '100%' }}
+      class="paper-frame"
+      style={{
+        position: 'relative',
+        maxWidth: FRAME_MAX_WIDTH,
+        width: '100%',
+        // 左端フェードの色。用紙の見た目（global.css の .paper）に合わせる
+        '--paper-color': bgColor,
+      }}
     >
       <div
         ref={scrollRef}
-        class="hide-scrollbar"
+        class="hide-scrollbar paper"
         style={{
-          background: bgColor,
-          backgroundImage: 'url(/images/background.webp)',
-          backgroundRepeat: 'repeat',
-          backgroundBlendMode: 'luminosity',
+          // 用紙の色。テクスチャとの合成は global.css の .paper で行う
+          '--paper-color': bgColor,
           borderRadius: '12px',
           padding: `2rem ${FRAME_PADDING_X}`,
           width: '100%',
@@ -172,6 +177,7 @@ export default function DiaryScrollFrame({
       {/* スクロールバーを隠しているため、左にまだ続きがあるときはフェードで示す */}
       <div
         aria-hidden="true"
+        class="paper-fade"
         style={{
           position: 'absolute',
           left: 0,
@@ -179,7 +185,6 @@ export default function DiaryScrollFrame({
           bottom: 0,
           width: '56px',
           borderRadius: '12px 0 0 12px',
-          background: `linear-gradient(to right, ${bgColor}, transparent)`,
           opacity: showFade ? 1 : 0,
           transition: 'opacity 0.25s',
           pointerEvents: 'none',
