@@ -222,6 +222,32 @@ describe('useDiaryDraft', () => {
     )
   })
 
+  test.each([
+    undefined,
+    'editing',
+  ])('日付の重複時は既存の日記を上書き・公開しない (%s)', async (diaryId) => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse(
+        {
+          error: 'この日の日記はすでにあります。',
+          existing_diary_id: 'existing',
+        },
+        { status: 409 },
+      ),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    const options = makeOptions({ diaryId })
+    const original = { ...options }
+    const { publishDraft } = useDiaryDraft(options)
+    await publishDraft()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock).toHaveBeenCalledWith(
+      diaryId ? `/api/diaries/${diaryId}` : '/api/diaries',
+      expect.objectContaining({ method: diaryId ? 'PUT' : 'POST' }),
+    )
+    expect(options).toEqual(original)
+  })
+
   test('保存 API が例外を投げたら公開 API を呼ばない', async () => {
     const fetchMock = vi.fn().mockRejectedValue(new Error('network error'))
     vi.stubGlobal('fetch', fetchMock)

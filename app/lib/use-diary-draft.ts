@@ -58,10 +58,16 @@ export function useDiaryDraft({
   const [publishedAt, setPublishedAt] = useState(initialPublishedAt)
   const [savedId, setSavedId] = useState(diaryId ?? '')
   const [error, setError] = useState('')
+  const [dateConflict, setDateConflict] = useState<{
+    date: string
+    id: string | null
+    message: string
+  } | null>(null)
 
   const currentDiaryId = diaryId || savedId
 
   const saveDraft = useCallback(async (): Promise<string | null> => {
+    setDateConflict(null)
     const draft: DiaryDraft = {
       body,
       date,
@@ -105,7 +111,18 @@ export function useDiaryDraft({
       })
 
       if (!res.ok) {
-        const data = (await res.json()) as { error?: string }
+        const data = (await res.json()) as {
+          error?: string
+          existing_diary_id?: string | null
+        }
+        if (res.status === 409) {
+          setDateConflict({
+            date: draft.date,
+            id: data.existing_diary_id ?? null,
+            message: data.error || 'この日の日記はすでにあります。',
+          })
+          return null
+        }
         setError(data.error || '保存に失敗しました')
         return null
       }
@@ -157,7 +174,8 @@ export function useDiaryDraft({
 
   return {
     currentDiaryId,
-    error,
+    error: dateConflict?.date === date ? dateConflict.message : error,
+    conflictingDiaryId: dateConflict?.date === date ? dateConflict.id : null,
     publishedAt,
     publishing,
     saveDraft,
