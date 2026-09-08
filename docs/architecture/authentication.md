@@ -68,7 +68,7 @@ graph LR
         D["GET /api/images/*"]
     end
     subgraph Protected["保護 (認証必須)"]
-        E["/new 新規作成"]
+        E["/new 今日の日記を開く"]
         F["/edit/:id 編集"]
         G["POST /api/diaries"]
         H["PUT /api/diaries/:id"]

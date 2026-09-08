@@ -90,6 +90,7 @@ export default function VerticalEditor({
 
   const {
     currentDiaryId,
+    conflictingDiaryId,
     error,
     publishedAt,
     publishing,
@@ -124,6 +125,21 @@ export default function VerticalEditor({
           }}
         >
           {error}
+          {conflictingDiaryId && (
+            <>
+              {' '}
+              <a
+                href={`/edit/${encodeURIComponent(conflictingDiaryId)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ textDecoration: 'underline' }}
+              >
+                既存の日記を別タブで確認する
+              </a>
+              <br />
+              入力内容はこの画面に残っています。日付を変更して保存できます。
+            </>
+          )}
         </p>
       )}
 

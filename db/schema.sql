@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS diaries (
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE INDEX IF NOT EXISTS idx_diaries_diary_date ON diaries(diary_date DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_diaries_diary_date_unique ON diaries(diary_date DESC);
 
 -- diary_snapshots: 公開スナップショット
 CREATE TABLE IF NOT EXISTS diary_snapshots (
