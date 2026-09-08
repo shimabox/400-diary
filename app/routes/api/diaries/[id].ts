@@ -1,5 +1,6 @@
 import { createRoute, requireAuth } from '~/factory'
 import {
+  DiaryDateConflictError,
   deleteDiary,
   getDiary,
   getDiaryWithSnapshot,
@@ -77,13 +78,23 @@ export const PUT = createRoute(requireAuth, async (c) => {
   }
 
   const db = c.env.DB
-  const diary = await updateDiary(db, id, result.value)
+  try {
+    const diary = await updateDiary(db, id, result.value)
 
-  if (!diary) {
-    return c.json({ error: '日記が見つかりません' }, 404)
+    if (!diary) {
+      return c.json({ error: '日記が見つかりません' }, 404)
+    }
+
+    return c.json(diary)
+  } catch (error) {
+    if (error instanceof DiaryDateConflictError) {
+      return c.json(
+        { error: error.message, existing_diary_id: error.existingDiaryId },
+        409,
+      )
+    }
+    throw error
   }
-
-  return c.json(diary)
 })
 
 export const DELETE = createRoute(requireAuth, async (c) => {

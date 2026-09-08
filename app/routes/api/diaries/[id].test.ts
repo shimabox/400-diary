@@ -4,7 +4,8 @@ import type { AppEnv } from '~/factory'
 import { MAX_BODY_LENGTH } from '../../../lib/constants'
 import type { Diary, DiarySnapshot, DiaryWithSnapshot } from '../../../lib/db'
 
-vi.mock('../../../lib/db', () => ({
+vi.mock('../../../lib/db', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/db')>()),
   getDiary: vi.fn(),
   getDiaryWithSnapshot: vi.fn(),
   updateDiary: vi.fn(),
@@ -253,6 +254,27 @@ describe('PUT /api/diaries/:id バリデーション', () => {
     expect(res.status).toBe(400)
     const json = await res.json()
     expect(json.error).toContain(`${MAX_BODY_LENGTH}文字`)
+  })
+
+  test.each([
+    'existing',
+    null,
+  ])('日付変更先に日記があると409と既存IDを返す: %s', async (existingId) => {
+    const { updateDiary, DiaryDateConflictError } = await import(
+      '../../../lib/db'
+    )
+    vi.mocked(updateDiary).mockRejectedValueOnce(
+      new DiaryDateConflictError(existingId),
+    )
+    const res = await putJSON(await createApp(true), {
+      body: '編集中の本文',
+      diary_date: '2026-09-08',
+    })
+    expect(res.status).toBe(409)
+    expect(await res.json()).toEqual({
+      error: 'この日の日記はすでにあります。日記は1日1つまでです。',
+      existing_diary_id: existingId,
+    })
   })
 
   test('bodyを省略した更新は許可される', async () => {

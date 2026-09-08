@@ -1,6 +1,10 @@
 import { createRoute, requireAuth } from '~/factory'
 import { randomPastelColor } from '../../lib/colors'
-import { createDiary, listDiariesPage } from '../../lib/db'
+import {
+  createDiary,
+  DiaryDateConflictError,
+  listDiariesPage,
+} from '../../lib/db'
 import { toDiaryListPage } from '../../lib/diary-cards'
 import { isDiaryDate, validateDiaryInput } from '../../lib/validation'
 
@@ -72,17 +76,27 @@ export const POST = createRoute(requireAuth, async (c) => {
   const input = result.value
 
   const db = c.env.DB
-  const diary = await createDiary(db, {
-    body: input.body as string,
-    diary_date: input.diary_date as string,
-    background_color: input.background_color || randomPastelColor(),
-    image_layout: input.image_layout,
-    mood: input.mood,
-    image_x: input.image_x,
-    image_y: input.image_y,
-    image_scale: input.image_scale,
-    image_rotation: input.image_rotation,
-  })
+  try {
+    const diary = await createDiary(db, {
+      body: input.body as string,
+      diary_date: input.diary_date as string,
+      background_color: input.background_color || randomPastelColor(),
+      image_layout: input.image_layout,
+      mood: input.mood,
+      image_x: input.image_x,
+      image_y: input.image_y,
+      image_scale: input.image_scale,
+      image_rotation: input.image_rotation,
+    })
 
-  return c.json(diary, 201)
+    return c.json(diary, 201)
+  } catch (error) {
+    if (error instanceof DiaryDateConflictError) {
+      return c.json(
+        { error: error.message, existing_diary_id: error.existingDiaryId },
+        409,
+      )
+    }
+    throw error
+  }
 })

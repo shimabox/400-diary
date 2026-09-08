@@ -5,7 +5,8 @@ import { MAX_BODY_LENGTH } from '../../lib/constants'
 import type { DiaryWithPublished } from '../../lib/db'
 import { createMockDB } from '../../lib/test-helpers'
 
-vi.mock('../../lib/db', () => ({
+vi.mock('../../lib/db', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/db')>()),
   createDiary: vi.fn((_db, params) =>
     Promise.resolve({ id: 'new-id', ...params }),
   ),
@@ -245,6 +246,25 @@ describe('POST /api/diaries バリデーション', () => {
     expect(res.status).toBe(400)
     const json = await res.json()
     expect(json.error).toContain('形式')
+  })
+
+  test.each([
+    'existing',
+    null,
+  ])('同日の日記があると409と既存IDを返す: %s', async (existingId) => {
+    const { createDiary, DiaryDateConflictError } = await import('../../lib/db')
+    vi.mocked(createDiary).mockRejectedValueOnce(
+      new DiaryDateConflictError(existingId),
+    )
+    const res = await postJSON(await createPostApp(true), {
+      body: '本文',
+      diary_date: '2026-09-08',
+    })
+    expect(res.status).toBe(409)
+    expect(await res.json()).toEqual({
+      error: 'この日の日記はすでにあります。日記は1日1つまでです。',
+      existing_diary_id: existingId,
+    })
   })
 
   test('正常なリクエストは201を返す', async () => {
