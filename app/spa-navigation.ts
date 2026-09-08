@@ -129,7 +129,9 @@ async function navigate(url: string, push: boolean): Promise<void> {
     document.body.innerHTML = doc.body.innerHTML
 
     if (push) {
-      history.pushState(null, '', url)
+      history.pushState(null, '', res.redirected ? res.url : url)
+    } else if (res.redirected) {
+      history.replaceState(history.state, '', res.url)
     }
 
     activateScripts(document.body)
