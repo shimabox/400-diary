@@ -2,9 +2,11 @@ import { describe, expect, test, vi } from 'vitest'
 import {
   countSnapshotsWithImageKey,
   createDiary,
+  DiaryDateConflictError,
   deleteDiary,
   getDiary,
   getDiaryDateRange,
+  getDiaryIdByDate,
   listAllDiaries,
   listDiariesPage,
   listPublishedFeedItems,
@@ -448,5 +450,103 @@ describe('listAllDiaries', () => {
     expect(sql).toContain('ORDER BY diary_date ASC, id ASC')
     expect(sql).not.toContain('LIMIT')
     expect(sql).not.toContain('JOIN')
+  })
+})
+
+describe('日付の重複', () => {
+  const uniqueError = new Error(
+    'D1_ERROR: UNIQUE constraint failed: diaries.diary_date: SQLITE_CONSTRAINT',
+  )
+
+  test('日付から下書きも含めて既存の日記を取得する', async () => {
+    const db = createMockDB({ first: { id: 'existing' } })
+    await expect(getDiaryIdByDate(db, '2026-09-08')).resolves.toBe('existing')
+    expect(db.boundValues).toEqual(['2026-09-08'])
+    await expect(
+      getDiaryIdByDate(createMockDB(), '2026-09-08'),
+    ).resolves.toBeNull()
+  })
+
+  test('新規作成のDB制約違反を既存ID付きの重複エラーに変換する', async () => {
+    const db = createMockDB({ first: { id: 'existing' } })
+    vi.mocked(db.prepare('').run).mockRejectedValueOnce(uniqueError)
+    await expect(
+      createDiary(db, {
+        body: '新しい本文',
+        diary_date: '2026-09-08',
+        background_color: '#FFFFFF',
+      }),
+    ).rejects.toMatchObject({
+      name: 'DiaryDateConflictError',
+      existingDiaryId: 'existing',
+    })
+  })
+
+  test('日付変更の制約違反でも変更先の日記IDを返す', async () => {
+    const db = createMockDB()
+    const stmt = db.prepare('')
+    vi.mocked(stmt.first)
+      .mockResolvedValueOnce({ id: 'editing', diary_date: '2026-09-07' })
+      .mockResolvedValueOnce({ id: 'existing' })
+    vi.mocked(stmt.run).mockRejectedValueOnce(uniqueError)
+    await expect(
+      updateDiary(db, 'editing', {
+        body: '編集中の本文',
+        diary_date: '2026-09-08',
+      }),
+    ).rejects.toMatchObject({ existingDiaryId: 'existing' })
+    expect(db.boundValues.at(-1)).toBe('2026-09-08')
+  })
+
+  test.each([
+    'create',
+    'update',
+  ])('既存IDの取得に失敗しても重複エラーを保つ: %s', async (operation) => {
+    const db = createMockDB()
+    const stmt = db.prepare('')
+    if (operation === 'update') {
+      vi.mocked(stmt.first).mockResolvedValueOnce({ id: 'editing' })
+    }
+    vi.mocked(stmt.first).mockRejectedValueOnce(new Error('D1 lookup failed'))
+    vi.mocked(stmt.run).mockRejectedValueOnce(uniqueError)
+    const params = {
+      body: '本文',
+      diary_date: '2026-09-08',
+      background_color: '#FFFFFF',
+    }
+    const write =
+      operation === 'create'
+        ? createDiary(db, params)
+        : updateDiary(db, 'editing', params)
+    await expect(write).rejects.toBeInstanceOf(DiaryDateConflictError)
+    await expect(write).rejects.toMatchObject({ existingDiaryId: null })
+  })
+
+  test('競合した日記が直後に削除されても重複エラーを返す', async () => {
+    const db = createMockDB()
+    vi.mocked(db.prepare('').run).mockRejectedValueOnce(uniqueError)
+    await expect(
+      createDiary(db, {
+        body: '本文',
+        diary_date: '2026-09-08',
+        background_color: '#FFFFFF',
+      }),
+    ).rejects.toEqual(new DiaryDateConflictError(null))
+  })
+
+  test.each([
+    'D1_ERROR: database unavailable',
+    'D1_ERROR: UNIQUE constraint failed: diaries.id: SQLITE_CONSTRAINT',
+  ])('日付以外のDBエラーを重複扱いしない: %s', async (message) => {
+    const db = createMockDB()
+    const error = new Error(message)
+    vi.mocked(db.prepare('').run).mockRejectedValueOnce(error)
+    await expect(
+      createDiary(db, {
+        body: '本文',
+        diary_date: '2026-09-08',
+        background_color: '#FFFFFF',
+      }),
+    ).rejects.toBe(error)
   })
 })

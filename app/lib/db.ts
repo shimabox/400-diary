@@ -59,6 +59,45 @@ export type PublishedFeedItem = {
   published_at: string
 }
 
+export class DiaryDateConflictError extends Error {
+  constructor(public readonly existingDiaryId: string | null) {
+    super('この日の日記はすでにあります。日記は1日1つまでです。')
+    this.name = 'DiaryDateConflictError'
+  }
+}
+
+export async function getDiaryIdByDate(
+  db: D1Database,
+  date: string,
+): Promise<string | null> {
+  const diary = await db
+    .prepare('SELECT id FROM diaries WHERE diary_date = ? LIMIT 1')
+    .bind(date)
+    .first<{ id: string }>()
+  return diary?.id ?? null
+}
+
+async function rethrowDiaryWriteError(
+  db: D1Database,
+  date: string | undefined,
+  error: unknown,
+): Promise<never> {
+  if (
+    date !== undefined &&
+    error instanceof Error &&
+    error.message.includes('UNIQUE constraint failed: diaries.diary_date')
+  ) {
+    let existingDiaryId: string | null = null
+    try {
+      existingDiaryId = await getDiaryIdByDate(db, date)
+    } catch {
+      // リンク先を取得できなくても、書き込みが日付の重複で拒否されたことは確定している。
+    }
+    throw new DiaryDateConflictError(existingDiaryId)
+  }
+  throw error
+}
+
 export async function createDiary(
   db: D1Database,
   params: {
@@ -104,6 +143,7 @@ export async function createDiary(
       image_rotation ?? null,
     )
     .run()
+    .catch((error: unknown) => rethrowDiaryWriteError(db, diary_date, error))
 
   return (await getDiary(db, id))!
 }
@@ -129,8 +169,7 @@ export type DiaryPageCursor = { diaryDate: string; id: string }
  * 一覧用: keyset pagination で1ページ分を取得する。
  * OFFSET 方式ではなく (diary_date, id) を境界にするのは、データ増加時に
  * ページが深くなるほど OFFSET 分の行を読み捨てるコストが線形に増えるのを避けるため。
- * 同日に複数件あり得るため id をタイブレークに使う（nanoid なので意味順ではないが、
- * 一意で安定していればカーソルとして十分）。
+ * 既存のカーソル形式との互換性を保つため、日付に加えて id も境界に使う。
  */
 export async function listDiariesPage(
   db: D1Database,
@@ -284,6 +323,9 @@ export async function updateDiary(
     .prepare(`UPDATE diaries SET ${setClauses.join(', ')} WHERE id = ?`)
     .bind(...values)
     .run()
+    .catch((error: unknown) =>
+      rethrowDiaryWriteError(db, params.diary_date, error),
+    )
 
   return await getDiary(db, id)
 }
