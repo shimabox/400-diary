@@ -332,11 +332,12 @@ describe('listDiariesPage', () => {
     const sql = vi.mocked(db.prepare).mock.calls[0][0] as string
     expect(sql).not.toContain('before')
     expect(sql).not.toContain('published_snapshot_id IS NOT NULL')
-    expect(sql).toContain('ORDER BY d.diary_date DESC, d.id DESC')
+    expect(sql).toContain('ORDER BY d.diary_date DESC')
+    expect(sql).not.toContain('d.id DESC')
     expect(db.boundValues).toEqual([31])
   })
 
-  test('before 指定時は keyset カーソル条件を WHERE に含め、値を diaryDate, diaryDate, id, limit の順で bind する', async () => {
+  test('before 指定時は日付のみを境界にし、互換用の id は検索条件に使わない', async () => {
     const db = createMockDB()
 
     await listDiariesPage(db, {
@@ -346,15 +347,10 @@ describe('listDiariesPage', () => {
     })
 
     const sql = vi.mocked(db.prepare).mock.calls[0][0] as string
-    expect(sql).toContain(
-      '(d.diary_date < ? OR (d.diary_date = ? AND d.id < ?))',
-    )
-    expect(db.boundValues).toEqual([
-      '2026-07-01',
-      '2026-07-01',
-      'cursor-id',
-      10,
-    ])
+    expect(sql).toContain('WHERE d.diary_date < ?')
+    expect(sql).not.toContain(' OR ')
+    expect(sql).not.toContain('d.id <')
+    expect(db.boundValues).toEqual(['2026-07-01', 10])
   })
 
   test('publishedOnly 指定時は published_snapshot_id IS NOT NULL を条件に含める', async () => {
@@ -377,9 +373,9 @@ describe('listDiariesPage', () => {
 
     const sql = vi.mocked(db.prepare).mock.calls[0][0] as string
     expect(sql).toContain(
-      'WHERE d.published_snapshot_id IS NOT NULL AND (d.diary_date < ?',
+      'WHERE d.published_snapshot_id IS NOT NULL AND d.diary_date < ?',
     )
-    expect(db.boundValues).toEqual(['2026-07-01', '2026-07-01', 'cursor-id', 5])
+    expect(db.boundValues).toEqual(['2026-07-01', 5])
   })
 })
 

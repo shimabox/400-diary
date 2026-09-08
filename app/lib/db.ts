@@ -167,9 +167,9 @@ export type DiaryPageCursor = { diaryDate: string; id: string }
 
 /**
  * 一覧用: keyset pagination で1ページ分を取得する。
- * OFFSET 方式ではなく (diary_date, id) を境界にするのは、データ増加時に
+ * OFFSET 方式ではなく一意な diary_date を境界にするのは、データ増加時に
  * ページが深くなるほど OFFSET 分の行を読み捨てるコストが線形に増えるのを避けるため。
- * 既存のカーソル形式との互換性を保つため、日付に加えて id も境界に使う。
+ * 既存のカーソル形式との互換性を保つため id も受け取るが、検索条件には使わない。
  */
 export async function listDiariesPage(
   db: D1Database,
@@ -187,8 +187,8 @@ export async function listDiariesPage(
     conditions.push('d.published_snapshot_id IS NOT NULL')
   }
   if (before) {
-    conditions.push('(d.diary_date < ? OR (d.diary_date = ? AND d.id < ?))')
-    values.push(before.diaryDate, before.diaryDate, before.id)
+    conditions.push('d.diary_date < ?')
+    values.push(before.diaryDate)
   }
   const whereClause =
     conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
@@ -211,7 +211,7 @@ export async function listDiariesPage(
        FROM diaries d
        LEFT JOIN diary_snapshots s ON d.published_snapshot_id = s.id
        ${whereClause}
-       ORDER BY d.diary_date DESC, d.id DESC
+       ORDER BY d.diary_date DESC
        LIMIT ?`,
     )
     .bind(...values, limit)
