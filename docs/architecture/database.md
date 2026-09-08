@@ -4,6 +4,33 @@
 
 Cloudflare D1 (SQLite) を使用。下書きと公開スナップショットを分離した2テーブル構成。
 
+## 日付ごとの制限
+
+- `diaries.diary_date` のユニーク索引で、下書き・公開を問わず1日1件を保証する。基準は作成日時ではなく日記の対象日。
+- `/new` は今日（JST）の日記があれば `/edit/{id}` にリダイレクトする。
+- 新規作成や日付変更が既存の日記と重複すると、API は `409` と `existing_diary_id` を返す。同時リクエストの重複もDBの制約で拒否する。既存IDの取得に失敗した場合も `409` を維持し、`existing_diary_id` は `null` にする。
+- 編集画面は重複時も入力内容を保持し、既存の日記を別タブで確認するリンクを表示する。既存の日記を自動で上書きしない。
+- 同じ日記の保存・編集・再公開、日記のない過去日への作成は制限しない。削除した日付には再作成できる。
+
+### 既存DBへの適用
+
+`20260908_0001_unique_diary_date.sql` は重複があると索引の作成時に失敗し、既存の日記を削除・統合しない。適用前に次のSQLで確認する。
+
+```sql
+SELECT diary_date, COUNT(*) AS count
+FROM diaries
+GROUP BY diary_date
+HAVING COUNT(*) > 1;
+```
+
+本番DBへの適用前には、remote を明示して同じ重複チェックを実行する。
+
+```bash
+pnpm wrangler d1 execute 400-diary-db --remote --command 'SELECT diary_date, COUNT(*) AS count FROM diaries GROUP BY diary_date HAVING COUNT(*) > 1;'
+```
+
+重複があればエクスポートで内容を保全し、残す日記や正しい日付を確認してから手動で解消する。重複の解消後にマイグレーションを再実行する。
+
 ## テーブル構成
 
 ```mermaid
