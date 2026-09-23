@@ -119,6 +119,7 @@ function HeatmapView({
   onMonthClick: (month: number) => void
 }) {
   const scrollRef = useRef<HTMLDivElement>(null)
+  const [highlightMood, setHighlightMood] = useState<string | null>(null)
 
   const startDate = new Date(year, 0, 1)
   const endDate = new Date(year, 11, 31)
@@ -296,6 +297,10 @@ function HeatmapView({
             const col = Math.floor(pos / 7) + 1
             const row = (pos % 7) + 2
             const color = getCellColor(cell.entry)
+            const cellClass =
+              highlightMood !== null && cell.entry?.mood !== highlightMood
+                ? 'heat-cell is-dimmed'
+                : 'heat-cell'
             if (cell.entry) {
               const href = isAuthenticated
                 ? `/edit/${cell.entry.id}`
@@ -305,6 +310,7 @@ function HeatmapView({
                   key={cell.date}
                   href={href}
                   title={cell.date}
+                  class={cellClass}
                   style={{
                     gridRow: row,
                     gridColumn: col,
@@ -333,6 +339,7 @@ function HeatmapView({
               <div
                 key={cell.date}
                 title={cell.date}
+                class={cellClass}
                 style={{
                   gridRow: row,
                   gridColumn: col,
@@ -357,29 +364,31 @@ function HeatmapView({
       />
 
       {/* Mood legend */}
-      <MoodLegend />
+      <MoodLegend activeKey={highlightMood} onChange={setHighlightMood} />
     </div>
   )
 }
 
-function MoodLegend() {
-  const [activeKey, setActiveKey] = useState<string | null>(null)
+function MoodLegend({
+  activeKey,
+  onChange,
+}: {
+  activeKey: string | null
+  onChange: (key: string | null) => void
+}) {
   const items = MOODS.map((m) => ({
     key: m.key,
     color: m.color,
     label: m.label,
   }))
 
+  // 選んだ気分はもう一度押すか、凡例の外を押すまで保つ
   useEffect(() => {
     if (!activeKey) return
-    const dismiss = () => setActiveKey(null)
+    const dismiss = () => onChange(null)
     document.addEventListener('click', dismiss)
-    const timer = setTimeout(dismiss, 1000)
-    return () => {
-      document.removeEventListener('click', dismiss)
-      clearTimeout(timer)
-    }
-  }, [activeKey])
+    return () => document.removeEventListener('click', dismiss)
+  }, [activeKey, onChange])
 
   return (
     <div
@@ -395,11 +404,12 @@ function MoodLegend() {
         <button
           type="button"
           key={item.key}
-          class="mood-legend-item"
+          class={`mood-legend-item${activeKey !== null && activeKey !== item.key ? ' is-dimmed' : ''}`}
           aria-label={item.label}
+          aria-pressed={activeKey === item.key ? 'true' : 'false'}
           onClick={(e) => {
             e.stopPropagation()
-            setActiveKey((prev) => (prev === item.key ? null : item.key))
+            onChange(activeKey === item.key ? null : item.key)
           }}
           style={{
             position: 'relative',

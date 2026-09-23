@@ -270,6 +270,24 @@ button {
   transform: translate(-50%, -50%);
 }
 
+/* 凡例で気分を選ぶと、その気分の日だけを残して他のマスと凡例を暗くする */
+.heat-cell,
+.mood-legend-item {
+  transition: opacity 0.2s ease;
+}
+
+.heat-cell.is-dimmed,
+.mood-legend-item.is-dimmed {
+  opacity: 0.15;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heat-cell,
+  .mood-legend-item {
+    transition: none;
+  }
+}
+
 @keyframes pulse {
   0%,
   100% {
