@@ -415,14 +415,24 @@ function MoodLegend({
             position: 'relative',
             width: '12px',
             height: '12px',
-            borderRadius: '2px',
-            background: item.color,
+            background: 'none',
             border: 'none',
             padding: 0,
             cursor: 'pointer',
             WebkitTapHighlightColor: 'transparent',
           }}
         >
+          {/* 減光は色の四角だけにかけ、ラベルは選択中以外でも読めるようにする */}
+          <span
+            class="mood-legend-swatch"
+            style={{
+              display: 'block',
+              width: '100%',
+              height: '100%',
+              borderRadius: '2px',
+              background: item.color,
+            }}
+          />
           <span
             class={`mood-legend-label${activeKey === item.key ? ' is-active' : ''}`}
             style={{

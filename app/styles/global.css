@@ -272,18 +272,18 @@ button {
 
 /* 凡例で気分を選ぶと、その気分の日だけを残して他のマスと凡例を暗くする */
 .heat-cell,
-.mood-legend-item {
+.mood-legend-swatch {
   transition: opacity 0.2s ease;
 }
 
 .heat-cell.is-dimmed,
-.mood-legend-item.is-dimmed {
+.mood-legend-item.is-dimmed .mood-legend-swatch {
   opacity: 0.15;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .heat-cell,
-  .mood-legend-item {
+  .mood-legend-swatch {
     transition: none;
   }
 }
