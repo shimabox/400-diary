@@ -3,6 +3,7 @@ import DeleteDiaryButton from '../../islands/delete-diary-button'
 import VerticalEditor from '../../islands/vertical-editor'
 import { DEFAULT_APP_NAME } from '../../lib/constants'
 import { getDiaryWithPublished } from '../../lib/db'
+import { expectedSpeechKey } from '../../lib/speech'
 
 export default createRoute(async (c) => {
   const appName = c.env.APP_NAME || DEFAULT_APP_NAME
@@ -43,6 +44,18 @@ export default createRoute(async (c) => {
     )
   }
 
+  // 音声が保存済みの本文と気分に合っているかは声 ID を使うのでサーバで判定し、
+  // 結果だけを渡す（声 ID は画面に出さない）
+  const expectedKey = await expectedSpeechKey(diary, c.env.GEMINI_VOICE_ID)
+  const speech = {
+    available: !!(c.env.GEMINI_API_KEY && c.env.GEMINI_VOICE_ID),
+    key: diary.speech_key,
+    matches: !!diary.speech_key && diary.speech_key === expectedKey,
+    isPublic: !!diary.speech_public,
+    // 「公開すれば反映される音声」の案内の判定に使う
+    publishedKey: diary.snapshot_speech_key,
+  }
+
   return c.render(
     <div
       style={{
@@ -69,6 +82,7 @@ export default createRoute(async (c) => {
           initialImageRotation={diary.image_rotation}
           diaryId={diary.id}
           publishedAt={diary.published_at}
+          speech={speech}
         />
         <div style={{ padding: '0 1rem 2rem', textAlign: 'right' }}>
           <DeleteDiaryButton diaryId={diary.id} />

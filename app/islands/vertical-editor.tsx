@@ -15,6 +15,7 @@ import { useSpeech } from '../lib/use-speech'
 import { useVerticalTextInput } from '../lib/use-vertical-text-input'
 import DiaryScrollFrame from './diary-scroll-frame'
 import ImageAttachmentEditor from './image-attachment-editor'
+import SpeechEditor from './speech-editor'
 import ThemeToggle from './theme-toggle'
 
 const CELL = 2.0 // em – 1マスのサイズ（正方形）
@@ -33,6 +34,19 @@ type Props = {
   initialImageRotation?: number | null
   diaryId?: string
   publishedAt?: string | null
+  /** 読み上げ音声の操作。既存の日記の編集画面だけが渡す */
+  speech?: {
+    /** API キーと声 ID が設定されていて音声を作れるか */
+    available: boolean
+    /** 下書きの音声のキー */
+    key: string | null
+    /** 音声が保存済みの本文と気分に合っているか（サーバで判定。声 ID は渡さない） */
+    matches: boolean
+    /** 訪問者も声で聞けるか（下書き側の設定） */
+    isPublic: boolean
+    /** 公開版の音声のキー */
+    publishedKey: string | null
+  }
 }
 
 export default function VerticalEditor({
@@ -49,8 +63,10 @@ export default function VerticalEditor({
   initialImageRotation = null,
   diaryId,
   publishedAt: initialPublishedAt = null,
+  speech,
 }: Props) {
   const [date, setDate] = useState(initialDate)
+  const [speechPublic, setSpeechPublic] = useState(speech?.isPublic ?? false)
   const [bgColor, setBgColor] = useState(initialColor)
   const [imageLayout, setImageLayout] = useState(initialImageLayout)
   const [mood, setMood] = useState<MoodKey | null>(
@@ -89,13 +105,16 @@ export default function VerticalEditor({
   )
 
   const {
+    clearPublishedSpeechKey,
     currentDiaryId,
     conflictingDiaryId,
     error,
     publishedAt,
+    publishedSpeechKey,
     publishing,
     saveDraft,
     savedId,
+    savedSpeechSource,
     saving,
     publishDraft,
   } = useDiaryDraft({
@@ -110,6 +129,9 @@ export default function VerticalEditor({
     imageY,
     imageScale,
     imageRotation,
+    // 音声操作の無い新規作成画面では送らず、保存の内容を変えない
+    speechPublic: speech ? speechPublic : undefined,
+    publishedSpeechKey: speech?.publishedKey,
   })
   const imageSrc = imagePreview ?? (imageKey ? `/api/images/${imageKey}` : null)
 
@@ -509,6 +531,22 @@ export default function VerticalEditor({
           onImageKeyChange={setImageKey}
           onImagePreviewChange={setImagePreview}
         />
+
+        {speech && diaryId && (
+          <SpeechEditor
+            diaryId={diaryId}
+            available={speech.available}
+            initialKey={speech.key}
+            initialMatches={speech.matches}
+            initialSource={{ body: initialBody, mood: initialMood }}
+            onSpeechDeleted={clearPublishedSpeechKey}
+            publishedKey={publishedAt ? publishedSpeechKey : undefined}
+            saved={savedSpeechSource}
+            current={{ body, mood }}
+            speechPublic={speechPublic}
+            onSpeechPublicChange={setSpeechPublic}
+          />
+        )}
 
         <a
           href="/"
