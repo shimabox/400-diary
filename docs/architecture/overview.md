@@ -78,12 +78,17 @@ app/
 │       ├── diaries/[id].ts
 │       ├── diaries/[id]/publish.ts
 │       ├── diaries/[id]/image.ts
+│       ├── diaries/[id]/speech.ts  # 読み上げ音声の生成・削除
+│       ├── speech/[id].ts          # 読み上げ音声の配信（公開版）
+│       ├── speech/[id]/draft.ts    # 読み上げ音声の配信（下書き）
 │       ├── images/[...key].ts
 │       ├── og/index.ts
 │       └── og/[id].ts
 ├── islands/               # インタラクティブコンポーネント
 │   ├── vertical-editor.tsx
 │   ├── image-attachment-editor.tsx
+│   ├── speech-editor.tsx
+│   ├── speech-player.tsx
 │   ├── flow-text.tsx
 │   ├── calendar-view.tsx
 │   ├── confirm-dialog.tsx
@@ -96,6 +101,12 @@ app/
 │   ├── media-cleanup.ts   # snapshot 参照を考慮した R2 孤児削除
 │   ├── og-cache.ts        # OGP 画像キャッシュ
 │   ├── og-image.ts        # OGP 画像生成
+│   ├── speech.ts          # 読み上げ音声（Gemini 呼び出し・R2 キー・削除）
+│   ├── speech-style.ts    # 気分と話し方の対応表
+│   ├── speech-cleanup.ts  # 使われなくなった読み上げ音声の削除
+│   ├── speech-response.ts # 読み上げ音声の Range 対応配信
+│   ├── speech-editor-state.ts # 編集画面の音声操作の表示の導出
+│   ├── http-range.ts      # Range ヘッダの解釈
 │   ├── hydrate.ts         # Islands ハイドレーション
 │   ├── grid.ts            # 400字グリッド制御
 │   ├── layout.ts          # 縦書き回り込み計算
@@ -144,6 +155,8 @@ flowchart LR
 |--------------|------|------|
 | `vertical-editor` | 縦書きエディタ全体の組み立て | 本文・画像添付・保存公開の状態を各 hook / 子コンポーネントへ委譲 |
 | `image-attachment-editor` | 画像アップロード・削除 UI | エラー、削除確認 |
+| `speech-editor` | 読み上げ音声の作成・試聴・削除、訪問者への公開の切り替え | 音声のキーと元の本文・気分、生成中、確認 |
+| `speech-player` | 公開ページの「声で聞く」 | 再生中 |
 | `flow-text` | テキスト流し込み表示（画像回り込み） | props からの派生（useMemo） |
 | `calendar-view` | ヒートマップ + 月間カレンダー | selectedMonth のみ |
 | `confirm-dialog` | 削除確認ダイアログ | 表示・非表示 |
@@ -221,6 +234,8 @@ flowchart LR
 | `APP_NAME` | No | アプリ名（デフォルト: `400字日記`） |
 | `CF_WEB_ANALYTICS_TOKEN` | No | Cloudflare Web Analytics のトークン |
 | `DEV_AUTH_BYPASS` | No | 開発時の認証バイパス |
+| `GEMINI_API_KEY` | No | 日記の読み上げに使う Gemini API キー（シークレット。未設定なら「音声を作る」を出さない） |
+| `GEMINI_VOICE_ID` | No | 読み上げに使う声 ID（シークレット） |
 
 ## 設計文書一覧
 
@@ -230,6 +245,7 @@ flowchart LR
 | [Vertical Text Layout](./vertical-text.md) | 縦書きエディタ・FlowText レイアウトエンジン |
 | [Authentication](./authentication.md) | Cloudflare Access JWT 検証 |
 | [Speech Input](./speech-input.md) | Web Speech API による音声入力 |
+| [Speech Output](./speech-output.md) | 本人の声での日記の読み上げ・キーの扱い・費用 |
 | [Image Upload & Storage](./image-upload.md) | R2 画像管理・配信・クリーンアップ |
 | [Calendar & Heatmap](./calendar.md) | ヒートマップ・月間カレンダー・Mood システム |
 | [OGP Image](./ogp-image.md) | OGP 画像の PNG 動的生成・フォント管理 |

@@ -11,7 +11,8 @@
 3. OGP画像用フォントを R2 にアップロードする
 4. Cloudflare Pages にデプロイする
 5. Cloudflare Access で認証を設定する
-6. 再デプロイして動作確認する
+6. （任意）日記の読み上げに使うキーを登録する
+7. 再デプロイして動作確認する
 
 ## 免責事項
 
@@ -220,6 +221,35 @@ Zero Trust ダッシュボードで Access > アプリケーション に移動�
 ```
 CF_ACCESS_AUD = "<確認した AUD の値>"
 ```
+
+## 日記の読み上げ（任意）
+
+日記を書き手本人の声で読み上げる機能を使う場合だけ行う。設定しなければ、編集画面に「音声を作る」が出ないだけで、他の機能はそのまま使える。
+
+必要なもの:
+
+- 有料枠（課金を有効にしたプロジェクト）の Gemini API キー
+- Google AI Studio の Voice Replication で登録した、自分の声の ID（登録から 1 年で失効する）
+
+この 2 つを Cloudflare Pages のシークレット `GEMINI_API_KEY` と `GEMINI_VOICE_ID` に登録する。シークレットはプロジェクトができてから登録できるので、最初のデプロイの後に行う。
+
+- macOS: キーチェーンに保存し、固定ラッパーで登録する。ラッパーは登録先のプロジェクト名を `wrangler.toml` の `name` から読む。
+
+  ```
+  security add-generic-password -a "$USER" -s 400-diary-gemini-api-key -w
+  security add-generic-password -a "$USER" -s 400-diary-gemini-voice-id -w
+  bash scripts/keychain/put-pages-secret-gemini-api-key.sh
+  bash scripts/keychain/put-pages-secret-gemini-voice-id.sh
+  ```
+
+- それ以外: 次のコマンドを実行し、表示される入力欄に値を貼り付ける（値はコマンドに書かない）。`<プロジェクト名>` は `wrangler.toml` の `name` の値。Cloudflare のダッシュボード（Workers & Pages → 対象のプロジェクト → 設定 → 変数とシークレット）から「暗号化」の変数として登録してもよい。
+
+  ```
+  pnpm exec wrangler pages secret put GEMINI_API_KEY --project-name <プロジェクト名>
+  pnpm exec wrangler pages secret put GEMINI_VOICE_ID --project-name <プロジェクト名>
+  ```
+
+シークレットは登録後のデプロイから有効になるので、次の再デプロイで反映される。ローカルでの試し方や声 ID が失効したときの手順は [日記の読み上げ](../architecture/speech-output.md#キーの扱い) を参照。
 
 ## 再デプロイと動作確認
 

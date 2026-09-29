@@ -13,6 +13,7 @@ https://diary.orukubami.sh で公開されているアプリのソースコー�
 - **パステル背景色** — 12色のプリセットからランダム選択またはカスタム指定
 - **画像アップロード** — ドラッグで自由に配置でき、[chenglou/pretext](https://github.com/chenglou/pretext) によりテキストが画像を回り込む
 - **音声入力** — Web Speech API による日本語リアルタイム音声認識
+- **声で聞く** — 書き手本人の声（Gemini TTS の音声複製）で日記を読み上げ。日記ごとに訪問者への公開を選べる
 - **カレンダー** — GitHub風ヒートマップ + 月間カレンダーで気分を可視化
 - **マークダウン一括エクスポート** — 全日記を frontmatter 付きマークダウン + zip で一括ダウンロード(認証時のみ)
 - **SPA ナビゲーション** — History API によるページ遷移
@@ -76,6 +77,7 @@ pnpm run dev
 - [OGP画像](docs/architecture/ogp-image.md) — SVG → PNG 動的生成
 - [カレンダー](docs/architecture/calendar.md) — ヒートマップと気分システム
 - [音声入力](docs/architecture/speech-input.md) — Web Speech API 連携
+- [日記の読み上げ](docs/architecture/speech-output.md) — Gemini TTS による音声の生成・配信とキーの扱い
 
 ## デプロイ
 
@@ -84,11 +86,15 @@ Cloudflare Pages にデプロイします。詳細な手順は [`docs/deploy/REA
 | バインディング | 種別 | 用途 |
 |--------------|------|------|
 | `DB` | D1 Database | 日記データの保存 |
-| `BUCKET` | R2 Bucket | 画像の保存 |
+| `BUCKET` | R2 Bucket | 画像・読み上げ音声の保存 |
 | `CF_ACCESS_TEAM_DOMAIN` | 環境変数 | Cloudflare Access のチームドメイン |
 | `CF_ACCESS_AUD` | 環境変数 | Cloudflare Access の AUD タグ |
 | `APP_NAME` | 環境変数（任意） | アプリ表示名（デフォルト: 400字日記） |
 | `CF_WEB_ANALYTICS_TOKEN` | 環境変数（任意） | Cloudflare Web Analytics のトークン |
+| `GEMINI_API_KEY` | シークレット（任意） | 日記の読み上げ音声の生成に使う Gemini API キー。未設定なら音声を作る操作が出ない |
+| `GEMINI_VOICE_ID` | シークレット（任意） | 日記の読み上げ音声の生成に使う声 ID。未設定なら音声を作る操作が出ない |
+
+読み上げを使う場合のキーの登録方法は [`docs/architecture/speech-output.md`](docs/architecture/speech-output.md#キーの扱い) を参照してください。
 
 ## 免責事項
 
