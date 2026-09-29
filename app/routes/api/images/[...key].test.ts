@@ -69,6 +69,16 @@ describe('GET /api/images/* 公開範囲', () => {
     expect(vi.mocked(getImage)).not.toHaveBeenCalled()
   })
 
+  test('speech/ prefix（読み上げ音声）は R2 を参照せず 404 を返す', async () => {
+    const { getImage } = await import('../../../lib/storage')
+
+    const app = await createApp()
+    const res = await app.request('/api/images/speech/diary-1/hash.wav')
+
+    expect(res.status).toBe(404)
+    expect(vi.mocked(getImage)).not.toHaveBeenCalled()
+  })
+
   test('prefix の無いキーは 404 を返す', async () => {
     const { getImage } = await import('../../../lib/storage')
 

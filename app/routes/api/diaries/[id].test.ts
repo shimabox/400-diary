@@ -21,6 +21,11 @@ vi.mock('../../../lib/og-cache', () => ({
   deleteDiaryOgCache: vi.fn(),
 }))
 
+vi.mock('../../../lib/speech', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../lib/speech')>()),
+  deleteDiarySpeech: vi.fn(),
+}))
+
 async function createApp(isAuthenticated: boolean) {
   const { GET, PUT, DELETE } = await import('./[id]')
   const app = new Hono<AppEnv>()
@@ -62,6 +67,8 @@ function makeDiary(overrides: Partial<Diary> = {}): Diary {
     image_rotation: null,
     background_color: '#FFFFFF',
     mood: 'happy',
+    speech_key: null,
+    speech_public: 0,
     diary_date: '2026-04-15',
     published_snapshot_id: null,
     created_at: '2026-04-15 00:00:00',
@@ -83,6 +90,8 @@ function makeSnapshot(overrides: Partial<DiarySnapshot> = {}): DiarySnapshot {
     image_rotation: null,
     background_color: '#EEEEEE',
     mood: 'calm',
+    speech_key: null,
+    speech_public: 0,
     published_at: '2026-04-15 12:00:00',
     ...overrides,
   }
@@ -339,6 +348,29 @@ describe('PUT /api/diaries/:id バリデーション', () => {
     )
   })
 
+  test('speech_public を受け付け、speech_key は updateDiary に渡さない', async () => {
+    const { updateDiary } = await import('../../../lib/db')
+    vi.mocked(updateDiary).mockResolvedValue(makeDiary({ speech_public: 1 }))
+
+    const app = await createApp(true)
+    const res = await putJSON(app, {
+      speech_public: true,
+      speech_key: 'speech/abc/other.wav',
+    })
+
+    expect(res.status).toBe(200)
+    const params = vi.mocked(updateDiary).mock.calls[0][2]
+    expect(params).toEqual({ speech_public: true })
+    expect(params).not.toHaveProperty('speech_key')
+  })
+
+  test('speech_public が真偽値でない場合は400を返す', async () => {
+    const app = await createApp(true)
+    const res = await putJSON(app, { speech_public: 'yes' })
+
+    expect(res.status).toBe(400)
+  })
+
   test('image_x が数値でない文字列の場合は400を返す', async () => {
     const app = await createApp(true)
     const res = await putJSON(app, { image_x: 'NaN文字列' })
@@ -418,5 +450,41 @@ describe('DELETE /api/diaries/:id', () => {
 
     expect(res.status).toBe(204)
     expect(deleteDiaryOgCache).toHaveBeenCalledWith(expect.anything(), 'abc')
+  })
+
+  test('削除時に読み上げ音声(全て)も R2 から捨てる', async () => {
+    const { getDiary, listSnapshotImageKeys, deleteDiary } = await import(
+      '../../../lib/db'
+    )
+    const { deleteDiarySpeech } = await import('../../../lib/speech')
+    vi.mocked(getDiary).mockResolvedValue(makeDiary({ image_key: null }))
+    vi.mocked(listSnapshotImageKeys).mockResolvedValue([])
+    vi.mocked(deleteDiary).mockResolvedValue(true)
+
+    const app = await createApp(true)
+    const res = await app.request('/api/diaries/abc', { method: 'DELETE' })
+
+    expect(res.status).toBe(204)
+    expect(deleteDiarySpeech).toHaveBeenCalledWith(expect.anything(), 'abc')
+  })
+
+  test('読み上げ音声の削除に失敗しても日記は削除する', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const { getDiary, listSnapshotImageKeys, deleteDiary } = await import(
+      '../../../lib/db'
+    )
+    const { deleteDiarySpeech } = await import('../../../lib/speech')
+    vi.mocked(getDiary).mockResolvedValue(makeDiary({ image_key: null }))
+    vi.mocked(listSnapshotImageKeys).mockResolvedValue([])
+    vi.mocked(deleteDiary).mockResolvedValue(true)
+    vi.mocked(deleteDiarySpeech).mockRejectedValue(new Error('R2 down'))
+
+    const app = await createApp(true)
+    const res = await app.request('/api/diaries/abc', { method: 'DELETE' })
+
+    expect(res.status).toBe(204)
+    expect(deleteDiary).toHaveBeenCalledWith(expect.anything(), 'abc')
+    expect(consoleError).toHaveBeenCalled()
+    consoleError.mockRestore()
   })
 })

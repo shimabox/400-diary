@@ -1,6 +1,7 @@
 import { createRoute } from '~/factory'
 import DiaryScrollFrame from '../../islands/diary-scroll-frame'
 import MoodMarker from '../../islands/mood-marker'
+import SpeechPlayer from '../../islands/speech-player'
 import { DEFAULT_APP_NAME } from '../../lib/constants'
 import { getDiaryWithSnapshot } from '../../lib/db'
 import { formatDiaryDate } from '../../lib/format'
@@ -56,6 +57,13 @@ export default createRoute(async (c) => {
   // スナップショット ID をクエリに載せることで、再公開時に og:image URL 自体が
   // 変わり、ブラウザや SNS のキャッシュが自動で迂回される。
   const ogImageUrl = `/api/og/${diary.id}?v=${snapshot.id}`
+  // 読み上げ音声は「訪問者も声で聞ける」を公開した日記だけに出す。ログイン中でも
+  // 訪問者と同じ見え方にし、書き手は編集画面のプレーヤーで下書きの音声を聞く。
+  // 再公開で URL を変え、古い音声のキャッシュを迂回する
+  const speechSrc =
+    snapshot.speech_key && snapshot.speech_public
+      ? `/api/speech/${diary.id}?v=${snapshot.id}`
+      : null
 
   return c.render(
     <div
@@ -94,6 +102,7 @@ export default createRoute(async (c) => {
             <MoodMarker moodKey={pubMood} />
           </h1>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
+            {speechSrc && <SpeechPlayer audioSrc={speechSrc} />}
             {isAuthenticated && (
               <a
                 href={`/edit/${diary.id}`}

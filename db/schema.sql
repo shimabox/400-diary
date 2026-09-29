@@ -14,6 +14,8 @@ CREATE TABLE IF NOT EXISTS diaries (
   image_rotation REAL,                 -- 画像回転角/度 (-15〜15, nullable: 未設定時は0)
   background_color TEXT NOT NULL,      -- HEX (#FFE4E1等)
   mood TEXT,                           -- 感情カテゴリ (happy/calm/sad/angry/anxious/fun)
+  speech_key TEXT,                     -- 下書き側の読み上げ音声の R2 キー (nullable)
+  speech_public INTEGER NOT NULL DEFAULT 0, -- 訪問者も声で聞けるか (1 / 0)
   diary_date TEXT NOT NULL,            -- 対象日 (YYYY-MM-DD)
   published_snapshot_id TEXT,          -- 公開中のスナップショットID
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -35,6 +37,8 @@ CREATE TABLE IF NOT EXISTS diary_snapshots (
   image_rotation REAL,
   background_color TEXT NOT NULL,
   mood TEXT,
+  speech_key TEXT,                     -- 公開中の読み上げ音声の R2 キー (本文・気分に合わなければ NULL)
+  speech_public INTEGER NOT NULL DEFAULT 0, -- 公開時点の「訪問者も声で聞ける」
   published_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

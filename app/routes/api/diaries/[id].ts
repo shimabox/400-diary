@@ -8,6 +8,7 @@ import {
   updateDiary,
 } from '../../../lib/db'
 import { deleteDiaryOgCache } from '../../../lib/og-cache'
+import { deleteDiarySpeech } from '../../../lib/speech'
 import { deleteImage } from '../../../lib/storage'
 import { validateDiaryInput } from '../../../lib/validation'
 
@@ -106,14 +107,15 @@ export const DELETE = createRoute(requireAuth, async (c) => {
     return c.json({ error: '日記が見つかりません' }, 404)
   }
 
-  // 下書きの画像 + snapshot の画像 + OGP キャッシュ（全スナップショット分）を
-  // R2 から best-effort で削除
+  // 下書きの画像 + snapshot の画像 + OGP キャッシュ（全スナップショット分）+
+  // 読み上げ音声（全て）を R2 から best-effort で削除
   const snapshotKeys = await listSnapshotImageKeys(db, id)
   const allImageKeys = new Set(snapshotKeys)
   if (diary.image_key) allImageKeys.add(diary.image_key)
   const results = await Promise.allSettled([
     ...[...allImageKeys].map((key) => deleteImage(c.env.BUCKET, key)),
     deleteDiaryOgCache(c.env.BUCKET, id),
+    deleteDiarySpeech(c.env.BUCKET, id),
   ])
   for (const result of results) {
     if (result.status === 'rejected') {

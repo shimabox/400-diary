@@ -1,5 +1,6 @@
 import { describe, expect, test, vi } from 'vitest'
 import {
+  clearDiarySpeechKeys,
   countSnapshotsWithImageKey,
   createDiary,
   DiaryDateConflictError,
@@ -10,9 +11,12 @@ import {
   listAllDiaries,
   listDiariesPage,
   listPublishedFeedItems,
+  listSpeechKeysInUse,
   publishDiary,
+  setDiarySpeechKey,
   updateDiary,
 } from './db'
+import { expectedSpeechKey } from './speech'
 import { createMockDB } from './test-helpers'
 
 vi.mock('nanoid', () => ({
@@ -221,6 +225,275 @@ describe('updateDiary', () => {
     const db2 = createMockDB({ first: { id: 'abc', image_rotation: 12 } })
     await updateDiary(db2, 'abc', { image_rotation: null })
     expect(db2.prepare).toHaveBeenCalledTimes(3)
+  })
+
+  test('speech_public を 1 / 0 で保存する', async () => {
+    const db = createMockDB({ first: { id: 'abc', speech_public: 0 } })
+
+    await updateDiary(db, 'abc', { speech_public: true })
+
+    const sql = vi.mocked(db.prepare).mock.calls[1][0] as string
+    expect(sql).toContain('speech_public = ?')
+    expect(db.boundValues).toContain(1)
+
+    const db2 = createMockDB({ first: { id: 'abc', speech_public: 1 } })
+    await updateDiary(db2, 'abc', { speech_public: false })
+    expect(db2.boundValues).toContain(0)
+  })
+
+  test('speech_public を指定しなければ UPDATE に含めず、speech_key も書き換えない', async () => {
+    const db = createMockDB({ first: { id: 'abc' } })
+
+    await updateDiary(db, 'abc', { body: '本文' })
+
+    const sql = vi.mocked(db.prepare).mock.calls[1][0] as string
+    expect(sql).not.toContain('speech_public')
+    expect(sql).not.toContain('speech_key')
+  })
+})
+
+describe('publishDiary の読み上げ音声の引き継ぎ', () => {
+  const baseDiary = {
+    id: 'abc',
+    body: '本文',
+    image_key: null,
+    image_layout: 'left' as const,
+    image_x: null,
+    image_y: null,
+    image_scale: null,
+    image_rotation: null,
+    background_color: '#FFE4E1',
+    mood: 'happy',
+    speech_public: 1,
+  }
+
+  /** スナップショットの INSERT に bind した値（末尾 2 つが speech_key, speech_public） */
+  function insertValues(db: ReturnType<typeof createMockDB>) {
+    const sqls = vi.mocked(db.prepare).mock.calls.map(([sql]) => sql as string)
+    expect(
+      sqls.some((sql) => sql.includes('INSERT INTO diary_snapshots')),
+    ).toBe(true)
+    const stmt = db.prepare('')
+    return vi.mocked(stmt.bind).mock.calls.find((args) => args.length === 13)!
+  }
+
+  test('音声が保存済みの本文・気分に合えば、speech_key と speech_public を写す', async () => {
+    const key = await expectedSpeechKey(baseDiary, 'voice_a')
+    const db = createMockDB({ first: { ...baseDiary, speech_key: key } })
+
+    await publishDiary(db, 'abc', { voiceId: 'voice_a' })
+
+    const values = insertValues(db)
+    expect(values.at(-2)).toBe(key)
+    expect(values.at(-1)).toBe(1)
+  })
+
+  test('初めての公開で音声が古ければ speech_key は NULL にする', async () => {
+    const staleKey = await expectedSpeechKey(
+      { ...baseDiary, mood: 'sad' },
+      'voice_a',
+    )
+    const db = createMockDB({
+      first: {
+        ...baseDiary,
+        speech_key: staleKey,
+        published_snapshot_id: null,
+      },
+    })
+
+    await publishDiary(db, 'abc', { voiceId: 'voice_a' })
+
+    const values = insertValues(db)
+    expect(values.at(-2)).toBeNull()
+    expect(values.at(-1)).toBe(1)
+  })
+
+  /**
+   * 公開済みの日記を再公開する。first() は 1 回目が下書き、2 回目が直前の公開版を返す
+   * （3 回目の公開後のスナップショット取得は既定の null）
+   */
+  function republishDB(
+    draft: Record<string, unknown>,
+    previous: { body: string; speech_key: string | null },
+  ) {
+    const db = createMockDB()
+    vi.mocked(db.prepare('').first)
+      .mockResolvedValueOnce({
+        ...baseDiary,
+        published_snapshot_id: 'prev-snap',
+        ...draft,
+      })
+      .mockResolvedValueOnce(previous)
+    vi.mocked(db.prepare).mockClear()
+    return db
+  }
+
+  test('再公開でも音声が今の本文・気分に合えば、直前の公開版を見ずに下書きの音声を写す', async () => {
+    const key = await expectedSpeechKey(baseDiary, 'voice_a')
+    const db = republishDB(
+      { speech_key: key },
+      { body: baseDiary.body, speech_key: 'speech/abc/published.wav' },
+    )
+
+    await publishDiary(db, 'abc', { voiceId: 'voice_a' })
+
+    expect(insertValues(db).at(-2)).toBe(key)
+    expect(db.boundValues).not.toContain('prev-snap')
+  })
+
+  test('気分だけ変えて公開すると、本文が同じ直前の公開版の音声を引き継ぐ', async () => {
+    const staleKey = await expectedSpeechKey(
+      { ...baseDiary, mood: 'sad' },
+      'voice_a',
+    )
+    const db = republishDB(
+      { speech_key: staleKey },
+      { body: baseDiary.body, speech_key: staleKey },
+    )
+
+    await publishDiary(db, 'abc', { voiceId: 'voice_a' })
+
+    const sqls = vi.mocked(db.prepare).mock.calls.map(([sql]) => sql as string)
+    expect(sqls).toContain(
+      'SELECT body, speech_key FROM diary_snapshots WHERE id = ?',
+    )
+    expect(db.boundValues).toContain('prev-snap')
+    expect(insertValues(db).at(-2)).toBe(staleKey)
+  })
+
+  test('本文を変えて公開すると、直前の公開版に音声があっても NULL にする', async () => {
+    const staleKey = await expectedSpeechKey(
+      { ...baseDiary, body: '前の本文' },
+      'voice_a',
+    )
+    const db = republishDB(
+      { speech_key: staleKey },
+      { body: '前の本文', speech_key: staleKey },
+    )
+
+    await publishDiary(db, 'abc', { voiceId: 'voice_a' })
+
+    expect(insertValues(db).at(-2)).toBeNull()
+  })
+
+  test('本文が同じでも直前の公開版に音声が無ければ NULL にする', async () => {
+    const staleKey = await expectedSpeechKey(
+      { ...baseDiary, mood: 'sad' },
+      'voice_a',
+    )
+    const db = republishDB(
+      { speech_key: staleKey },
+      { body: baseDiary.body, speech_key: null },
+    )
+
+    await publishDiary(db, 'abc', { voiceId: 'voice_a' })
+
+    expect(insertValues(db).at(-2)).toBeNull()
+  })
+
+  test('声 ID が未設定なら下書きの音声は写さないが、本文が同じ直前の公開版の音声は引き継ぐ', async () => {
+    const key = await expectedSpeechKey(baseDiary, 'voice_a')
+    const db = republishDB(
+      { speech_key: key },
+      { body: baseDiary.body, speech_key: 'speech/abc/published.wav' },
+    )
+
+    await publishDiary(db, 'abc')
+
+    expect(insertValues(db).at(-2)).toBe('speech/abc/published.wav')
+  })
+
+  test('声 ID が未設定で直前の公開版も無ければ NULL にする', async () => {
+    const key = await expectedSpeechKey(baseDiary, 'voice_a')
+    const db = createMockDB({ first: { ...baseDiary, speech_key: key } })
+
+    await publishDiary(db, 'abc')
+
+    expect(insertValues(db).at(-2)).toBeNull()
+  })
+
+  test('speech_public が 0 ならそのまま 0 を写す', async () => {
+    const db = createMockDB({
+      first: { ...baseDiary, speech_key: null, speech_public: 0 },
+    })
+
+    await publishDiary(db, 'abc', { voiceId: 'voice_a' })
+
+    const values = insertValues(db)
+    expect(values.at(-2)).toBeNull()
+    expect(values.at(-1)).toBe(0)
+  })
+})
+
+describe('読み上げ音声のキー', () => {
+  test('setDiarySpeechKey は updated_at が生成開始時のままのときだけ speech_key を書き、updated_at は変えない', async () => {
+    const db = createMockDB({ run: { results: [], meta: { changes: 1 } } })
+
+    await expect(
+      setDiarySpeechKey(db, 'abc', 'speech/abc/new.wav', '2026-09-29 00:00:00'),
+    ).resolves.toBe(true)
+
+    const sql = vi.mocked(db.prepare).mock.calls[0][0] as string
+    expect(sql).toBe(
+      'UPDATE diaries SET speech_key = ? WHERE id = ? AND updated_at = ?',
+    )
+    expect(db.boundValues).toEqual([
+      'speech/abc/new.wav',
+      'abc',
+      '2026-09-29 00:00:00',
+    ])
+  })
+
+  test('setDiarySpeechKey は updated_at が変わっていて書けなければ false を返す', async () => {
+    const db = createMockDB({ run: { results: [], meta: { changes: 0 } } })
+
+    await expect(
+      setDiarySpeechKey(db, 'abc', 'speech/abc/new.wav', '2026-09-29 00:00:00'),
+    ).resolves.toBe(false)
+  })
+
+  test('clearDiarySpeechKeys は下書きとスナップショットの speech_key を batch で NULL にし、下書きの updated_at をミリ秒まで進める', async () => {
+    const db = createMockDB()
+
+    await clearDiarySpeechKeys(db, 'abc')
+
+    expect(db.batch).toHaveBeenCalledTimes(1)
+    const sqls = vi.mocked(db.prepare).mock.calls.map(([sql]) => sql as string)
+    // 秒単位の datetime('now') では、生成開始と同じ秒の削除を生成が検知できない
+    expect(sqls).toContain(
+      "UPDATE diaries SET speech_key = NULL, updated_at = strftime('%Y-%m-%d %H:%M:%f', 'now') WHERE id = ?",
+    )
+    expect(sqls).toContain(
+      'UPDATE diary_snapshots SET speech_key = NULL WHERE diary_id = ?',
+    )
+    expect(db.boundValues).toEqual(['abc', 'abc'])
+  })
+
+  test('listSpeechKeysInUse は下書きと公開中のキーを返し、NULL は除く', async () => {
+    const db = createMockDB({
+      first: { draft_key: 'speech/abc/a.wav', published_key: null },
+    })
+
+    await expect(listSpeechKeysInUse(db, 'abc')).resolves.toEqual([
+      'speech/abc/a.wav',
+    ])
+
+    const db2 = createMockDB({
+      first: {
+        draft_key: 'speech/abc/a.wav',
+        published_key: 'speech/abc/b.wav',
+      },
+    })
+    await expect(listSpeechKeysInUse(db2, 'abc')).resolves.toEqual([
+      'speech/abc/a.wav',
+      'speech/abc/b.wav',
+    ])
+  })
+
+  test('listSpeechKeysInUse は日記が無ければ空配列', async () => {
+    await expect(listSpeechKeysInUse(createMockDB(), 'abc')).resolves.toEqual(
+      [],
+    )
   })
 })
 

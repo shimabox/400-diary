@@ -241,6 +241,32 @@ describe('validateDiaryInput', () => {
     if (result.ok) expect(result.value.image_rotation).toBeNull()
   })
 
+  test('speech_public は真偽値なら受け付ける', () => {
+    for (const speechPublic of [true, false]) {
+      const result = validateDiaryInput({ speech_public: speechPublic })
+      expect(result.ok).toBe(true)
+      if (result.ok) expect(result.value.speech_public).toBe(speechPublic)
+    }
+  })
+
+  test('speech_public が真偽値以外なら失敗する', () => {
+    expect(validateDiaryInput({ speech_public: 1 }).ok).toBe(false)
+    expect(validateDiaryInput({ speech_public: 'true' }).ok).toBe(false)
+    expect(validateDiaryInput({ speech_public: null }).ok).toBe(false)
+  })
+
+  test('speech_key は保存 API から書き換えさせないため value に含めない', () => {
+    const result = validateDiaryInput({
+      body: '本文',
+      speech_key: 'speech/other/evil.wav',
+    })
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.value).toEqual({ body: '本文' })
+      expect(result.value).not.toHaveProperty('speech_key')
+    }
+  })
+
   test('全フィールドが正しい値なら成功する', () => {
     const result = validateDiaryInput(
       {

@@ -81,6 +81,7 @@ export type DiaryInput = {
   image_y?: number | null
   image_scale?: number | null
   image_rotation?: number | null
+  speech_public?: boolean
 }
 
 export type ValidateDiaryInputOptions = {
@@ -162,7 +163,14 @@ export function validateDiaryInput(
   if ('image_rotation' in input && !isImageRotation(input.image_rotation)) {
     return { ok: false, error: '画像の回転角の指定が不正です' }
   }
+  if (
+    input.speech_public !== undefined &&
+    typeof input.speech_public !== 'boolean'
+  ) {
+    return { ok: false, error: '音声の公開設定の指定が不正です' }
+  }
 
+  // speech_key は音声の生成・削除 API だけが書くため、ここでは受け取っても value に含めない
   const value: DiaryInput = {}
   if (input.body !== undefined) value.body = input.body as string
   if (input.diary_date !== undefined) {
@@ -182,6 +190,9 @@ export function validateDiaryInput(
   }
   if ('image_rotation' in input) {
     value.image_rotation = input.image_rotation as number | null
+  }
+  if (input.speech_public !== undefined) {
+    value.speech_public = input.speech_public as boolean
   }
 
   return { ok: true, value }

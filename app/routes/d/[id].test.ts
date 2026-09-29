@@ -18,7 +18,7 @@ type CapturedHead = {
   body?: string
 }
 
-async function createApp(captured: CapturedHead[]) {
+async function createApp(captured: CapturedHead[], isAuthenticated = false) {
   const { default: handlers } = await import('./[id]')
   const app = new Hono<AppEnv>()
 
@@ -27,7 +27,7 @@ async function createApp(captured: CapturedHead[]) {
       DB: createMockDB(),
       APP_NAME: 'テスト日記',
     } as unknown as AppEnv['Bindings']
-    c.set('isAuthenticated', false)
+    c.set('isAuthenticated', isAuthenticated)
     await next()
   })
 
@@ -66,6 +66,8 @@ function makeSnapshot(
     image_rotation: null,
     background_color: '#FFE4E1',
     mood: 'happy',
+    speech_key: null,
+    speech_public: 0,
     published_at: '2026-04-15 12:00:00',
     ...overrides,
   }
@@ -86,6 +88,8 @@ function makeResult(
     image_rotation: null,
     background_color: '#FFE4E1',
     mood: 'happy',
+    speech_key: null,
+    speech_public: 0,
     published_snapshot_id: 'snap_abc123',
     created_at: '2026-04-13 00:00:00',
     updated_at: '2026-04-15 00:00:00',
@@ -142,5 +146,56 @@ describe('GET /d/:id', () => {
     expect(body).toContain(
       `<div style="max-width:960px;width:100%">${frameRoot}`,
     )
+  })
+
+  describe('「声で聞く」ボタン', () => {
+    const SPEECH_SRC = '/api/speech/diary-1?v=snap_abc123'
+
+    async function render(
+      snapshotOverrides: Partial<DiaryWithSnapshot['snapshot']>,
+      isAuthenticated: boolean,
+    ) {
+      const { getDiaryWithSnapshot } = await import('~/lib/db')
+      vi.mocked(getDiaryWithSnapshot).mockResolvedValueOnce(
+        makeResult(snapshotOverrides),
+      )
+      const captured: CapturedHead[] = []
+      const app = await createApp(captured, isAuthenticated)
+      await app.request('/d/diary-1')
+      return captured[0]?.body ?? ''
+    }
+
+    test('音声があり訪問者も聞ける設定なら、未認証でも出す', async () => {
+      const body = await render(
+        { speech_key: 'speech/diary-1/a.wav', speech_public: 1 },
+        false,
+      )
+      expect(body).toContain('声で聞く')
+      expect(body).toContain(`src="${SPEECH_SRC}"`)
+      expect(body).toContain('preload="none"')
+    })
+
+    test('音声があっても訪問者も聞ける設定がオフなら、認証済みでも出さない', async () => {
+      const snapshot = { speech_key: 'speech/diary-1/a.wav', speech_public: 0 }
+      expect(await render(snapshot, false)).not.toContain('声で聞く')
+      const ownerBody = await render(snapshot, true)
+      expect(ownerBody).not.toContain('声で聞く')
+      expect(ownerBody).not.toContain(SPEECH_SRC)
+      expect(ownerBody).toContain('編集する')
+    })
+
+    test('音声が無ければ公開設定や認証に関わらず出さない', async () => {
+      const snapshot = { speech_key: null, speech_public: 1 }
+      expect(await render(snapshot, false)).not.toContain('声で聞く')
+      expect(await render(snapshot, true)).not.toContain('声で聞く')
+    })
+
+    test('「編集する」の手前に置く', async () => {
+      const body = await render(
+        { speech_key: 'speech/diary-1/a.wav', speech_public: 1 },
+        true,
+      )
+      expect(body.indexOf('声で聞く')).toBeLessThan(body.indexOf('編集する'))
+    })
   })
 })

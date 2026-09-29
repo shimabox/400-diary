@@ -54,6 +54,8 @@ function makeResult(snapshotId = 'snap_abc123'): DiaryWithSnapshot {
     image_rotation: null,
     background_color: '#FFE4E1',
     mood: 'happy',
+    speech_key: null,
+    speech_public: 0,
     published_snapshot_id: snapshotId,
     created_at: '2026-04-13 00:00:00',
     updated_at: '2026-04-15 00:00:00',
@@ -69,6 +71,8 @@ function makeResult(snapshotId = 'snap_abc123'): DiaryWithSnapshot {
       image_rotation: null,
       background_color: '#FFE4E1',
       mood: 'happy',
+      speech_key: null,
+      speech_public: 0,
       published_at: '2026-04-15 12:00:00',
     },
   }

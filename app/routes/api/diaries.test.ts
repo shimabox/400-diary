@@ -67,6 +67,8 @@ function makeRow(
     image_rotation: null,
     background_color: '#FFE4E1',
     mood: 'happy',
+    speech_key: null,
+    speech_public: 0,
     diary_date: '2026-07-05',
     published_snapshot_id: 'snap-1',
     created_at: '2026-07-05T00:00:00',
@@ -81,6 +83,8 @@ function makeRow(
     snapshot_image_scale: null,
     snapshot_image_rotation: null,
     snapshot_mood: 'happy',
+    snapshot_speech_key: null,
+    snapshot_speech_public: 0,
     ...overrides,
   }
 }
