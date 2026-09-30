@@ -231,7 +231,7 @@ CF_ACCESS_AUD = "<確認した AUD の値>"
 - 有料枠（課金を有効にしたプロジェクト）の Gemini API キー
 - Google AI Studio の Voice Replication で登録した、自分の声の ID（登録から 1 年で失効する）
 
-この 2 つを Cloudflare Pages のシークレット `GEMINI_API_KEY` と `GEMINI_VOICE_ID` に登録する。シークレットはプロジェクトができてから登録できるので、最初のデプロイの後に行う。
+この 2 つを Cloudflare Pages のシークレット `GEMINI_API_KEY` と `GEMINI_VOICE_ID` に登録する。シークレットはプロジェクトができてから登録できるので、最初のデプロイの後に行う。キーチェーンは手元の Mac だけのものなので、本番のサーバーが読めるよう同じ値を Cloudflare 側にも登録する必要があり、登録コマンドはそのシークレットが無ければ作り、あれば上書きする（詳細は [日記の読み上げ](../architecture/speech-output.md#キーの扱い) を参照）。
 
 - macOS: キーチェーンに保存し、固定ラッパーで登録する。ラッパーは登録先のプロジェクト名を `wrangler.toml` の `name` から読む。
 
