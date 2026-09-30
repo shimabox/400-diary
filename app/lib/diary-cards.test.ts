@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import type { DiaryWithPublished } from './db'
-import { toDiaryCard, toDiaryListPage } from './diary-cards'
+import { toCardSpeech, toDiaryCard, toDiaryListPage } from './diary-cards'
 
 function makeRow(
   overrides: Partial<DiaryWithPublished> = {},
@@ -51,6 +51,7 @@ describe('toDiaryCard', () => {
       background_color: '#FFE4E1',
       is_draft: false,
       has_unpublished_changes: false,
+      speech: null,
     })
   })
 
@@ -96,6 +97,7 @@ describe('toDiaryCard', () => {
       background_color: '#FFE4E1',
       is_draft: true,
       has_unpublished_changes: false,
+      speech: null,
     })
   })
 
@@ -150,6 +152,87 @@ describe('toDiaryCard', () => {
     const card = toDiaryCard(row, true)
 
     expect(card?.has_unpublished_changes).toBe(true)
+  })
+
+  test('公開版の音声が公開されていれば、未認証でも speech は public', () => {
+    const row = makeRow({
+      snapshot_speech_key: 'speech/diary-1/a.wav',
+      snapshot_speech_public: 1,
+    })
+
+    expect(toDiaryCard(row, false)?.speech).toBe('public')
+  })
+
+  test('未認証レスポンスに非公開の音声の有無が現れない', () => {
+    const row = makeRow({ speech_key: 'speech/diary-1/draft.wav' })
+
+    const card = toDiaryCard(row, false)
+
+    expect(card?.speech).toBeNull()
+    expect(JSON.stringify(card)).not.toContain('private')
+  })
+})
+
+describe('toCardSpeech', () => {
+  const publicSpeech = {
+    speech_key: 'speech/diary-1/a.wav',
+    snapshot_speech_key: 'speech/diary-1/a.wav',
+    snapshot_speech_public: 1,
+  }
+  const draftOnly = {
+    speech_key: 'speech/diary-1/draft.wav',
+    snapshot_speech_key: null,
+    snapshot_speech_public: 0,
+  }
+  const publishedButHidden = {
+    speech_key: null,
+    snapshot_speech_key: 'speech/diary-1/a.wav',
+    snapshot_speech_public: 0,
+  }
+  const noSpeech = {
+    speech_key: null,
+    snapshot_speech_key: null,
+    snapshot_speech_public: 0,
+  }
+
+  test.each([
+    ['公開中の音声', publicSpeech, true, 'public'],
+    ['公開中の音声', publicSpeech, false, 'public'],
+    ['下書きにだけ音声', draftOnly, true, 'private'],
+    ['下書きにだけ音声', draftOnly, false, null],
+    [
+      '公開版に音声があるが speech_public = 0',
+      publishedButHidden,
+      true,
+      'private',
+    ],
+    ['公開版に音声があるが speech_public = 0', publishedButHidden, false, null],
+    ['音声なし', noSpeech, true, null],
+    ['音声なし', noSpeech, false, null],
+  ] as const)('%s・認証 %s なら %s', (_label, row, isAuthenticated, expected) => {
+    expect(toCardSpeech(row, isAuthenticated)).toBe(expected)
+  })
+
+  test('下書きの speech_public = 1 だけでは公開扱いにしない（公開版の設定で決める）', () => {
+    const row = makeRow({
+      speech_key: 'speech/diary-1/a.wav',
+      speech_public: 1,
+      snapshot_speech_key: 'speech/diary-1/a.wav',
+      snapshot_speech_public: 0,
+    })
+
+    expect(toCardSpeech(row, true)).toBe('private')
+    expect(toCardSpeech(row, false)).toBeNull()
+  })
+
+  test('未公開の日記（snapshot 列が null）で下書きに音声があれば private', () => {
+    const row = {
+      speech_key: 'speech/diary-1/draft.wav',
+      snapshot_speech_key: null,
+      snapshot_speech_public: null,
+    }
+
+    expect(toCardSpeech(row, true)).toBe('private')
   })
 })
 

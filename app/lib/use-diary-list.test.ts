@@ -17,6 +17,7 @@ function makeCard(id: string): DiaryCard {
     background_color: '#FFE4E1',
     is_draft: false,
     has_unpublished_changes: false,
+    speech: null,
   }
 }
 
