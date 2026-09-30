@@ -145,6 +145,9 @@ export default function SpeechEditor({
     }
   }, [diaryId, onSpeechDeleted])
 
+  // 出すものが無ければ、ツールバーに空の欄を残さない
+  if (!view.showControls) return null
+
   return (
     <div
       style={{
@@ -194,28 +197,30 @@ export default function SpeechEditor({
           音声を削除
         </button>
       )}
-      <label
-        title="公開したときに反映されます"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.2rem',
-          fontSize: '0.85rem',
-          color: 'var(--fg-muted)',
-        }}
-      >
-        <input
-          type="checkbox"
-          checked={speechPublic}
-          onChange={(e) =>
-            onSpeechPublicChange((e.target as HTMLInputElement).checked)
-          }
-        />
-        訪問者も声で聞ける
-        <span style={{ fontSize: '0.75rem', color: 'var(--fg-subtle)' }}>
-          （公開したときに反映されます）
-        </span>
-      </label>
+      {view.showSpeechPublic && (
+        <label
+          title="公開したときに反映されます"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.2rem',
+            fontSize: '0.85rem',
+            color: 'var(--fg-muted)',
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={speechPublic}
+            onChange={(e) =>
+              onSpeechPublicChange((e.target as HTMLInputElement).checked)
+            }
+          />
+          訪問者も声で聞ける
+          <span style={{ fontSize: '0.75rem', color: 'var(--fg-subtle)' }}>
+            （公開したときに反映されます）
+          </span>
+        </label>
+      )}
       {view.notice && (
         <span
           role={error && !generating ? 'alert' : 'status'}

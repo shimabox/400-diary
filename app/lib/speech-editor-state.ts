@@ -46,8 +46,12 @@ export type SpeechView = {
   generateLabel: string
   generateDisabled: boolean
   deleteDisabled: boolean
+  /** 「訪問者も声で聞ける」を出すか */
+  showSpeechPublic: boolean
   /** 状態に応じた短い案内文 */
   notice: string | null
+  /** 音声操作の欄に出すものがあるか。無ければ欄ごと出さない */
+  showControls: boolean
 }
 
 export function deriveSpeechView(params: {
@@ -93,6 +97,9 @@ export function deriveSpeechView(params: {
     isFresh &&
     !hasUnsavedChanges &&
     state.key !== publishedKey
+  // 読み上げを設定していない環境では使えないので出さない。設定を後から外しても、
+  // 作成済みの音声の公開・非公開は切り替えられるよう、音声があれば出す
+  const showSpeechPublic = available || hasSpeech || !!publishedKey
 
   let notice: string | null = null
   if (generating) {
@@ -115,7 +122,9 @@ export function deriveSpeechView(params: {
     generateLabel: hasSpeech ? REGENERATE_LABEL : GENERATE_LABEL,
     generateDisabled: generating || deleting || hasUnsavedChanges,
     deleteDisabled: generating || deleting,
+    showSpeechPublic,
     notice,
+    showControls: hasSpeech || showGenerate || showSpeechPublic || !!notice,
   }
 }
 

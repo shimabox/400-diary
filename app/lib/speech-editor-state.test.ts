@@ -196,6 +196,34 @@ describe('deriveSpeechView の「公開する」の案内', () => {
   })
 })
 
+describe('deriveSpeechView の「訪問者も声で聞ける」', () => {
+  test('設定があれば、音声が無くても出す', () => {
+    const v = view({ publishedKey: null })
+    expect(v.showSpeechPublic).toBe(true)
+    expect(v.showControls).toBe(true)
+  })
+
+  test('設定が無く音声も無ければ出さず、欄ごと出さない', () => {
+    for (const publishedKey of [undefined, null]) {
+      const v = view({ available: false, publishedKey })
+      expect(v.showSpeechPublic).toBe(false)
+      expect(v.showControls).toBe(false)
+    }
+  })
+
+  test('設定が無くても下書きの音声があれば出す', () => {
+    const v = view({ available: false, state: FRESH })
+    expect(v.showSpeechPublic).toBe(true)
+    expect(v.showControls).toBe(true)
+  })
+
+  test('設定が無くても公開版の音声だけがあれば出す', () => {
+    const v = view({ available: false, publishedKey: KEY })
+    expect(v.showSpeechPublic).toBe(true)
+    expect(v.showControls).toBe(true)
+  })
+})
+
 describe('speechDraftSrc', () => {
   test('キー由来の値を v に載せ、作り直すと URL が変わる', () => {
     expect(speechDraftSrc('abc', KEY)).toBe(
