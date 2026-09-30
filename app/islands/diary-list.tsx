@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'hono/jsx'
-import type { DiaryCard, DiaryListCursor } from '../lib/diary-cards'
+import type { CardSpeech, DiaryCard, DiaryListCursor } from '../lib/diary-cards'
 import { formatDiaryDate } from '../lib/format'
 import {
   appendDiaryPage,
@@ -285,6 +285,7 @@ export default function DiaryList({
                 未公開の変更
               </span>
             )}
+            {diary.speech && <SpeechBadge speech={diary.speech} />}
             <time
               class="paper-muted"
               style={{
@@ -306,10 +307,7 @@ export default function DiaryList({
                 lineHeight: '1.8',
                 overflow: 'hidden',
                 fontWeight: 600,
-                maskImage:
-                  'radial-gradient(circle at bottom left, transparent 0%, black 3.5rem)',
-                WebkitMaskImage:
-                  'radial-gradient(circle at bottom left, transparent 0%, black 3.5rem)',
+                ...(diary.speech ? SPEECH_BADGE_BODY_MASK : BODY_MASK),
               }}
             >
               {diary.body}
@@ -325,5 +323,63 @@ export default function DiaryList({
         />
       )}
     </div>
+  )
+}
+
+const SPEECH_BADGE_LABEL = {
+  public: '声で聞ける',
+  private: '音声あり（非公開）',
+} as const
+
+const BODY_MASK_IMAGE =
+  'radial-gradient(circle at bottom left, transparent 0%, black 3.5rem)'
+
+/** 本文の左下をぼかすマスク。 */
+const BODY_MASK = {
+  maskImage: BODY_MASK_IMAGE,
+  WebkitMaskImage: BODY_MASK_IMAGE,
+} as const
+
+const SPEECH_BADGE_BODY_MASK_IMAGE = `${BODY_MASK_IMAGE}, radial-gradient(circle at bottom right, transparent 0%, transparent 1.6rem, black 3rem)`
+
+/**
+ * 左下に加えて、「声」ラベルと重なる本文の右下（1 列目の最後の 1〜2 文字）を薄くするマスク。
+ * 縦書きの本文は右の列から下まで埋まるので、長い日記ではラベルが 1 列目の終わりに重なる。
+ * 2 つのグラデーションの共通部分だけを見せる。文字は DOM に残るので、支援技術には全部読まれる。
+ */
+const SPEECH_BADGE_BODY_MASK = {
+  maskImage: SPEECH_BADGE_BODY_MASK_IMAGE,
+  WebkitMaskImage: SPEECH_BADGE_BODY_MASK_IMAGE,
+  maskComposite: 'intersect',
+  WebkitMaskComposite: 'source-in',
+} as const
+
+/**
+ * 音声のある日記を示す「声」ラベル。公開ページの「声で聞く」ボタンと同じく
+ * 線と文字だけで描き、非公開は破線と控えめな色で公開と見分ける。
+ * 色は用紙の文字色に合わせ、ライト・ダークどちらの用紙でも読めるようにする。
+ * 目に入る大きさで右下の角に置き、重なる本文は SPEECH_BADGE_BODY_MASK で薄くする。
+ */
+function SpeechBadge({ speech }: { speech: NonNullable<CardSpeech> }) {
+  const label = SPEECH_BADGE_LABEL[speech]
+  return (
+    <span
+      role="img"
+      aria-label={label}
+      title={label}
+      style={{
+        position: 'absolute',
+        bottom: '0.5rem',
+        right: '0.5rem',
+        fontSize: '0.85rem',
+        lineHeight: 1.2,
+        color: speech === 'public' ? 'var(--paper-fg)' : 'var(--paper-muted)',
+        border: `1px ${speech === 'public' ? 'solid' : 'dashed'} currentColor`,
+        padding: '0.1rem 0.4rem',
+        borderRadius: '3px',
+      }}
+    >
+      声
+    </span>
   )
 }

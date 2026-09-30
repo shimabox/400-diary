@@ -12,7 +12,16 @@ export type DiaryCard = {
   background_color: string
   is_draft: boolean
   has_unpublished_changes: boolean
+  speech: CardSpeech
 }
+
+/**
+ * 一覧カードの「声」ラベルの状態。
+ * - 'public': 公開ページで誰でも声で聞ける
+ * - 'private': 音声はあるが訪問者には出していない（書き手にだけ見せる）
+ * - null: 音声が無い
+ */
+export type CardSpeech = 'public' | 'private' | null
 
 export type DiaryListCursor = { before_date: string; before_id: string } | null
 
@@ -63,7 +72,27 @@ export function toDiaryCard(
     background_color: backgroundColor,
     is_draft: isDraft,
     has_unpublished_changes: hasUnpublishedChanges,
+    speech: toCardSpeech(row, isAuthenticated),
   }
+}
+
+/**
+ * 一覧カードの「声」ラベルの状態を決める。
+ * 'public' は公開ページに「声で聞く」が出る条件（公開版に音声があり speech_public = 1）と揃える。
+ * 未認証時は 'private' を返さない。下書きの音声や非公開の設定の有無を訪問者に漏らさないため。
+ */
+export function toCardSpeech(
+  row: Pick<
+    DiaryWithPublished,
+    'speech_key' | 'snapshot_speech_key' | 'snapshot_speech_public'
+  >,
+  isAuthenticated: boolean,
+): CardSpeech {
+  if (row.snapshot_speech_key && row.snapshot_speech_public === 1) {
+    return 'public'
+  }
+  if (!isAuthenticated) return null
+  return row.speech_key || row.snapshot_speech_key ? 'private' : null
 }
 
 /**
