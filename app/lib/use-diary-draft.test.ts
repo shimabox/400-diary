@@ -151,6 +151,48 @@ describe('useDiaryDraft', () => {
     })
   })
 
+  test('speechPublic を渡したときだけ speech_public を保存に含める', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(async () => jsonResponse({ id: 'diary-1' }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await useDiaryDraft(
+      makeOptions({ diaryId: 'diary-1', speechPublic: true }),
+    ).saveDraft()
+    await useDiaryDraft(
+      makeOptions({ diaryId: 'diary-1', speechPublic: false }),
+    ).saveDraft()
+
+    const bodies = fetchMock.mock.calls.map(([, init]) =>
+      JSON.parse((init as { body: string }).body),
+    )
+    expect(bodies[0].speech_public).toBe(true)
+    expect(bodies[1].speech_public).toBe(false)
+    expect(bodies[0]).not.toHaveProperty('speech_key')
+  })
+
+  test('既存の日記は、開いた時点の本文と気分を保存済みの値として返す', () => {
+    const { savedSpeechSource } = useDiaryDraft(
+      makeOptions({ diaryId: 'diary-1', body: '保存済み', mood: 'calm' }),
+    )
+    expect(savedSpeechSource).toEqual({ body: '保存済み', mood: 'calm' })
+
+    expect(useDiaryDraft(makeOptions()).savedSpeechSource).toBeNull()
+  })
+
+  test('開いた時点の公開版の音声のキーを返す', () => {
+    expect(
+      useDiaryDraft(
+        makeOptions({
+          diaryId: 'diary-1',
+          publishedSpeechKey: 'speech/diary-1/a.wav',
+        }),
+      ).publishedSpeechKey,
+    ).toBe('speech/diary-1/a.wav')
+    expect(useDiaryDraft(makeOptions()).publishedSpeechKey).toBeNull()
+  })
+
   test('公開時は保存してから保存済み id を公開する', async () => {
     const fetchMock = vi
       .fn()

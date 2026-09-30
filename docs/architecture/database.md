@@ -47,6 +47,8 @@ erDiagram
         REAL image_rotation "画像回転角/度 -15〜15 (nullable)"
         TEXT background_color "HEX (#FFE4E1等)"
         TEXT mood "happy/calm/sad/angry/anxious/fun"
+        TEXT speech_key "下書きの読み上げ音声の R2 キー (nullable)"
+        INTEGER speech_public "訪問者も声で聞けるか 1/0"
         TEXT diary_date "YYYY-MM-DD"
         TEXT published_snapshot_id FK "公開中のスナップショット"
         TEXT created_at
@@ -64,6 +66,8 @@ erDiagram
         REAL image_rotation
         TEXT background_color
         TEXT mood
+        TEXT speech_key "公開中の読み上げ音声 (公開した本文を読む音声が無ければ NULL)"
+        INTEGER speech_public "公開時点の訪問者も声で聞けるか"
         TEXT published_at
     }
 ```
@@ -95,6 +99,10 @@ sequenceDiagram
     DB-->>API: DiarySnapshot { published_at }
     API-->>Editor: { published_at: "2026-04-11T..." }
 ```
+
+### 読み上げ音声の引き継ぎ
+
+公開時、`speech_public` はそのままスナップショットへ写す。`speech_key` は、保存済みの本文と気分から計算したキーと一致するときは下書きの音声を写す。一致しなければ、直前の公開版と本文が同じときだけその音声を引き継ぎ、それ以外は NULL にする（内容の違う古い音声を公開しない）。`speech_key` は保存 API からは書き換えられず、音声の生成・削除 API だけが書く。公開後は、下書きと公開中のどちらからも参照されていない音声を R2 から削除する。詳細は [Speech Output](./speech-output.md) を参照。
 
 ## 下書きと公開の関係
 
@@ -141,7 +149,7 @@ DELETE /api/diaries/:id
   1. diary の image_key を取得
   2. 全 snapshot の image_key を取得 (listSnapshotImageKeys)
   3. 重複除去して画像を R2 から best-effort で一括削除
-  4. OGP キャッシュを R2 から best-effort で削除
+  4. OGP キャッシュと読み上げ音声（speech/{id}/ 配下）を R2 から best-effort で削除
   5. DELETE FROM diaries (CASCADE で snapshots も削除)
 ```
 
@@ -155,3 +163,4 @@ DELETE /api/diaries/:id
 | `app/routes/api/diaries.ts` | 新規作成 API |
 | `app/routes/api/diaries/[id].ts` | 取得・更新・削除 API |
 | `app/routes/api/diaries/[id]/publish.ts` | 公開 API |
+| `app/routes/api/diaries/[id]/speech.ts` | 読み上げ音声の生成・削除 API |

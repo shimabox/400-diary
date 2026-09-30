@@ -10,6 +10,10 @@ export type AppEnv = {
     DEV_AUTH_BYPASS?: string
     APP_NAME?: string
     CF_WEB_ANALYTICS_TOKEN?: string
+    // 日記の読み上げ（音声の生成と「音声が今の日記に合っているか」の判定）だけが使う。
+    // 未設定なら「音声を作る」を出さない。作成済みの音声の配信・削除は設定が無くても動く
+    GEMINI_API_KEY?: string
+    GEMINI_VOICE_ID?: string
   }
   Variables: {
     isAuthenticated: boolean

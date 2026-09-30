@@ -52,7 +52,9 @@ export function toDiaryCard(
       // 正規化してから比較する (見た目が同じ組み合わせを変更扱いにしない)
       (row.image_scale ?? 1) !== (row.snapshot_image_scale ?? 1) ||
       (row.image_rotation ?? 0) !== (row.snapshot_image_rotation ?? 0) ||
-      row.mood !== row.snapshot_mood)
+      row.mood !== row.snapshot_mood ||
+      // 「訪問者も声で聞ける」も公開したときに反映される設定なので差分に含める
+      row.speech_public !== (row.snapshot_speech_public ?? 0))
 
   return {
     id: row.id,

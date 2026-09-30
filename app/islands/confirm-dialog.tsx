@@ -3,6 +3,12 @@ import { useEffect, useRef } from 'hono/jsx'
 type Props = {
   open: boolean
   message: string
+  /** message の下に添える補足（費用や影響範囲など） */
+  detail?: string
+  /** 実行ボタンの文言。既定は OK */
+  confirmLabel?: string
+  /** 実行ボタンの色。削除など取り消せない操作は danger（既定） */
+  confirmTone?: 'danger' | 'accent'
   onConfirm: () => void
   onCancel: () => void
 }
@@ -10,9 +16,14 @@ type Props = {
 export default function ConfirmDialog({
   open,
   message,
+  detail,
+  confirmLabel = 'OK',
+  confirmTone = 'danger',
   onConfirm,
   onCancel,
 }: Props) {
+  const confirmColor =
+    confirmTone === 'danger' ? 'var(--danger)' : 'var(--accent-bg)'
   const dialogRef = useRef<HTMLDialogElement>(null)
 
   useEffect(() => {
@@ -50,6 +61,17 @@ export default function ConfirmDialog({
       >
         {message}
       </p>
+      {detail && (
+        <p
+          style={{
+            margin: '-0.75rem 0 1.25rem',
+            fontSize: '0.85rem',
+            color: 'var(--fg-muted)',
+          }}
+        >
+          {detail}
+        </p>
+      )}
       <div
         style={{
           display: 'flex',
@@ -76,15 +98,15 @@ export default function ConfirmDialog({
           onClick={onConfirm}
           style={{
             padding: '0.4rem 1rem',
-            border: '1px solid var(--danger)',
+            border: `1px solid ${confirmColor}`,
             borderRadius: '4px',
-            background: 'var(--danger)',
+            background: confirmColor,
             color: 'var(--on-accent)',
             fontSize: '0.85rem',
             cursor: 'pointer',
           }}
         >
-          OK
+          {confirmLabel}
         </button>
       </div>
     </dialog>

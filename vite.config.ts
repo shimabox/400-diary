@@ -37,6 +37,20 @@ function resvgWasmPlugin(): Plugin {
   }
 }
 
+// dev サーバーで日記の読み上げを試すための binding。scripts/keychain/dev-with-gemini.sh が
+// キーチェーンから読んで子プロセスの環境変数にだけ渡した値を、定義されているときだけ使う。
+// .dev.vars や wrangler.toml には書かない（リポジトリやファイルにキーを残さない）。
+// @hono/vite-dev-server はこの env を binding に合成した後にアダプタ（.dev.vars 由来）の値を
+// 重ねるが、この 2 つは .dev.vars に無いので上書きされない。本番ビルドには影響しない
+function geminiDevEnv(): Record<string, string> {
+  const env: Record<string, string> = {}
+  for (const name of ['GEMINI_API_KEY', 'GEMINI_VOICE_ID']) {
+    const value = process.env[name]
+    if (value) env[name] = value
+  }
+  return env
+}
+
 export default defineConfig(({ mode }) => {
   const common = {
     resolve: {
@@ -79,6 +93,7 @@ export default defineConfig(({ mode }) => {
       honox({
         devServer: {
           adapter,
+          env: geminiDevEnv,
         },
       }),
       pages(),
