@@ -146,6 +146,15 @@ export function useDiaryDraft({
       }
 
       const data = (await res.json()) as { id: string }
+      if (!currentDiaryId) {
+        // 新規作成の URL のままだと、再読み込みで白紙のエディタが開いてしまうため、
+        // 作成した日記の編集 URL に置き換える（戻るで白紙の新規作成画面にも戻らない）
+        history.replaceState(
+          history.state,
+          '',
+          `/edit/${encodeURIComponent(data.id)}`,
+        )
+      }
       setSavedId(data.id)
       setSavedSpeechSource({ body: draft.body, mood: draft.mood })
       return data.id
