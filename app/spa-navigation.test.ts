@@ -12,7 +12,7 @@ afterEach(() => {
 test.each([
   true,
   false,
-])('リダイレクト先の編集URLを履歴に反映する（クリック遷移: %s）', async (push) => {
+])('リダイレクト先のURLを履歴に反映する（クリック遷移: %s）', async (push) => {
   const listeners = new Map<string, (event: unknown) => void>()
   const savedState = {
     window: { x: 12, y: 345 },
@@ -58,11 +58,12 @@ test.each([
     'DOMParser',
     class {
       parseFromString() {
-        return { title: '日記を編集', body: { innerHTML: 'editor' } }
+        return { title: 'トップ', body: { innerHTML: 'home' } }
       }
     },
   )
-  const destination = 'http://localhost/edit/existing'
+  // ログインが切れていると /new はトップへリダイレクトする
+  const destination = 'http://localhost/'
   vi.stubGlobal(
     'fetch',
     vi.fn().mockResolvedValue({
@@ -70,7 +71,7 @@ test.each([
       redirected: true,
       url: destination,
       headers: new Headers({ 'Content-Type': 'text/html' }),
-      text: async () => 'editor',
+      text: async () => 'home',
     }),
   )
 
@@ -108,5 +109,5 @@ test.each([
     expect(scrollContainer.scrollTop).toBe(89)
     expect(history.state).toEqual(savedState)
   }
-  expect(body.innerHTML).toBe('editor')
+  expect(body.innerHTML).toBe('home')
 })

@@ -5,6 +5,7 @@ import {
   createDiary,
   DiaryDateConflictError,
   deleteDiary,
+  findFirstFreeDiaryDate,
   getDiary,
   getDiaryDateRange,
   getDiaryIdByDate,
@@ -734,6 +735,32 @@ describe('日付の重複', () => {
     await expect(
       getDiaryIdByDate(createMockDB(), '2026-09-08'),
     ).resolves.toBeNull()
+  })
+
+  test('指定日以降で日記の無い最初の日付を返す', async () => {
+    const db = createMockDB({
+      all: {
+        results: [
+          { diary_date: '2026-09-30' },
+          { diary_date: '2026-10-01' },
+          { diary_date: '2026-10-03' },
+        ],
+        meta: { changes: 0 },
+      },
+    })
+    await expect(findFirstFreeDiaryDate(db, '2026-09-30')).resolves.toBe(
+      '2026-10-02',
+    )
+    expect(db.boundValues).toEqual(['2026-09-30'])
+  })
+
+  test('指定日に日記が無ければその日を返す', async () => {
+    const db = createMockDB({
+      all: { results: [{ diary_date: '2026-09-12' }], meta: { changes: 0 } },
+    })
+    await expect(findFirstFreeDiaryDate(db, '2026-09-10')).resolves.toBe(
+      '2026-09-10',
+    )
   })
 
   test('新規作成のDB制約違反を既存ID付きの重複エラーに変換する', async () => {

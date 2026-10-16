@@ -1,5 +1,9 @@
 import { describe, expect, test } from 'vitest'
-import { formatDiaryDate, toLocalDateString } from './format'
+import {
+  addDaysToDateString,
+  formatDiaryDate,
+  toLocalDateString,
+} from './format'
 
 describe('formatDiaryDate', () => {
   test('平日の日付をフォーマットする', () => {
@@ -45,5 +49,17 @@ describe('toLocalDateString', () => {
   test('YYYY-MM-DD 形式(ゼロ埋め)で返す', () => {
     const date = new Date('2026-01-05T03:00:00.000Z')
     expect(toLocalDateString(date)).toBe('2026-01-05')
+  })
+})
+
+describe('addDaysToDateString', () => {
+  test('月末・年末をまたいで繰り上げる', () => {
+    expect(addDaysToDateString('2026-09-30', 1)).toBe('2026-10-01')
+    expect(addDaysToDateString('2026-12-31', 1)).toBe('2027-01-01')
+  })
+
+  test('うるう年の2月29日を数える', () => {
+    expect(addDaysToDateString('2028-02-28', 1)).toBe('2028-02-29')
+    expect(addDaysToDateString('2027-02-28', 1)).toBe('2027-03-01')
   })
 })

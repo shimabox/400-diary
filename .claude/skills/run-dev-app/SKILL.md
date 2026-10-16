@@ -122,6 +122,6 @@ npx wrangler d1 execute 400-diary-db --local \
 curl -X DELETE http://localhost:5173/api/diaries/<id>   # 204 が返る。画像も削除される
 ```
 
-注意: 保存後も URL が `/new` のままのことがあるため、diaryId は URL からではなく
-上記の D1 クエリで取るのが確実。ユーザー自身のテスト日記（過去日付のもの）を
+注意: `/new` で保存できると URL は `/edit/{id}` に置き換わるが、保存に失敗した
+ときは `/new` のまま残る。消し漏れを防ぐため、diaryId は上記の D1 クエリで取るのが確実。ユーザー自身のテスト日記（過去日付のもの）を
 消さないよう、作成日時の条件を必ず付けること。

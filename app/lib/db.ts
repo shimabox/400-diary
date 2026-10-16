@@ -1,5 +1,6 @@
 import type { D1Database } from '@cloudflare/workers-types/latest'
 import { nanoid } from 'nanoid'
+import { addDaysToDateString } from './format'
 import { expectedSpeechKey } from './speech'
 
 export type Diary = {
@@ -86,6 +87,25 @@ export async function getDiaryIdByDate(
     .bind(date)
     .first<{ id: string }>()
   return diary?.id ?? null
+}
+
+/** fromDate 以降で、日記がまだ無い最初の日付を返す */
+export async function findFirstFreeDiaryDate(
+  db: D1Database,
+  fromDate: string,
+): Promise<string> {
+  const { results } = await db
+    .prepare(
+      'SELECT diary_date FROM diaries WHERE diary_date >= ? ORDER BY diary_date',
+    )
+    .bind(fromDate)
+    .all<{ diary_date: string }>()
+  let date = fromDate
+  for (const row of results) {
+    if (row.diary_date !== date) break
+    date = addDaysToDateString(date, 1)
+  }
+  return date
 }
 
 async function rethrowDiaryWriteError(

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { MAX_BODY_LENGTH } from './constants'
 import {
   type DiaryDraft,
@@ -93,6 +93,13 @@ describe('validateDiaryDraft', () => {
 })
 
 describe('useDiaryDraft', () => {
+  const replaceState = vi.fn()
+
+  beforeEach(() => {
+    replaceState.mockClear()
+    vi.stubGlobal('history', { state: { saved: true }, replaceState })
+  })
+
   // hono/jsx の hooks は render context 外でも初期値と callback を返す。
   // ここではその性質を使い、saveDraft / publishDraft の通信契約だけを検証する。
   test('未保存の日記を POST で保存する', async () => {
@@ -112,6 +119,11 @@ describe('useDiaryDraft', () => {
     )
 
     await expect(saveDraft()).resolves.toBe('diary-1')
+    expect(replaceState).toHaveBeenCalledWith(
+      { saved: true },
+      '',
+      '/edit/diary-1',
+    )
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expectJsonFetchCall(fetchMock, 0, '/api/diaries', 'POST', {
       body: '今日は晴れ',
@@ -137,6 +149,7 @@ describe('useDiaryDraft', () => {
     )
 
     await expect(saveDraft()).resolves.toBe('diary-1')
+    expect(replaceState).not.toHaveBeenCalled()
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expectJsonFetchCall(fetchMock, 0, '/api/diaries/diary-1', 'PUT', {
       body: '今日は晴れ',
@@ -287,6 +300,7 @@ describe('useDiaryDraft', () => {
       diaryId ? `/api/diaries/${diaryId}` : '/api/diaries',
       expect.objectContaining({ method: diaryId ? 'PUT' : 'POST' }),
     )
+    expect(replaceState).not.toHaveBeenCalled()
     expect(options).toEqual(original)
   })
 
