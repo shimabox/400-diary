@@ -16,3 +16,10 @@ export function formatDiaryDate(dateStr: string): string {
 export function toLocalDateString(date: Date = new Date()): string {
   return date.toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' })
 }
+
+/** "2026-09-30" に日数を足した日付を YYYY-MM-DD で返す（月末・年末を繰り上げる） */
+export function addDaysToDateString(dateStr: string, days: number): string {
+  const date = new Date(`${dateStr}T00:00:00Z`)
+  date.setUTCDate(date.getUTCDate() + days)
+  return date.toISOString().slice(0, 10)
+}
