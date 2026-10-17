@@ -4,7 +4,7 @@
 
 ## やること
 
-1. リポジトリを fork し、`wrangler.toml` の設定値を自分の環境に合わせる（[wrangler.toml で書き換える値](#wranglertoml-で書き換える値)）
+1. リポジトリを fork し、`wrangler.toml.example` をコピーして `wrangler.toml` を作り、自分の環境の値を入れる（[wrangler.toml で書き換える値](#wranglertoml-で書き換える値)）
 2. Cloudflare に D1 データベースと R2 バケットを作成する
 3. OGP画像用フォントを R2 にアップロードする
 4. Cloudflare Pages にデプロイする
@@ -14,19 +14,27 @@
 
 ## wrangler.toml で書き換える値
 
-`wrangler.toml` には、このリポジトリの作者の環境の値が入っています。そのままデプロイすると、作者の説明文やリンクが表示され、アクセス解析のデータが作者のアカウントに送られます。fork したら、次の値をすべて自分のものに書き換えるか、任意のものは消してください。
+`wrangler.toml` は自分の環境の値を入れるファイルで、git の管理に入れていません（`.gitignore` 済み）。fork したら、ひな形の `wrangler.toml.example` をコピーして作ります。
+
+```
+cp wrangler.toml.example wrangler.toml
+```
+
+ひな形の `<...>` の値は、決まった時点で自分の値に書き換えます。`<...>` が残っていると、`pnpm run deploy` と `pnpm run db:migrate:remote` は始める前に、その行を示して止まります。任意の値は、使うものだけコメントを外して書き換えます。
+
+`wrangler.toml` は git に入らないので、別の PC で作業するときは同じ内容のファイルを用意してください。作者の更新を取り込んでも、自分の `wrangler.toml` とはぶつかりません。
 
 | 値 | 必須 | いつ決まるか | 設定する内容 |
 |---|---|---|---|
-| `name` | Yes | 最初に決める | Cloudflare Pages のプロジェクト名。URL（`https://<name>.pages.dev`）になる。Cloudflare Pages 全体でユニークである必要がある |
+| `name` | Yes | 最初に決める | Cloudflare Pages のプロジェクト名。URL（`https://<name>.pages.dev`）になる。Cloudflare Pages 全体でユニークである必要がある。ひな形の `400-diary` は wrangler が形式を確かめるため `<...>` にしていないので、自分の名前に変える |
 | `database_id` | Yes | [D1 データベースの作成](#d1データベースの作成)のあと | 作成した D1 の ID |
 | `CF_ACCESS_TEAM_DOMAIN` | Yes | [Cloudflare Access の設定](#cloudflare-access-の設定)の途中 | `<チーム名>.cloudflareaccess.com` |
 | `CF_ACCESS_AUD` | Yes | [Cloudflare Access の設定](#cloudflare-access-の設定)の最後 | Access アプリケーションの AUD タグ |
-| `APP_NAME` | No | いつでも | アプリ名。トップページの見出し、ページのタイトル、RSS、OGP 画像に出る。消すと「400字日記」 |
-| `APP_DESCRIPTION` | No | いつでも | 説明文。トップページの説明、RSS、トップの OGP 画像に出る。消すと「400文字で綴る日記」 |
-| `X_URL` | No | いつでも | トップのフッターに出す X のリンク。消すとリンクを出さない |
-| `GITHUB_URL` | No | いつでも | トップのフッターに出す GitHub のリンク。消すとリンクを出さない |
-| `CF_WEB_ANALYTICS_TOKEN` | No | いつでも | Cloudflare Web Analytics のトークン。消すと解析のスクリプトを出さない |
+| `APP_NAME` | No | いつでも | アプリ名。トップページの見出し、ページのタイトル、RSS、OGP 画像に出る。書かなければ「400字日記」 |
+| `APP_DESCRIPTION` | No | いつでも | 説明文。トップページの説明、RSS、トップの OGP 画像に出る。書かなければ「400文字で綴る日記」 |
+| `X_URL` | No | いつでも | トップのフッターに出す X のリンク。書かなければリンクを出さない |
+| `GITHUB_URL` | No | いつでも | トップのフッターに出す GitHub のリンク。書かなければリンクを出さない |
+| `CF_WEB_ANALYTICS_TOKEN` | No | いつでも | Cloudflare Web Analytics のトークン。書かなければ解析のスクリプトを出さない |
 
 - D1 と R2 の名前（`database_name` の `400-diary-db`、`bucket_name` の `400-diary-images`）は、自分のアカウントの中で重ならなければ変えなくてよい。変える場合は、`package.json` の `db:migrate:local` と `db:migrate:remote`、`scripts/upload-fonts.sh` の `R2_BUCKET`、以下のコマンドに出てくる名前も合わせて変える。
 - `CF_WEB_ANALYTICS_TOKEN` を使う場合は、Cloudflare ダッシュボードの Web 分析 からサイトを追加し、JS スニペット内の token の値を設定する。
