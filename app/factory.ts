@@ -9,6 +9,10 @@ export type AppEnv = {
     CF_ACCESS_AUD: string
     DEV_AUTH_BYPASS?: string
     APP_NAME?: string
+    APP_DESCRIPTION?: string
+    // トップのフッターに出すリンク。未設定ならそのリンクを出さない
+    X_URL?: string
+    GITHUB_URL?: string
     CF_WEB_ANALYTICS_TOKEN?: string
     // 日記の読み上げ（音声の生成と「音声が今の日記に合っているか」の判定）だけが使う。
     // 未設定なら「音声を作る」を出さない。作成済みの音声の配信・削除は設定が無くても動く

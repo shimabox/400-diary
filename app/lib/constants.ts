@@ -19,3 +19,6 @@ export const IMAGE_ROTATION_MAX = 15
 
 /** アプリケーション名のデフォルト値 */
 export const DEFAULT_APP_NAME = '400字日記'
+
+/** トップページ・RSS・トップの OGP 画像に出す説明文のデフォルト値 */
+export const DEFAULT_APP_DESCRIPTION = '400文字で綴る日記'

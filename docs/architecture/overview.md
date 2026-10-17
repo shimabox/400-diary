@@ -233,6 +233,9 @@ flowchart LR
 | `CF_ACCESS_TEAM_DOMAIN` | Yes | Cloudflare Access のチームドメイン |
 | `CF_ACCESS_AUD` | Yes | Cloudflare Access の AUD タグ |
 | `APP_NAME` | No | アプリ名（デフォルト: `400字日記`） |
+| `APP_DESCRIPTION` | No | トップページ・RSS・トップの OGP 画像の説明文（デフォルト: `400文字で綴る日記`） |
+| `X_URL` | No | トップのフッターに出す X のリンク（未設定なら出さない） |
+| `GITHUB_URL` | No | トップのフッターに出す GitHub のリンク（未設定なら出さない） |
 | `CF_WEB_ANALYTICS_TOKEN` | No | Cloudflare Web Analytics のトークン |
 | `DEV_AUTH_BYPASS` | No | 開発時の認証バイパス |
 | `GEMINI_API_KEY` | No | 日記の読み上げに使う Gemini API キー（シークレット。未設定なら「音声を作る」を出さない） |

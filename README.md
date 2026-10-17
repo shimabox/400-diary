@@ -90,6 +90,9 @@ Cloudflare Pages にデプロイします。詳細な手順は [`docs/deploy/REA
 | `CF_ACCESS_TEAM_DOMAIN` | 環境変数 | Cloudflare Access のチームドメイン |
 | `CF_ACCESS_AUD` | 環境変数 | Cloudflare Access の AUD タグ |
 | `APP_NAME` | 環境変数（任意） | アプリ表示名（デフォルト: 400字日記） |
+| `APP_DESCRIPTION` | 環境変数（任意） | トップページ・RSS・トップの OGP 画像の説明文（デフォルト: 400文字で綴る日記） |
+| `X_URL` | 環境変数（任意） | トップのフッターに出す X のリンク。未設定なら出さない |
+| `GITHUB_URL` | 環境変数（任意） | トップのフッターに出す GitHub のリンク。未設定なら出さない |
 | `CF_WEB_ANALYTICS_TOKEN` | 環境変数（任意） | Cloudflare Web Analytics のトークン |
 | `GEMINI_API_KEY` | シークレット（任意） | 日記の読み上げ音声の生成に使う Gemini API キー。未設定なら音声を作る操作が出ない |
 | `GEMINI_VOICE_ID` | シークレット（任意） | 日記の読み上げ音声の生成に使う声 ID。未設定なら音声を作る操作が出ない |

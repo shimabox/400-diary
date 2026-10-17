@@ -5,6 +5,7 @@ describe('buildRssFeed', () => {
   test('公開日記のRSS XMLを生成する', () => {
     const xml = buildRssFeed({
       appName: '400字日記',
+      description: '400文字で綴る日記',
       origin: 'https://example.com',
       items: [
         {
@@ -21,6 +22,7 @@ describe('buildRssFeed', () => {
       '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">',
     )
     expect(xml).toContain('<title>400字日記</title>')
+    expect(xml).toContain('<description>400文字で綴る日記</description>')
     expect(xml).toContain('<link>https://example.com/</link>')
     expect(xml).toContain(
       '<atom:link href="https://example.com/rss.xml" rel="self" type="application/rss+xml" />',
@@ -36,12 +38,14 @@ describe('buildRssFeed', () => {
   test('アイテムが空でもchannelを生成する', () => {
     const xml = buildRssFeed({
       appName: 'テスト',
+      description: '説明 <&>',
       origin: 'https://example.com',
       items: [],
     })
 
     expect(xml).toContain('<channel>')
     expect(xml).toContain('<title>テスト</title>')
+    expect(xml).toContain('<description>説明 &lt;&amp;&gt;</description>')
     expect(xml).not.toContain('<item>')
   })
 })

@@ -4,15 +4,36 @@
 
 ## やること
 
-1. リポジトリを fork し、`wrangler.toml` の設定値（`name`, `APP_NAME`, `CF_WEB_ANALYTICS_TOKEN` 等）を自分の環境に合わせる
-   - `CF_WEB_ANALYTICS_TOKEN` は設定しなければ Analytics のスクリプトが出力されないだけなので、不要なら削除またはコメントアウトで大丈夫です。利用する場合は Cloudflare ダッシュボードの Web 分析 からサイトを追加し、JS スニペット内の token の値を設定してください
-   ![Web Analytics のトークン確認](web-analytics.png)
+1. リポジトリを fork し、`wrangler.toml` の設定値を自分の環境に合わせる（[wrangler.toml で書き換える値](#wranglertoml-で書き換える値)）
 2. Cloudflare に D1 データベースと R2 バケットを作成する
 3. OGP画像用フォントを R2 にアップロードする
 4. Cloudflare Pages にデプロイする
 5. Cloudflare Access で認証を設定する
 6. （任意）日記の読み上げに使うキーを登録する
 7. 再デプロイして動作確認する
+
+## wrangler.toml で書き換える値
+
+`wrangler.toml` には、このリポジトリの作者の環境の値が入っています。そのままデプロイすると、作者の説明文やリンクが表示され、アクセス解析のデータが作者のアカウントに送られます。fork したら、次の値をすべて自分のものに書き換えるか、任意のものは消してください。
+
+| 値 | 必須 | いつ決まるか | 設定する内容 |
+|---|---|---|---|
+| `name` | Yes | 最初に決める | Cloudflare Pages のプロジェクト名。URL（`https://<name>.pages.dev`）になる。Cloudflare Pages 全体でユニークである必要がある |
+| `database_id` | Yes | [D1 データベースの作成](#d1データベースの作成)のあと | 作成した D1 の ID |
+| `CF_ACCESS_TEAM_DOMAIN` | Yes | [Cloudflare Access の設定](#cloudflare-access-の設定)の途中 | `<チーム名>.cloudflareaccess.com` |
+| `CF_ACCESS_AUD` | Yes | [Cloudflare Access の設定](#cloudflare-access-の設定)の最後 | Access アプリケーションの AUD タグ |
+| `APP_NAME` | No | いつでも | アプリ名。トップページの見出し、ページのタイトル、RSS、OGP 画像に出る。消すと「400字日記」 |
+| `APP_DESCRIPTION` | No | いつでも | 説明文。トップページの説明、RSS、トップの OGP 画像に出る。消すと「400文字で綴る日記」 |
+| `X_URL` | No | いつでも | トップのフッターに出す X のリンク。消すとリンクを出さない |
+| `GITHUB_URL` | No | いつでも | トップのフッターに出す GitHub のリンク。消すとリンクを出さない |
+| `CF_WEB_ANALYTICS_TOKEN` | No | いつでも | Cloudflare Web Analytics のトークン。消すと解析のスクリプトを出さない |
+
+- D1 と R2 の名前（`database_name` の `400-diary-db`、`bucket_name` の `400-diary-images`）は、自分のアカウントの中で重ならなければ変えなくてよい。変える場合は、`package.json` の `db:migrate:local` と `db:migrate:remote`、`scripts/upload-fonts.sh` の `R2_BUCKET`、以下のコマンドに出てくる名前も合わせて変える。
+- `CF_WEB_ANALYTICS_TOKEN` を使う場合は、Cloudflare ダッシュボードの Web 分析 からサイトを追加し、JS スニペット内の token の値を設定する。
+
+  ![Web Analytics のトークン確認](web-analytics.png)
+
+- `APP_NAME` と `APP_DESCRIPTION` は OGP 画像（SNS で共有したときのカード画像）にも使われる。`APP_NAME` はトップと日記ごとの画像、`APP_DESCRIPTION` はトップの画像に出る。OGP 画像は一度作ると R2 に保存されて使い回されるので、デプロイ後に値を変えたときは、保存された画像を消して作り直させる（[本番 R2 の OGP キャッシュ削除](../architecture/ogp-image.md#本番-r2-の-ogp-キャッシュ削除)）。
 
 ## 免責事項
 
@@ -264,7 +285,7 @@ pnpm run deploy
 ![トップページの表示](default.png)
 
 > [!NOTE]
-> 左上のアプリ名は `wrangler.toml` の `APP_NAME` で変更できます。
+> 左上のアプリ名は `wrangler.toml` の `APP_NAME`、説明文は `APP_DESCRIPTION`、下のリンクは `X_URL` と `GITHUB_URL` で変更できます（[wrangler.toml で書き換える値](#wranglertoml-で書き換える値)）。
 
 以下を確認する:
 

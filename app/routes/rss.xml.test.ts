@@ -33,13 +33,14 @@ vi.mock('~/lib/db', async (importOriginal) => {
   }
 })
 
-function createApp() {
+function createApp(env: Partial<AppEnv['Bindings']> = {}) {
   const app = new Hono<AppEnv>()
 
   app.use('*', async (c, next) => {
     c.env = {
       DB: createMockDB(),
-      APP_NAME: 'しまぶ日記',
+      APP_NAME: 'テスト日記',
+      ...env,
     } as unknown as AppEnv['Bindings']
     await next()
   })
@@ -67,5 +68,19 @@ describe('GET /rss.xml', () => {
     expect(sameDateIndex).toBeGreaterThan(-1)
     expect(newDiaryIndex).toBeGreaterThan(sameDateIndex)
     expect(oldDiaryIndex).toBeGreaterThan(newDiaryIndex)
+  })
+
+  test('説明文は APP_DESCRIPTION を使い、未設定ならデフォルトにする', async () => {
+    const custom = await createApp({ APP_DESCRIPTION: '毎日の記録' }).request(
+      'http://example.com/rss.xml',
+    )
+    expect(await custom.text()).toContain(
+      '<description>毎日の記録</description>',
+    )
+
+    const fallback = await createApp().request('http://example.com/rss.xml')
+    expect(await fallback.text()).toContain(
+      '<description>400文字で綴る日記</description>',
+    )
   })
 })

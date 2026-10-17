@@ -4,6 +4,7 @@ import { getDiaryWithSnapshot } from '~/lib/db'
 import { formatDiaryDate } from '~/lib/format'
 import { ogCacheKey } from '~/lib/og-cache'
 import { svgToPng } from '~/lib/og-image'
+import { escapeXml } from '~/lib/xml'
 
 const WIDTH = 1200
 const HEIGHT = 630
@@ -33,7 +34,7 @@ function generateOgSvg(
     font-family="'Klee One', serif"
     font-size="32"
     fill="#666"
-  >${appName}</text>
+  >${escapeXml(appName)}</text>
 </svg>`
 }
 
