@@ -226,6 +226,8 @@ flowchart LR
 
 ## 環境設定
 
+バインディングと環境変数は `wrangler.toml` に書く。`wrangler.toml` は環境ごとの値を入れるファイルなので git の管理に入れず、ひな形の `wrangler.toml.example` からコピーして作る（[デプロイ手順](../deploy/README.md#wranglertoml-で書き換える値)）。`DEV_AUTH_BYPASS` はローカル開発の `.dev.vars` に、シークレットは Cloudflare Pages のシークレットに入れる。
+
 | 環境変数 | 必須 | 説明 |
 |---------|------|------|
 | `DB` | Yes | D1 データベースバインディング |

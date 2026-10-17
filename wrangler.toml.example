@@ -1,0 +1,28 @@
+# 自分の環境の値を入れて wrangler.toml として使う（cp wrangler.toml.example wrangler.toml）。
+# wrangler.toml は git の管理に入れない。値ごとの説明は docs/deploy/README.md の
+# 「wrangler.toml で書き換える値」を参照。<...> の値は、デプロイ前に必ず書き換える
+# Cloudflare Pages のプロジェクト名。英小文字・数字・ハイフンだけで、自分の名前に変える
+name = "400-diary"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = "./dist"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "400-diary-db"
+database_id = "<D1 の database_id>"
+migrations_dir = "db/migrations"
+
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "400-diary-images"
+
+[vars]
+CF_ACCESS_TEAM_DOMAIN = "<チーム名>.cloudflareaccess.com"
+CF_ACCESS_AUD = "<Access の AUD タグ>"
+# 以下は任意。使うものだけコメントを外して書き換える
+# APP_NAME = "400字日記"
+# APP_DESCRIPTION = "400文字で綴る日記"
+# X_URL = "https://x.com/<ユーザー名>"
+# GITHUB_URL = "https://github.com/<ユーザー名>/400-diary"
+# CF_WEB_ANALYTICS_TOKEN = "<Web Analytics のトークン>"
