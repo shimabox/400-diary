@@ -20,7 +20,7 @@
 cp wrangler.toml.example wrangler.toml
 ```
 
-ひな形の `<...>` の値は、決まった時点で自分の値に書き換えます。`<...>` が残っていると、`pnpm run deploy` と `pnpm run db:migrate:remote` は始める前に、その行を示して止まります。任意の値は、使うものだけコメントを外して書き換えます。
+ひな形の `<...>` の値は、決まった時点で自分の値に書き換えます。`<...>` が残っていると、`pnpm run deploy` と `pnpm run db:migrate:remote` は始める前に、その行を示して止まります。ただし Cloudflare Access の 2 つ（`CF_ACCESS_TEAM_DOMAIN`、`CF_ACCESS_AUD`）は、最初のデプロイで URL が決まってから設定するので、`<...>` のままでも止めずに知らせるだけにしています（設定するまではログインできません）。任意の値は、使うものだけコメントを外して書き換えます。
 
 `wrangler.toml` は git に入らないので、別の PC で作業するときは同じ内容のファイルを用意してください。作者の更新を取り込んでも、自分の `wrangler.toml` とはぶつかりません。
 

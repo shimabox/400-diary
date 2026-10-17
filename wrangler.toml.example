@@ -1,6 +1,7 @@
 # 自分の環境の値を入れて wrangler.toml として使う（cp wrangler.toml.example wrangler.toml）。
 # wrangler.toml は git の管理に入れない。値ごとの説明は docs/deploy/README.md の
-# 「wrangler.toml で書き換える値」を参照。<...> の値は、デプロイ前に必ず書き換える
+# 「wrangler.toml で書き換える値」を参照。<...> の値は、決まった時点で書き換える
+# （Access の 2 つは最初のデプロイの後に決まる。それ以外はデプロイ前に書き換える）
 # Cloudflare Pages のプロジェクト名。英小文字・数字・ハイフンだけで、自分の名前に変える
 name = "400-diary"
 compatibility_date = "2025-01-01"
