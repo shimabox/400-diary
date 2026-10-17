@@ -1,16 +1,6 @@
 import type { PublishedFeedItem } from './db'
 import { formatDiaryDate } from './format'
-
-const FEED_DESCRIPTION = 'しまぶが400文字で綴る日記'
-
-function escapeXml(value: string): string {
-  return value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&apos;')
-}
+import { escapeXml } from './xml'
 
 function toRssDate(value: string): string {
   const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/.test(value)
@@ -33,10 +23,11 @@ function compareFeedItemsByDiaryDate(
 
 export function buildRssFeed(params: {
   appName: string
+  description: string
   origin: string
   items: PublishedFeedItem[]
 }): string {
-  const { appName, origin, items } = params
+  const { appName, description, origin, items } = params
   const orderedItems = [...items].sort(compareFeedItemsByDiaryDate)
   const siteUrl = `${origin}/`
   const feedUrl = `${origin}/rss.xml`
@@ -62,7 +53,7 @@ export function buildRssFeed(params: {
   <channel>
     <title>${escapeXml(appName)}</title>
     <link>${escapeXml(siteUrl)}</link>
-    <description>${escapeXml(FEED_DESCRIPTION)}</description>
+    <description>${escapeXml(description)}</description>
     <language>ja</language>
     <atom:link href="${escapeXml(feedUrl)}" rel="self" type="application/rss+xml" />
 ${lastBuildDate}${itemXml}

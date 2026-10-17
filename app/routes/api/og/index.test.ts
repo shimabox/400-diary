@@ -13,7 +13,7 @@ type MockBucket = {
   put: ReturnType<typeof vi.fn>
 }
 
-async function createApp(appName?: string) {
+async function createApp(appName?: string, appDescription?: string) {
   const { default: handlers } = await import('./index')
   const app = new Hono<AppEnv>()
   const mockBucket: MockBucket = {
@@ -24,6 +24,7 @@ async function createApp(appName?: string) {
   app.use('*', async (c, next) => {
     c.env = {
       APP_NAME: appName,
+      APP_DESCRIPTION: appDescription,
       BUCKET: mockBucket,
     } as unknown as AppEnv['Bindings']
     await next()
@@ -78,6 +79,32 @@ describe('GET /api/og', () => {
       expect.stringContaining('400字日記'),
       expect.anything(),
     )
+  })
+
+  test('説明文は APP_DESCRIPTION を使い、未設定ならデフォルトにする', async () => {
+    const { svgToPng } = await import('~/lib/og-image')
+    const custom = await createApp('テスト日記', '毎日の記録')
+    await custom.app.request('/api/og')
+    expect(svgToPng).toHaveBeenLastCalledWith(
+      expect.stringContaining('>毎日の記録</text>'),
+      expect.anything(),
+    )
+
+    const fallback = await createApp('テスト日記')
+    await fallback.app.request('/api/og')
+    expect(svgToPng).toHaveBeenLastCalledWith(
+      expect.stringContaining('>400文字で綴る日記</text>'),
+      expect.anything(),
+    )
+  })
+
+  test('アプリ名と説明文は SVG に埋め込む前にエスケープする', async () => {
+    const { svgToPng } = await import('~/lib/og-image')
+    const { app } = await createApp('A & B', '<説明>')
+    await app.request('/api/og')
+    const svg = vi.mocked(svgToPng).mock.calls.at(-1)?.[0]
+    expect(svg).toContain('>A &amp; B</text>')
+    expect(svg).toContain('>&lt;説明&gt;</text>')
   })
 
   test('キャッシュキーが og/top.png でR2に保存される', async () => {

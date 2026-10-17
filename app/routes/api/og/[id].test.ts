@@ -18,7 +18,7 @@ type MockBucket = {
   put: ReturnType<typeof vi.fn>
 }
 
-async function createApp() {
+async function createApp(appName = 'テスト日記') {
   const { default: handlers } = await import('./[id]')
   const app = new Hono<AppEnv>()
   const mockBucket: MockBucket = {
@@ -29,7 +29,7 @@ async function createApp() {
   app.use('*', async (c, next) => {
     c.env = {
       DB: {},
-      APP_NAME: 'テスト日記',
+      APP_NAME: appName,
       BUCKET: mockBucket,
     } as unknown as AppEnv['Bindings']
     c.set('mockBucket' as never, mockBucket as never)
@@ -160,6 +160,20 @@ describe('GET /api/og/:id', () => {
 
     expect(svgToPng).toHaveBeenCalledWith(
       expect.stringContaining('#FFE4E1'),
+      expect.anything(),
+    )
+  })
+
+  test('アプリ名は SVG に埋め込む前にエスケープする', async () => {
+    const { getDiaryWithSnapshot } = await import('~/lib/db')
+    const { svgToPng } = await import('~/lib/og-image')
+    vi.mocked(getDiaryWithSnapshot).mockResolvedValueOnce(makeResult())
+
+    const { app } = await createApp('A & <B>')
+    await app.request('/api/og/diary-1')
+
+    expect(svgToPng).toHaveBeenCalledWith(
+      expect.stringContaining('>A &amp; &lt;B&gt;</text>'),
       expect.anything(),
     )
   })

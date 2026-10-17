@@ -2,7 +2,7 @@ import { createRoute } from '~/factory'
 import CalendarView from '../islands/calendar-view'
 import DiaryList from '../islands/diary-list'
 import ThemeToggle from '../islands/theme-toggle'
-import { DEFAULT_APP_NAME } from '../lib/constants'
+import { DEFAULT_APP_DESCRIPTION, DEFAULT_APP_NAME } from '../lib/constants'
 import {
   getDiaryDateRange,
   listDiariesPage,
@@ -17,6 +17,9 @@ const DIARY_LIST_PAGE_SIZE = 31
 
 export default createRoute(async (c) => {
   const appName = c.env.APP_NAME || DEFAULT_APP_NAME
+  const description = c.env.APP_DESCRIPTION || DEFAULT_APP_DESCRIPTION
+  const xUrl = c.env.X_URL
+  const githubUrl = c.env.GITHUB_URL
   const db = c.env.DB
   const yearParam = c.req.query('year')
   const year = yearParam
@@ -160,22 +163,26 @@ export default createRoute(async (c) => {
             fontSize: '0.85rem',
           }}
         >
-          <a
-            href="https://x.com/shimabox"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: 'var(--fg-muted)' }}
-          >
-            X
-          </a>
-          <a
-            href="https://github.com/shimabox/400-diary"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: 'var(--fg-muted)' }}
-          >
-            GitHub
-          </a>
+          {xUrl && (
+            <a
+              href={xUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: 'var(--fg-muted)' }}
+            >
+              X
+            </a>
+          )}
+          {githubUrl && (
+            <a
+              href={githubUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: 'var(--fg-muted)' }}
+            >
+              GitHub
+            </a>
+          )}
           <a href="/rss.xml" style={{ color: 'var(--fg-muted)' }}>
             RSS
           </a>
@@ -185,7 +192,7 @@ export default createRoute(async (c) => {
     </div>,
     {
       title: appName,
-      description: 'しまぶが400文字で綴る日記',
+      description,
       ogImage: '/api/og',
     },
   )

@@ -1,11 +1,12 @@
 import { createRoute } from '~/factory'
-import { DEFAULT_APP_NAME } from '~/lib/constants'
+import { DEFAULT_APP_DESCRIPTION, DEFAULT_APP_NAME } from '~/lib/constants'
 import { svgToPng } from '~/lib/og-image'
+import { escapeXml } from '~/lib/xml'
 
 const WIDTH = 1200
 const HEIGHT = 630
 
-function generateTopOgSvg(appName: string): string {
+function generateTopOgSvg(appName: string, description: string): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}">
   <rect width="${WIDTH}" height="${HEIGHT}" fill="#faf9f6" />
   <text
@@ -17,7 +18,7 @@ function generateTopOgSvg(appName: string): string {
     font-size="64"
     font-weight="600"
     fill="#333"
-  >${appName}</text>
+  >${escapeXml(appName)}</text>
   <text
     x="${WIDTH / 2}"
     y="${HEIGHT / 2 + 60}"
@@ -26,7 +27,7 @@ function generateTopOgSvg(appName: string): string {
     font-family="'Klee One', serif"
     font-size="28"
     fill="#666"
-  >しまぶが400文字で綴る日記</text>
+  >${escapeXml(description)}</text>
 </svg>`
 }
 
@@ -53,7 +54,8 @@ export default createRoute(async (c) => {
   }
 
   const appName = c.env.APP_NAME || DEFAULT_APP_NAME
-  const svg = generateTopOgSvg(appName)
+  const description = c.env.APP_DESCRIPTION || DEFAULT_APP_DESCRIPTION
+  const svg = generateTopOgSvg(appName, description)
 
   try {
     const png = await svgToPng(svg, bucket)
