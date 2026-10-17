@@ -3,18 +3,18 @@
   "type": "module",
   "scripts": {
     "copy:wasm": "mkdir -p public/static && cp node_modules/@resvg/resvg-wasm/index_bg.wasm public/static/resvg_bg.wasm",
-    "predev": "npm run copy:wasm",
+    "predev": "node scripts/check-wrangler-config.mjs && npm run copy:wasm",
     "dev": "vite",
     "typecheck": "tsc --noEmit",
     "prebuild": "npm run copy:wasm",
     "build": "npm run typecheck && rm -rf dist && vite build --mode client && node scripts/verify-client-manifest.mjs && vite build",
-    "deploy": "npm run build && npm run db:migrate:remote && wrangler pages deploy dist --commit-message=\"$(git rev-parse --short HEAD)\"",
+    "deploy": "node scripts/check-wrangler-config.mjs --deploy && npm run build && npm run db:migrate:remote && wrangler pages deploy dist --commit-message=\"$(git rev-parse --short HEAD)\"",
     "test": "vitest run",
     "lint": "biome check .",
     "lint:fix": "biome check --fix .",
     "format": "biome format --write .",
-    "db:migrate:local": "wrangler d1 migrations apply 400-diary-db --local",
-    "db:migrate:remote": "wrangler d1 migrations apply 400-diary-db --remote"
+    "db:migrate:local": "node scripts/check-wrangler-config.mjs && wrangler d1 migrations apply 400-diary-db --local",
+    "db:migrate:remote": "node scripts/check-wrangler-config.mjs --deploy && wrangler d1 migrations apply 400-diary-db --remote"
   },
   "dependencies": {
     "@chenglou/pretext": "^0.0.4",

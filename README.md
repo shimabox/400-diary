@@ -40,6 +40,9 @@ pnpm install
 # ローカル開発用の環境変数を設定
 cp .dev.vars.example .dev.vars
 
+# wrangler の設定をひな形から作る（git の管理には入れない。ローカル開発ならそのままでよい）
+cp wrangler.toml.example wrangler.toml
+
 # ローカル D1 にマイグレーションを適用
 pnpm run db:migrate:local
 
@@ -81,7 +84,7 @@ pnpm run dev
 
 ## デプロイ
 
-Cloudflare Pages にデプロイします。詳細な手順は [`docs/deploy/README.md`](docs/deploy/README.md) を参照してください。
+Cloudflare Pages にデプロイします。詳細な手順は [`docs/deploy/README.md`](docs/deploy/README.md) を参照してください。環境変数とバインディングは `wrangler.toml`（`wrangler.toml.example` から作る）に書きます。
 
 | バインディング | 種別 | 用途 |
 |--------------|------|------|
