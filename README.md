@@ -4,6 +4,9 @@
 
 https://diary.orukubami.sh で公開されているアプリのソースコードです。
 
+https://shimabox.github.io/400-diary/
+どんな日記か、自分の Cloudflare にデプロイする流れ、かかる費用を1ページにまとめています。
+
 ## 主な機能
 
 - **20×20 縦書きグリッドエディタ** — `writing-mode: vertical-rl` による縦書き入力

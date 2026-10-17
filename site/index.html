@@ -1,0 +1,548 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>400字日記</title>
+<meta name="description" content="20×20 の原稿用紙に縦書きで綴る日記アプリ。fork して自分の Cloudflare にデプロイできます。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Klee+One:wght@400;600&family=Zen+Kaku+Gothic+New:wght@400;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<meta property="og:type" content="website">
+<meta property="og:title" content="400字日記">
+<meta property="og:description" content="20×20 の原稿用紙に縦書きで綴る日記アプリ。fork して自分の Cloudflare にデプロイできます。">
+<meta property="og:url" content="https://shimabox.github.io/400-diary/">
+<meta property="og:image" content="https://shimabox.github.io/400-diary/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="ja_JP">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://shimabox.github.io/400-diary/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%232c6a4b'/%3E%3Cpath d='M8 8h16v16H8z' fill='none' stroke='%23fff' stroke-width='1.5'/%3E%3Cpath d='M16 8v16M8 16h16' stroke='%23fff' stroke-width='1'/%3E%3C/svg%3E">
+<style>
+  /* Layout: 原稿用紙を主役に、左に言葉・右に紙。下は罫線で区切った読み物の流れ */
+  :root {
+    --paper: #f6f8f6;
+    --sheet: #ffffff;
+    --ink: #1e2420;
+    --muted: #5a645d;
+    --rule: #a7cbb3;
+    --rule-strong: #6fa384;
+    --accent: #2c6a4b;
+    --accent-ink: #ffffff;
+    --line: #dbe3dd;
+    --code-bg: #ebf1ec;
+
+    --font-display: 'Klee One', 'Hiragino Mincho ProN', 'Yu Mincho', serif;
+    --font-body: 'Zen Kaku Gothic New', 'Hiragino Sans', 'Yu Gothic', system-ui, sans-serif;
+    --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+    --step--1: 0.85rem;
+    --step-0: 1rem;
+    --step-1: 1.2rem;
+    --step-2: 1.55rem;
+    --step-3: clamp(2.4rem, 6vw, 3.6rem);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #111513;
+      --sheet: #181d1a;
+      --ink: #e4eae6;
+      --muted: #9aa69e;
+      --rule: #34543f;
+      --rule-strong: #4f7d61;
+      --accent: #86c8a1;
+      --accent-ink: #0e1a13;
+      --line: #28302b;
+      --code-bg: #1b231e;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #111513;
+    --sheet: #181d1a;
+    --ink: #e4eae6;
+    --muted: #9aa69e;
+    --rule: #34543f;
+    --rule-strong: #4f7d61;
+    --accent: #86c8a1;
+    --accent-ink: #0e1a13;
+    --line: #28302b;
+    --code-bg: #1b231e;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: var(--step-0);
+    line-height: 1.85;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .wrap { max-width: 1040px; margin-inline: auto; }
+  a { color: var(--accent); text-underline-offset: 0.2em; }
+  a:focus-visible, .button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  h1, h2, h3 { font-family: var(--font-display); font-weight: 600; text-wrap: balance; line-height: 1.3; margin: 0; }
+  p { margin: 0; }
+  code { font-family: var(--font-mono); }
+
+  /* ---- 冒頭 ---- */
+  .hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+    gap: clamp(2rem, 5vw, 4rem);
+    align-items: center;
+    padding-block: clamp(2.5rem, 7vw, 5rem) clamp(2.5rem, 6vw, 4.5rem);
+  }
+  .hero-text { display: grid; gap: 1.25rem; min-width: 0; }
+  .eyebrow { font-size: var(--step--1); letter-spacing: 0.12em; color: var(--muted); }
+  .hero h1 { font-size: var(--step-3); letter-spacing: 0.04em; }
+  .lead { font-size: var(--step-1); line-height: 1.9; max-width: 32em; }
+  .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; padding-top: 0.5rem; }
+  .button {
+    display: inline-flex; align-items: center; gap: 0.4em;
+    padding: 0.7em 1.2em;
+    border-radius: 6px;
+    font-weight: 700;
+    text-decoration: none;
+    border: 1px solid var(--accent);
+    white-space: nowrap;
+  }
+  .button.primary { background: var(--accent); color: var(--accent-ink); }
+  .button.secondary { color: var(--accent); background: transparent; }
+
+  /* ---- 原稿用紙 ---- */
+  figure { margin: 0; }
+  .sheet-figure { display: grid; gap: 0.6rem; min-width: 0; }
+  .sheet {
+    container-type: inline-size;
+    width: 100%;
+    max-width: 520px;
+    justify-self: center;
+    background: var(--sheet);
+    padding: 3.5%;
+    border: 1px solid var(--line);
+    box-shadow: 0 1px 0 var(--line), 0 18px 40px -28px rgba(30, 60, 40, 0.35);
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(20, minmax(0, 1fr));
+    grid-template-rows: repeat(20, minmax(0, 1fr));
+    grid-auto-flow: column;
+    direction: rtl;
+    aspect-ratio: 1;
+    border-top: 1px solid var(--rule-strong);
+    border-left: 1px solid var(--rule-strong);
+  }
+  .cell {
+    direction: ltr;
+    writing-mode: vertical-rl;
+    display: grid;
+    place-items: center;
+    border-right: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    font-family: var(--font-display);
+    font-size: 3.2cqw;
+    line-height: 1;
+    overflow: hidden;
+    color: var(--ink);
+  }
+  .cell:nth-child(20n) { border-bottom-color: var(--rule-strong); }
+  .cell:nth-child(-n + 20) { border-right-color: var(--rule-strong); }
+  .sheet-figure figcaption {
+    display: flex; justify-content: space-between; gap: 1rem;
+    max-width: 520px; width: 100%; justify-self: center;
+    font-size: var(--step--1); color: var(--muted);
+  }
+  .count { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  .visually-hidden {
+    position: absolute; width: 1px; height: 1px; overflow: hidden;
+    clip: rect(0 0 0 0); white-space: nowrap;
+  }
+
+  /* ---- 本文の節 ---- */
+  section.block {
+    border-top: 1px solid var(--line);
+    padding-block: clamp(2.5rem, 6vw, 4rem);
+    display: grid;
+    grid-template-columns: minmax(0, 14rem) minmax(0, 1fr);
+    gap: clamp(1.25rem, 4vw, 3rem);
+  }
+  .block-head { display: grid; gap: 0.5rem; align-content: start; }
+  .block-head h2 { font-size: var(--step-2); }
+  .block-head p { color: var(--muted); font-size: var(--step--1); line-height: 1.8; }
+  .block-body { display: grid; gap: 2.5rem; min-width: 0; }
+  .sub-title { font-size: var(--step-1); margin-bottom: 0.6rem; }
+
+  /* 画面 */
+  .shots { display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); gap: 1.5rem 1.25rem; }
+  .shot { display: grid; gap: 0.5rem; align-content: start; min-width: 0; }
+  .shot.wide { grid-column: 1 / -1; }
+  .shot img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--sheet);
+  }
+  .shot figcaption { font-size: var(--step--1); color: var(--muted); line-height: 1.7; }
+  /* 画面の画像は、見る人の配色に合わせて昼と夜を出し分ける */
+  .shot img.night { display: none; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .shot img.day { display: none; }
+    :root:not([data-theme="light"]) .shot img.night { display: block; }
+  }
+  :root[data-theme="dark"] .shot img.day { display: none; }
+  :root[data-theme="dark"] .shot img.night { display: block; }
+  .shot figcaption b { color: var(--ink); font-weight: 700; margin-right: 0.5em; }
+
+  /* できること */
+  dl.features { margin: 0; display: grid; }
+  .feature {
+    display: grid;
+    grid-template-columns: minmax(0, 11rem) minmax(0, 1fr);
+    gap: 0.4rem 1.5rem;
+    padding-block: 1rem;
+    border-bottom: 1px dashed var(--line);
+  }
+  .feature:first-child { padding-top: 0; }
+  .feature dt { font-family: var(--font-display); font-weight: 600; font-size: var(--step-1); line-height: 1.5; }
+  .feature dd { margin: 0; max-width: 38em; display: grid; gap: 0.6rem; }
+  .chips { display: flex; flex-wrap: wrap; gap: 0.4rem 0.5rem; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 0.4em;
+    font-size: var(--step--1);
+    padding: 0.1em 0.7em 0.1em 0.5em;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--sheet);
+  }
+  .chip i { width: 0.7em; height: 0.7em; border-radius: 50%; display: inline-block; }
+  .swatches { display: flex; flex-wrap: wrap; gap: 4px; }
+  .swatches span { width: 1.5rem; height: 1.5rem; border: 1px solid var(--line); }
+
+  /* 自分の日記として使う */
+  .needs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem; }
+  .needs ul { margin: 0; padding-left: 1.2em; display: grid; gap: 0.25rem; }
+  .needs li::marker { color: var(--rule-strong); }
+  .service { display: grid; grid-template-columns: 4.5rem minmax(0, 1fr); gap: 0.25rem 0.75rem; margin: 0; }
+  .service dt { font-family: var(--font-mono); font-size: var(--step--1); padding-top: 0.2em; color: var(--accent); }
+  .service dd { margin: 0; }
+  .optional { color: var(--muted); font-size: var(--step--1); }
+
+  .costs { margin: 0; display: grid; }
+  .cost {
+    display: grid;
+    grid-template-columns: minmax(0, 9rem) minmax(0, 1fr);
+    gap: 0.25rem 1.25rem;
+    padding-block: 0.7rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .cost dt { font-weight: 700; }
+  .cost dd { margin: 0; max-width: 40em; }
+  .cost .tag {
+    display: inline-block;
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+    padding: 0 0.5em;
+    margin-right: 0.5em;
+    border-radius: 3px;
+    border: 1px solid var(--rule-strong);
+    color: var(--accent);
+    vertical-align: 0.1em;
+  }
+  .note { margin-top: 0.8rem; font-size: var(--step--1); color: var(--muted); max-width: 46em; display: grid; gap: 0.4rem; }
+
+  ol.steps { list-style: none; margin: 0; padding: 0; display: grid; counter-reset: step; }
+  ol.steps li {
+    counter-increment: step;
+    display: grid;
+    grid-template-columns: 2.6rem minmax(0, 1fr);
+    gap: 0.1rem 1rem;
+    padding-block: 0.9rem;
+    border-bottom: 1px dashed var(--line);
+  }
+  ol.steps li::before {
+    content: counter(step);
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: var(--step-2);
+    line-height: 1.2;
+    color: var(--accent);
+    grid-row: span 3;
+  }
+  .step-title { font-weight: 700; }
+  .step-note { color: var(--muted); font-size: var(--step--1); }
+  .step-link { font-size: var(--step--1); }
+  code.inline {
+    font-size: 0.88em;
+    background: var(--code-bg);
+    padding: 0.05em 0.35em;
+    border-radius: 3px;
+    overflow-wrap: anywhere;
+  }
+
+  .guide-link {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+    gap: 1rem;
+    padding: 1.25rem 1.5rem;
+    background: var(--sheet);
+    border: 1px solid var(--rule);
+  }
+  .guide-link p { max-width: 34em; }
+
+  footer {
+    border-top: 1px solid var(--line);
+    padding-block: 1.5rem 2.5rem;
+    display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.5rem 1.5rem;
+    color: var(--muted);
+    font-size: var(--step--1);
+  }
+
+  @media (max-width: 760px) {
+    .hero, section.block, .feature, .needs, .shots, .cost { grid-template-columns: minmax(0, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="hero">
+    <div class="hero-text">
+      <p class="eyebrow">20 × 20 の原稿用紙で綴る日記</p>
+      <h1>400字日記</h1>
+      <p class="lead">一日の終わりに、四百字だけ書く日記です。縦書きの原稿用紙に綴り、公開したい日だけを公開できます。ソースコードを公開しているので、fork して自分の日記として使えます。</p>
+      <div class="actions">
+        <a class="button primary" href="https://diary.orukubami.sh" target="_blank" rel="noopener noreferrer">公開中の日記を見る</a>
+        <a class="button secondary" href="https://github.com/shimabox/400-diary" target="_blank" rel="noopener noreferrer">GitHub で見る</a>
+      </div>
+    </div>
+    <figure class="sheet-figure">
+      <div class="sheet">
+        <div class="grid" id="grid" aria-hidden="true"></div>
+      </div>
+      <figcaption>
+        <span>見本の日記</span>
+        <span class="count" id="count">0 / 400</span>
+      </figcaption>
+      <p class="visually-hidden" id="sample">朝、窓を開けたら金木犀の匂いがした。駅までの道をいつもより少しだけ遠回りして、川沿いのベンチで缶コーヒーを飲んだ。仕事は思ったより早く片づいたので、帰りに本屋へ寄って、前から気になっていた文庫本を一冊買った。夜は今年はじめての鍋にした。四百字は短いようで、一日を思い出すにはちょうどいい長さだと思う。明日もひとつ、書きたいことがある日になるといい。</p>
+    </figure>
+  </header>
+
+  <section class="block" id="screens">
+    <div class="block-head">
+      <h2>画面</h2>
+      <p>どれも見本の日記で撮った、実際の画面です。</p>
+    </div>
+    <div class="block-body">
+      <div class="shots">
+        <figure class="shot wide">
+          <img class="day" src="images/diary.webp" width="980" height="545" alt="公開した日記のページ。若草色の背景に縦書きの本文があり、金木犀の絵を避けて文字が回り込んでいる">
+          <img class="night" src="images/diary-dark.webp" width="980" height="545" alt="夜の配色の、公開した日記のページ。深い緑の背景に縦書きの本文があり、金木犀の絵を避けて文字が回り込んでいる" loading="lazy">
+          <figcaption><b>公開した日記</b>読む人が見るページです。写真を置いた場所に合わせて、文字が回り込みます。</figcaption>
+        </figure>
+        <figure class="shot">
+          <img class="day" src="images/editor.webp" width="1000" height="1010" alt="日記を書く画面。薄いオレンジ色の原稿用紙に縦書きで本文が入り、上に日付と背景色、下に気分と操作のボタンが並ぶ" loading="lazy">
+          <img class="night" src="images/editor-dark.webp" width="1000" height="1010" alt="夜の配色の、日記を書く画面。茶色の原稿用紙に縦書きで本文が入り、上に日付と背景色、下に気分と操作のボタンが並ぶ" loading="lazy">
+          <figcaption><b>書く</b>原稿用紙のマスに縦書きで書きます。日付、背景色、気分もここで選びます。</figcaption>
+        </figure>
+        <figure class="shot">
+          <img class="day" src="images/top.webp" width="980" height="785" alt="トップページ。1 年分のヒートマップに気分の色が並び、その下に日記のカードが横に並ぶ" loading="lazy">
+          <img class="night" src="images/top-dark.webp" width="980" height="785" alt="夜の配色のトップページ。1 年分のヒートマップに気分の色が並び、その下に日記のカードが横に並ぶ" loading="lazy">
+          <figcaption><b>振り返る</b>トップページには、気分の色で塗った 1 年分のカレンダーと、日記のカードが並びます。</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="features">
+    <div class="block-head">
+      <h2>できること</h2>
+      <p>書くのは書き手ひとり。読む人は、公開した日記だけを読めます。</p>
+    </div>
+    <div class="block-body">
+      <dl class="features">
+        <div class="feature">
+          <dt>縦書きの原稿用紙</dt>
+          <dd><p>20×20 のマスに縦書きで書きます。書けるのは 400 字まで。音声入力でも書けます。</p></dd>
+        </div>
+        <div class="feature">
+          <dt>1日1件</dt>
+          <dd><p>日記は日付ごとに 1 件です。今日の日記がもうあるときは、次に空いている日の日記として書きはじめます。</p></dd>
+        </div>
+        <div class="feature">
+          <dt>下書きと公開</dt>
+          <dd><p>公開したあとも下書きを直せます。公開し直すまで、読む人には前に公開した版が見えます。</p></dd>
+        </div>
+        <div class="feature">
+          <dt>気分と背景色</dt>
+          <dd>
+            <p>その日の気分を 6 種類から選び、背景色を 12 色のパステルから選べます。</p>
+            <div class="chips" aria-label="気分">
+              <span class="chip"><i style="background:#FFD700"></i>嬉しい</span>
+              <span class="chip"><i style="background:#87CEEB"></i>穏やか</span>
+              <span class="chip"><i style="background:#6495ED"></i>悲しい</span>
+              <span class="chip"><i style="background:#FF6347"></i>怒り</span>
+              <span class="chip"><i style="background:#DDA0DD"></i>不安</span>
+              <span class="chip"><i style="background:#c6e48b"></i>楽しい</span>
+            </div>
+            <div class="swatches" aria-label="背景色">
+              <span style="background:#FFE4E1"></span><span style="background:#FFD1DC"></span><span style="background:#FFDAB9"></span><span style="background:#FFE5B4"></span><span style="background:#FFFACD"></span><span style="background:#E0F0E0"></span><span style="background:#D4F0F0"></span><span style="background:#D6E6FF"></span><span style="background:#E8D5F5"></span><span style="background:#F5E6CC"></span><span style="background:#F0E68C"></span><span style="background:#E6E6FA"></span>
+            </div>
+          </dd>
+        </div>
+        <div class="feature">
+          <dt>写真</dt>
+          <dd><p>写真をドラッグで好きな位置に置けます。文字は写真を避けて回り込みます。</p></dd>
+        </div>
+        <div class="feature">
+          <dt>カレンダー</dt>
+          <dd><p>GitHub のようなヒートマップと月のカレンダーで、気分の移り変わりを振り返れます。</p></dd>
+        </div>
+        <div class="feature">
+          <dt>自分の声で読み上げ</dt>
+          <dd><p>Gemini の音声複製で登録した自分の声で、日記を読み上げます。読む人にも聞かせるかは、日記ごとに選べます。使うかどうかは任意です。</p></dd>
+        </div>
+        <div class="feature">
+          <dt>書き出しと配信</dt>
+          <dd><p>すべての日記を Markdown の zip で書き出せます。RSS と、SNS で共有したときのカード画像も出します。</p></dd>
+        </div>
+      </dl>
+    </div>
+  </section>
+
+  <section class="block" id="deploy">
+    <div class="block-head">
+      <h2>自分の日記として使う</h2>
+      <p>fork して、自分の Cloudflare アカウントにデプロイします。コードは書き換えません。</p>
+    </div>
+    <div class="block-body">
+      <div class="needs">
+        <div>
+          <h3 class="sub-title">必要なもの</h3>
+          <ul>
+            <li>Cloudflare のアカウント</li>
+            <li>GitHub のアカウント（fork 用）</li>
+            <li>Node.js 22 以上と pnpm が入ったパソコン</li>
+            <li class="optional">読み上げを使うなら、有料枠の Gemini API キーと自分の声の ID</li>
+          </ul>
+        </div>
+        <div>
+          <h3 class="sub-title">Cloudflare で使うもの</h3>
+          <dl class="service">
+            <dt>Pages</dt><dd>日記のサイトを配信する</dd>
+            <dt>D1</dt><dd>日記の本文を保存する</dd>
+            <dt>R2</dt><dd>写真・音声・カード画像用のフォントを置く</dd>
+            <dt>Access</dt><dd>書き手だけがログインできるようにする</dd>
+          </dl>
+        </div>
+      </div>
+
+      <div>
+        <h3 class="sub-title">費用</h3>
+        <dl class="costs">
+          <div class="cost">
+            <dt>Pages・Workers</dt>
+            <dd><span class="tag">無料枠</span>1 日 10 万リクエストまで。1 回の処理に使える CPU 時間は 10 ミリ秒までです。</dd>
+          </div>
+          <div class="cost">
+            <dt>D1</dt>
+            <dd><span class="tag">無料枠</span>保存は 5 GB まで。読み込みは 1 日 500 万行、書き込みは 1 日 10 万行までです。</dd>
+          </div>
+          <div class="cost">
+            <dt>R2</dt>
+            <dd><span class="tag">無料枠</span>毎月 10 GB まで保存できます。ただし R2 を使いはじめるには、支払い方法を登録して R2 を有効にする必要があります。</dd>
+          </div>
+          <div class="cost">
+            <dt>Access</dt>
+            <dd><span class="tag">無料枠</span>Zero Trust の Free プランで、50 ユーザーまで使えます。書き手ひとりなら足ります。</dd>
+          </div>
+          <div class="cost">
+            <dt>読み上げ（任意）</dt>
+            <dd>Gemini API の有料枠が必要で、使った分だけかかります。今使っているモデル（gemini-3.8-flash-tts）は、音声 100 万トークンあたり $9 です（2026 年末まで。2027 年からは $18）。</dd>
+          </div>
+        </dl>
+        <div class="note">
+          <p>個人の日記の量なら、保存と読み書きは無料枠に収まる規模です。カード画像の生成は CPU を多く使うため、無料枠の CPU 時間を超えると、その画像だけ作れないことがあります。日記の表示と書き込みには影響しません。</p>
+          <p>2026 年 10 月時点の公式の料金表によります。最新の料金は <a href="https://developers.cloudflare.com/workers/platform/pricing/" target="_blank" rel="noopener noreferrer">Workers</a>・<a href="https://developers.cloudflare.com/d1/platform/pricing/" target="_blank" rel="noopener noreferrer">D1</a>・<a href="https://developers.cloudflare.com/r2/pricing/" target="_blank" rel="noopener noreferrer">R2</a>・<a href="https://www.cloudflare.com/plans/zero-trust-services/" target="_blank" rel="noopener noreferrer">Zero Trust</a>・<a href="https://ai.google.dev/gemini-api/docs/pricing" target="_blank" rel="noopener noreferrer">Gemini API</a> の各ページで確かめてください。</p>
+        </div>
+      </div>
+
+      <div>
+        <h3 class="sub-title">流れ</h3>
+        <ol class="steps">
+          <li>
+            <span class="step-title">fork して、設定ファイルを作る</span>
+            <span class="step-note">ひな形 <code class="inline">wrangler.toml.example</code> をコピーして、自分の値を入れていきます。このファイルは git に入りません。</span>
+            <a class="step-link" href="https://github.com/shimabox/400-diary/blob/main/docs/deploy/README.md#wranglertoml-で書き換える値" target="_blank" rel="noopener noreferrer">入れる値の一覧</a>
+          </li>
+          <li>
+            <span class="step-title">D1 と R2 を作る</span>
+            <span class="step-note">日記の保存先と、写真などの置き場所を作ります。</span>
+            <a class="step-link" href="https://github.com/shimabox/400-diary/blob/main/docs/deploy/README.md#d1データベースとr2バケットを作成" target="_blank" rel="noopener noreferrer">手順書の該当箇所</a>
+          </li>
+          <li>
+            <span class="step-title">カード画像用のフォントを R2 に置く</span>
+            <span class="step-note">最初の 1 回だけです。</span>
+            <a class="step-link" href="https://github.com/shimabox/400-diary/blob/main/docs/deploy/README.md#ogp画像用フォントをr2にアップロード" target="_blank" rel="noopener noreferrer">手順書の該当箇所</a>
+          </li>
+          <li>
+            <span class="step-title">デプロイする</span>
+            <span class="step-note">ここでサイトの URL が決まります。</span>
+            <a class="step-link" href="https://github.com/shimabox/400-diary/blob/main/docs/deploy/README.md#デプロイ" target="_blank" rel="noopener noreferrer">手順書の該当箇所</a>
+          </li>
+          <li>
+            <span class="step-title">Cloudflare Access でログインを設定する</span>
+            <span class="step-note">Cloudflare のダッシュボードで行います。最後に出るチームドメインと AUD タグを設定ファイルに入れます。</span>
+            <a class="step-link" href="https://github.com/shimabox/400-diary/blob/main/docs/deploy/README.md#cloudflare-access-の設定" target="_blank" rel="noopener noreferrer">手順書の該当箇所（画面ごとの画像つき）</a>
+          </li>
+          <li>
+            <span class="step-title">読み上げのキーを登録する（任意）</span>
+            <span class="step-note">Gemini API キーと声の ID を、Cloudflare Pages のシークレットに登録します。</span>
+            <a class="step-link" href="https://github.com/shimabox/400-diary/blob/main/docs/deploy/README.md#日記の読み上げ任意" target="_blank" rel="noopener noreferrer">手順書の該当箇所</a>
+          </li>
+          <li>
+            <span class="step-title">もう一度デプロイして確かめる</span>
+            <span class="step-note">ログインして「日記を書く」が出れば完了です。</span>
+            <a class="step-link" href="https://github.com/shimabox/400-diary/blob/main/docs/deploy/README.md#再デプロイと動作確認" target="_blank" rel="noopener noreferrer">手順書の該当箇所</a>
+          </li>
+        </ol>
+      </div>
+
+      <div class="guide-link">
+        <p>コマンドとその出力例、Cloudflare Access の画面ごとのスクリーンショットは、手順書にまとめています。</p>
+        <a class="button primary" href="https://github.com/shimabox/400-diary/blob/main/docs/deploy/README.md" target="_blank" rel="noopener noreferrer">手順書を読む</a>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>MIT License · © 2026 shimabox</span>
+    <a href="https://github.com/shimabox/400-diary" target="_blank" rel="noopener noreferrer">shimabox/400-diary</a>
+  </footer>
+</div>
+
+<script>
+  // 見本の日記を 20×20 のマスに、右の列から上から下へ 1 字ずつ入れる
+  {
+    const chars = Array.from(document.getElementById('sample').textContent.trim())
+    const grid = document.getElementById('grid')
+    const frag = document.createDocumentFragment()
+    for (let i = 0; i < 400; i++) {
+      const cell = document.createElement('span')
+      cell.className = 'cell'
+      cell.textContent = chars[i] ?? ''
+      frag.appendChild(cell)
+    }
+    grid.appendChild(frag)
+    document.getElementById('count').textContent = `${Math.min(chars.length, 400)} / 400`
+  }
+</script>
+</body>
+</html>
