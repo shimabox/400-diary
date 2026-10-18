@@ -56,6 +56,7 @@ cp wrangler.toml.example wrangler.toml
 - [Cloudflare アカウント](https://dash.cloudflare.com/sign-up)を作成済みであること
 - Node.js (v22 以上) がインストールされていること
 - pnpm がインストールされていること
+- macOS か Linux で作業すること。Windows では WSL2 の中で作業する（`package.json` のスクリプトとフォントのアップロードが `mkdir -p`、`cp`、`rm -rf`、`bash` などのシェルのコマンドを使うため）
 - リポジトリを fork し、`pnpm install` で依存パッケージをインストール済みであること
 
 ## D1データベースとR2バケットを作成
