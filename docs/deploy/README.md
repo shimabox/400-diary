@@ -12,6 +12,8 @@
 6. （任意）日記の読み上げに使うキーを登録する
 7. 再デプロイして動作確認する
 
+やめるときの片付け方は[日記を消す・やめる](#日記を消すやめる)にまとめています。
+
 ## wrangler.toml で書き換える値
 
 `wrangler.toml` は自分の環境の値を入れるファイルで、git の管理に入れていません（`.gitignore` 済み）。fork したら、ひな形の `wrangler.toml.example` をコピーして作ります。
@@ -315,3 +317,61 @@ https://<チームドメイン>/cdn-cgi/access/logout
 ```
 
 または、ブラウザの開発者ツールから `CF_Authorization` Cookie を削除しても同じ効果がある。
+
+## 日記を消す・やめる
+
+### 日記を 1 つ消す
+
+編集画面の下にある「この日記を削除」で消せる。添付した写真、読み上げの音声、カード画像も R2 から一緒に消える。消した日記は戻せない。
+
+### 使うのをやめる
+
+サイトごと消すときは、次の順に行う。消したものは戻せないので、残したい日記は先に手元に保存する。
+
+1. 日記を手元に保存する（任意）
+
+   ログインした状態でトップページの「エクスポート」を押すと、下書きを含むすべての日記を Markdown にした zip をダウンロードできる。写真と音声は含まれない（写真は `image_key` に R2 のキーが残るだけ）。写真も残したいときは、Cloudflare ダッシュボードの R2 で `400-diary-images` を開き、`diaries/<日記の ID>/` の下からダウンロードする。
+
+   データベースをそのまま残したいときは、SQL ファイルに書き出せる。
+
+   ```
+   pnpm wrangler d1 export 400-diary-db --remote --output=./400-diary-backup.sql
+   ```
+
+2. Cloudflare Pages のプロジェクトを消す
+
+   ```
+   pnpm wrangler pages project delete <プロジェクト名>
+   ```
+
+   `<プロジェクト名>` は `wrangler.toml` の `name` の値。消すとサイトの URL にアクセスできなくなる。読み上げのシークレットはこのプロジェクトに登録したものなので、一緒に消える。独自ドメインを付けている場合は、先にそのドメインの DNS から CNAME レコードを消し、プロジェクトの「カスタムドメイン」から外しておく。
+
+3. Cloudflare Access のアプリケーションを消す
+
+   Zero Trust ダッシュボードで、[Access アプリケーションの作成](#4-access-アプリケーションの作成)で開いたアプリケーションの一覧を開き、作ったアプリケーションを削除する。Zero Trust をほかで使っていなければ、Free プランのままにしておいても費用はかからない。
+
+4. D1 データベースを消す
+
+   ```
+   pnpm wrangler d1 delete 400-diary-db
+   ```
+
+5. R2 バケットを空にしてから消す
+
+   R2 のバケットは、中身が残っていると消せない。Cloudflare ダッシュボードの R2 で `400-diary-images` を開き、設定タブの下にあるバケットの削除の欄で、先に中身を空にしてから削除する。中身が多いと、空にするのに時間がかかることがある。コマンドで消す場合も、空にしてから次を実行する。
+
+   ```
+   pnpm wrangler r2 bucket delete 400-diary-images
+   ```
+
+6. 残りを片付ける（使っていた場合だけ）
+
+   - Cloudflare Web Analytics: Web 分析 の一覧から、追加したサイトを消す。
+   - 読み上げのキー（macOS）: キーチェーンに保存した値を消す。Gemini の API キーと声の ID は、不要なら Google AI Studio でも消しておく。
+
+     ```
+     security delete-generic-password -a "$USER" -s 400-diary-gemini-api-key
+     security delete-generic-password -a "$USER" -s 400-diary-gemini-voice-id
+     ```
+
+   - fork したリポジトリ: GitHub のリポジトリの Settings の一番下にある「Delete this repository」で消せる。
