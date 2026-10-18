@@ -13,13 +13,13 @@ sequenceDiagram
     participant MW as Middleware
     participant Route as Route Handler
 
-    User->>CF: /auth/400_diary にアクセス
+    User->>CF: /auth/:name にアクセス
     CF->>User: ログイン画面を表示
     User->>CF: メールアドレスを入力
     CF->>User: ワンタイムコードをメール送信
     User->>CF: コードを入力
     CF->>User: CF_Authorization Cookie をセット
-    CF->>Route: /auth/400_diary にリダイレクト
+    CF->>Route: /auth/:name にリダイレクト
     Route->>User: / にリダイレクト
 
     Note over User,Route: 以降のリクエスト
@@ -107,5 +107,5 @@ graph LR
 | `app/routes/_middleware.ts` | 認証ミドルウェア |
 | `app/lib/auth.ts` | JWT 検証ロジック (JWKS, 署名検証) |
 | `app/factory.ts` | AppEnv 型定義 (Bindings, Variables) |
-| `app/routes/auth/400_diary.tsx` | 認証エンドポイント (リダイレクトのみ) |
+| `app/routes/auth/[name].tsx` | 認証エンドポイント (リダイレクトのみ。`/auth/` の下ならどの名前でも受ける) |
 | `.dev.vars` | ローカル開発用設定 |

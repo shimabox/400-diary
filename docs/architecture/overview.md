@@ -73,7 +73,7 @@ app/
 │   ├── new.tsx            # 新規作成（日付の初期値は今日以降で日記のない最初の日）
 │   ├── edit/[id].tsx      # 編集
 │   ├── d/[id].tsx         # 公開ページ
-│   ├── auth/400_diary.tsx # 認証コールバック
+│   ├── auth/[name].tsx    # 認証コールバック（名前は Access で決めたもの）
 │   └── api/               # API エンドポイント
 │       ├── diaries.ts
 │       ├── diaries/[id].ts
