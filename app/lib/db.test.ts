@@ -9,10 +9,12 @@ import {
   getDiary,
   getDiaryDateRange,
   getDiaryIdByDate,
+  hasOtherPublishedDiary,
   listAllDiaries,
   listDiariesPage,
   listPublishedFeedItems,
   listSpeechKeysInUse,
+  pickRandomPublishedDiaryId,
   publishDiary,
   setDiarySpeechKey,
   updateDiary,
@@ -589,6 +591,62 @@ describe('listPublishedFeedItems', () => {
 
     expect(result).toEqual(items)
     expect(db.boundValues).toContain(10)
+  })
+})
+
+describe('pickRandomPublishedDiaryId', () => {
+  test('公開中の日記から excludeId 以外を 1 件ランダムに選ぶ', async () => {
+    const db = createMockDB({ first: { id: 'diary-2' } })
+
+    const result = await pickRandomPublishedDiaryId(db, 'diary-1')
+
+    expect(result).toBe('diary-2')
+    const sql = vi.mocked(db.prepare).mock.calls[0][0] as string
+    expect(sql).toContain('published_snapshot_id IS NOT NULL')
+    expect(sql).toContain('id != ?')
+    expect(sql).toContain('ORDER BY RANDOM()')
+    expect(sql).toContain('LIMIT 1')
+    expect(db.boundValues).toEqual(['diary-1'])
+  })
+
+  test('excludeId が null なら除外の条件を付けず、何も bind しない', async () => {
+    const db = createMockDB({ first: { id: 'diary-2' } })
+
+    const result = await pickRandomPublishedDiaryId(db, null)
+
+    expect(result).toBe('diary-2')
+    const sql = vi.mocked(db.prepare).mock.calls[0][0] as string
+    expect(sql).toContain('published_snapshot_id IS NOT NULL')
+    expect(sql).not.toContain('id != ?')
+    expect(db.boundValues).toEqual([])
+  })
+
+  test('該当が無ければ null を返す', async () => {
+    const db = createMockDB({ first: null })
+
+    expect(await pickRandomPublishedDiaryId(db, 'diary-1')).toBeNull()
+  })
+})
+
+describe('hasOtherPublishedDiary', () => {
+  test('公開中かつ excludeId 以外を LIMIT 1 で探し、見つかれば true', async () => {
+    const db = createMockDB({ first: { id: 'diary-2' } })
+
+    const result = await hasOtherPublishedDiary(db, 'diary-1')
+
+    expect(result).toBe(true)
+    const sql = vi.mocked(db.prepare).mock.calls[0][0] as string
+    expect(sql).toContain('published_snapshot_id IS NOT NULL')
+    expect(sql).toContain('id != ?')
+    expect(sql).toContain('LIMIT 1')
+    expect(sql).not.toContain('RANDOM()')
+    expect(db.boundValues).toEqual(['diary-1'])
+  })
+
+  test('該当が無ければ false を返す', async () => {
+    const db = createMockDB({ first: null })
+
+    expect(await hasOtherPublishedDiary(db, 'diary-1')).toBe(false)
   })
 })
 

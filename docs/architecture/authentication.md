@@ -64,6 +64,7 @@ graph LR
     subgraph Public["公開 (認証不要)"]
         A["/ 一覧ページ"]
         B["/d/:id 公開ページ"]
+        B2["/random ほかの日をめぐる"]
         C["GET /api/diaries/:id"]
         D["GET /api/images/*"]
     end
