@@ -7,6 +7,7 @@ import { createMockDB } from '~/lib/test-helpers'
 
 vi.mock('~/lib/db', () => ({
   getDiaryWithSnapshot: vi.fn(),
+  hasOtherPublishedDiary: vi.fn(),
 }))
 
 type CapturedHead = {
@@ -146,6 +147,62 @@ describe('GET /d/:id', () => {
     expect(body).toContain(
       `<div style="max-width:960px;width:100%">${frameRoot}`,
     )
+  })
+
+  describe('「ほかの日をめぐる」リンク', () => {
+    async function render(hasOther: boolean, isAuthenticated = false) {
+      const { getDiaryWithSnapshot, hasOtherPublishedDiary } = await import(
+        '~/lib/db'
+      )
+      vi.mocked(getDiaryWithSnapshot).mockResolvedValueOnce(makeResult())
+      vi.mocked(hasOtherPublishedDiary).mockResolvedValueOnce(hasOther)
+      const captured: CapturedHead[] = []
+      const app = await createApp(captured, isAuthenticated)
+      await app.request('/d/diary-1')
+      return captured[0]?.body ?? ''
+    }
+
+    test('ほかに公開中の日記があれば、今の日記を除く /random への固定リンクをフレームの下に出す', async () => {
+      const body = await render(true)
+
+      expect(body).toContain('href="/random?from=diary-1"')
+      expect(body).toContain('ほかの日をめぐる')
+      expect(body.indexOf('href="/random?from=diary-1"')).toBeGreaterThan(
+        body.indexOf('class="paper-frame"'),
+      )
+
+      const { hasOtherPublishedDiary } = await import('~/lib/db')
+      expect(hasOtherPublishedDiary).toHaveBeenCalledWith(
+        expect.anything(),
+        'diary-1',
+      )
+    })
+
+    test('ほかに公開中の日記が無ければ出さない', async () => {
+      const body = await render(false)
+
+      expect(body).not.toContain('/random?from=')
+      expect(body).not.toContain('ほかの日をめぐる')
+    })
+
+    test('ログイン中の書き手にも同じリンクを出す', async () => {
+      const body = await render(true, true)
+
+      expect(body).toContain('href="/random?from=diary-1"')
+    })
+
+    test('日記が見つからないときは有無を調べない', async () => {
+      const { getDiaryWithSnapshot, hasOtherPublishedDiary } = await import(
+        '~/lib/db'
+      )
+      vi.mocked(getDiaryWithSnapshot).mockResolvedValueOnce(null)
+      const captured: CapturedHead[] = []
+      const app = await createApp(captured)
+      await app.request('/d/missing')
+
+      expect(hasOtherPublishedDiary).not.toHaveBeenCalled()
+      expect(captured[0]?.body ?? '').not.toContain('/random?from=')
+    })
   })
 
   describe('「声で聞く」ボタン', () => {

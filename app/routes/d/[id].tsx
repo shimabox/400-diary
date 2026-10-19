@@ -3,7 +3,7 @@ import DiaryScrollFrame from '../../islands/diary-scroll-frame'
 import MoodMarker from '../../islands/mood-marker'
 import SpeechPlayer from '../../islands/speech-player'
 import { DEFAULT_APP_NAME } from '../../lib/constants'
-import { getDiaryWithSnapshot } from '../../lib/db'
+import { getDiaryWithSnapshot, hasOtherPublishedDiary } from '../../lib/db'
 import { formatDiaryDate } from '../../lib/format'
 
 export default createRoute(async (c) => {
@@ -64,6 +64,9 @@ export default createRoute(async (c) => {
     snapshot.speech_key && snapshot.speech_public
       ? `/api/speech/${diary.id}?v=${snapshot.id}`
       : null
+  // 「ほかの日をめぐる」は、行き先にできる公開中の日記があるときだけ出す。
+  // 行き先は押されたときに /random が選ぶので、ここでは有無だけを調べる
+  const hasOther = await hasOtherPublishedDiary(db, diary.id)
 
   return c.render(
     <div
@@ -141,6 +144,24 @@ export default createRoute(async (c) => {
           imageRotation={pubImageRotation}
         />
       </div>
+
+      {hasOther && (
+        <div style={{ paddingTop: '1rem' }}>
+          <a
+            href={`/random?from=${encodeURIComponent(diary.id)}`}
+            rel="nofollow"
+            style={{
+              display: 'inline-block',
+              padding: '0.6rem 0.75rem',
+              fontSize: '0.85rem',
+              color: 'var(--fg-muted)',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            ほかの日をめぐる
+          </a>
+        </div>
+      )}
     </div>,
     {
       title: `${dateLabel} の日記 — ${appName}`,
