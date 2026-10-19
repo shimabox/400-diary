@@ -290,6 +290,48 @@ export async function listPublishedFeedItems(
   return results
 }
 
+/**
+ * ほかの日をめぐる用: 公開中の日記から excludeId 以外を 1 件ランダムに選ぶ。
+ * ORDER BY RANDOM() は公開中の行を全部読むので、押されたときだけ呼ぶ。
+ * 条件は hasOtherPublishedDiary と揃え、リンクを出したのに選べない状態を作らない。
+ */
+export async function pickRandomPublishedDiaryId(
+  db: D1Database,
+  excludeId: string | null,
+): Promise<string | null> {
+  const conditions = ['published_snapshot_id IS NOT NULL']
+  const values: string[] = []
+  if (excludeId !== null) {
+    conditions.push('id != ?')
+    values.push(excludeId)
+  }
+  const row = await db
+    .prepare(
+      `SELECT id FROM diaries WHERE ${conditions.join(' AND ')} ORDER BY RANDOM() LIMIT 1`,
+    )
+    .bind(...values)
+    .first<{ id: string }>()
+  return row?.id ?? null
+}
+
+/**
+ * 公開ページ用: excludeId 以外に公開中の日記があるか（「ほかの日をめぐる」を出すかの判定）。
+ * ページを表示するたびに呼ぶので、ORDER BY RANDOM() で全件を読まず、
+ * 最初に見つかった 1 件で走査を止める。
+ */
+export async function hasOtherPublishedDiary(
+  db: D1Database,
+  excludeId: string,
+): Promise<boolean> {
+  const row = await db
+    .prepare(
+      'SELECT id FROM diaries WHERE published_snapshot_id IS NOT NULL AND id != ? LIMIT 1',
+    )
+    .bind(excludeId)
+    .first<{ id: string }>()
+  return row !== null
+}
+
 export async function updateDiary(
   db: D1Database,
   id: string,
