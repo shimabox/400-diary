@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'hono/jsx'
 import { MAX_IMAGE_SIZE } from '../lib/constants'
+import { compressImageForUpload } from '../lib/image-compress'
 import ConfirmDialog from './confirm-dialog'
 
 const IMAGE_ALLOWED_TYPES = [
@@ -49,13 +50,18 @@ export default function ImageAttachmentEditor({
         return
       }
 
-      const reader = new FileReader()
-      reader.onload = () => onImagePreviewChange(reader.result as string)
-      reader.readAsDataURL(file)
-
       try {
+        // 形式と大きさは選んだ時点のファイルで確かめ済み。通ったものだけを圧縮する。
+        // 圧縮できないときや圧縮しないほうがよいときは、元のファイルが返る
+        const uploadFile = await compressImageForUpload(file)
+
+        // プレビューは実際に送るファイルから作る
+        const reader = new FileReader()
+        reader.onload = () => onImagePreviewChange(reader.result as string)
+        reader.readAsDataURL(uploadFile)
+
         const formData = new FormData()
-        formData.append('file', file)
+        formData.append('file', uploadFile)
         const res = await fetch(`/api/diaries/${diaryId}/image`, {
           method: 'POST',
           body: formData,
