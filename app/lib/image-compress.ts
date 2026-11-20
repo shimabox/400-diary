@@ -3,6 +3,7 @@ import {
   IMAGE_COMPRESS_QUALITY,
   MAX_IMAGE_SIZE,
 } from './constants'
+import type { ImageSize } from './image-layout'
 
 /**
  * アップロード前に、ブラウザで画像を縮小・再エンコードする。
@@ -259,28 +260,84 @@ async function encodeCanvas(
 }
 
 /**
- * アップロードするファイルを返す。圧縮後のほうがよければ、書き出した形式に
- * 合った MIME と拡張子の File を、そうでなければ元の File をそのまま返す。
+ * 画像のアップロード（POST /api/diaries/:id/image）の本文を作る。寸法は
+ * 測れたときだけ width と height を組で足す。サーバーは片方だけの寸法を
+ * 捨てるので、片方だけを送ることはしない
+ */
+export function buildImageUploadForm(
+  file: File,
+  size: ImageSize | null,
+): FormData {
+  const form = new FormData()
+  form.append('file', file)
+  if (size) {
+    form.append('width', String(size.width))
+    form.append('height', String(size.height))
+  }
+  return form
+}
+
+export type CompressResult = {
+  /** アップロードするファイル（圧縮後、または元のまま） */
+  file: File
+  /**
+   * file をブラウザが表示するときの幅と高さ（EXIF の向きを反映した値で、
+   * <img> の naturalWidth / naturalHeight と一致する）。測れなかったときは null
+   */
+  size: ImageSize | null
+}
+
+/**
+ * 寸法を知るためだけに画像をデコードする。圧縮しない画像（GIF、アニメーション、
+ * 判定できなかったもの）に使い、送るファイルの選択には関わらない。
+ * <img> と同じく EXIF の向きを反映した寸法にする。失敗したら null
+ */
+async function measureImage(file: File): Promise<ImageSize | null> {
+  if (typeof createImageBitmap !== 'function') return null
+  let bitmap: ImageBitmap | undefined
+  try {
+    bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' })
+    return { width: bitmap.width, height: bitmap.height }
+  } catch {
+    return null
+  } finally {
+    bitmap?.close()
+  }
+}
+
+/**
+ * アップロードするファイルと、その表示寸法を返す。圧縮後のほうがよければ、
+ * 書き出した形式に合った MIME と拡張子の File を、そうでなければ元の File を
+ * そのまま返す。寸法は返すファイルのもの（圧縮後なら縮めた後の大きさ、元の
+ * ままならデコードした元の画像の大きさ）。
  *
  * 形式・大きさの確認は呼び出し側で済ませておく。途中で何が失敗しても例外は
  * 外へ出さず元の File を返し、今までどおりアップロードできることを優先する。
+ * 寸法が測れなくても（null でも）送るファイルの選び方は変えない。
  */
-export async function compressImageForUpload(file: File): Promise<File> {
+export async function compressImageForUpload(
+  file: File,
+): Promise<CompressResult> {
   const outputType = chooseOutputType(file.type)
-  if (!outputType) return file
+  if (!outputType) return { file, size: await measureImage(file) }
 
   let bitmap: ImageBitmap | undefined
   let canvas: HTMLCanvasElement | undefined
+  // デコードできた元の画像の寸法。元のファイルを送るときにこの値を返す
+  let originalSize: ImageSize | null = null
   try {
     if (file.type === 'image/png' || file.type === 'image/webp') {
       const bytes = new Uint8Array(await file.arrayBuffer())
-      if (detectAnimation(bytes, file.type) !== 'static') return file
+      if (detectAnimation(bytes, file.type) !== 'static') {
+        return { file, size: await measureImage(file) }
+      }
     }
 
-    if (typeof createImageBitmap !== 'function') return file
+    if (typeof createImageBitmap !== 'function') return { file, size: null }
     // EXIF の向きを反映して描く。'from-image' を知らない古いブラウザでは、
     // 列挙値の変換で例外になり、元のファイルを送る側に倒れる
     bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' })
+    originalSize = { width: bitmap.width, height: bitmap.height }
 
     const size = computeResizedSize(
       bitmap.width,
@@ -291,7 +348,7 @@ export async function compressImageForUpload(file: File): Promise<File> {
     canvas.width = size.width
     canvas.height = size.height
     const ctx = canvas.getContext('2d')
-    if (!ctx) return file
+    if (!ctx) return { file, size: originalSize }
     ctx.imageSmoothingEnabled = true
     ctx.imageSmoothingQuality = 'high'
     ctx.drawImage(bitmap, 0, 0, size.width, size.height)
@@ -303,14 +360,18 @@ export async function compressImageForUpload(file: File): Promise<File> {
       originalSize: file.size,
       maxSize: MAX_IMAGE_SIZE,
     })
-    if (source === 'original') return file
+    if (source === 'original') return { file, size: originalSize }
 
-    return new File([blob], renameForType(file.name, blob.type), {
-      type: blob.type,
-      lastModified: file.lastModified,
-    })
+    return {
+      file: new File([blob], renameForType(file.name, blob.type), {
+        type: blob.type,
+        lastModified: file.lastModified,
+      }),
+      // 書き出した画像には EXIF の向きが無く、描いた canvas の大きさがそのまま表示寸法になる
+      size: { width: size.width, height: size.height },
+    }
   } catch {
-    return file
+    return { file, size: originalSize }
   } finally {
     bitmap?.close()
     // iOS Safari は canvas の合計メモリに上限があるので、使い終えたらすぐ手放す

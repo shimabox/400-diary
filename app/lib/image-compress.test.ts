@@ -1,8 +1,10 @@
-import { describe, expect, test } from 'vitest'
+import { afterEach, describe, expect, test, vi } from 'vitest'
 import { IMAGE_COMPRESS_MAX_EDGE, MAX_IMAGE_SIZE } from './constants'
 import {
+  buildImageUploadForm,
   chooseOutputType,
   chooseUploadSource,
+  compressImageForUpload,
   computeResizedSize,
   detectAnimation,
   renameForType,
@@ -361,5 +363,229 @@ describe('renameForType', () => {
 
   test('対応していない形式なら名前を変えない', () => {
     expect(renameForType('anim.gif', 'image/gif')).toBe('anim.gif')
+  })
+})
+
+describe('buildImageUploadForm', () => {
+  const file = new File([new Uint8Array([1, 2, 3])], 'photo.jpg', {
+    type: 'image/jpeg',
+  })
+
+  test('寸法があるときは file と一緒に width と height を 10 進の文字列で送る', () => {
+    const form = buildImageUploadForm(file, { width: 1500, height: 2000 })
+    expect(form.get('file')).toBeInstanceOf(File)
+    expect(form.get('width')).toBe('1500')
+    expect(form.get('height')).toBe('2000')
+  })
+
+  test('寸法が無いときは file だけを送る', () => {
+    const form = buildImageUploadForm(file, null)
+    expect(form.get('file')).toBeInstanceOf(File)
+    expect(form.has('width')).toBe(false)
+    expect(form.has('height')).toBe(false)
+  })
+})
+
+describe('compressImageForUpload が返す寸法', () => {
+  type BrowserStub = {
+    /** createImageBitmap が返す（向きを反映した）大きさ。Error なら失敗させる */
+    bitmap: { width: number; height: number } | Error
+    /** 書き出した結果のバイト数。null なら書き出しに失敗させる */
+    encodedSize?: number | null
+    /** getContext('2d') が null を返すブラウザ */
+    noContext?: boolean
+  }
+
+  function stubBrowser({ bitmap, encodedSize = 1, noContext }: BrowserStub) {
+    const createImageBitmapMock = vi.fn(async () => {
+      if (bitmap instanceof Error) throw bitmap
+      return { ...bitmap, close: vi.fn() }
+    })
+    vi.stubGlobal('createImageBitmap', createImageBitmapMock)
+    const canvas = {
+      width: 0,
+      height: 0,
+      getContext: () =>
+        noContext
+          ? null
+          : {
+              drawImage: vi.fn(),
+              imageSmoothingEnabled: false,
+              imageSmoothingQuality: 'low',
+            },
+      toBlob: (callback: (blob: Blob | null) => void, type: string) =>
+        callback(
+          encodedSize === null
+            ? null
+            : new Blob([new Uint8Array(encodedSize)], { type }),
+        ),
+    }
+    vi.stubGlobal('document', { createElement: () => canvas })
+    return { createImageBitmapMock }
+  }
+
+  function fileOf(bytes: Uint8Array | number, name: string, type: string) {
+    const data =
+      typeof bytes === 'number' ? new Uint8Array(bytes) : Uint8Array.from(bytes)
+    return new File([data], name, { type })
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  test('縮小して圧縮後を送るときは、縮めた後の幅と高さを返す', async () => {
+    stubBrowser({ bitmap: { width: 4032, height: 3024 }, encodedSize: 5000 })
+    const original = fileOf(20000, 'photo.jpg', 'image/jpeg')
+
+    const result = await compressImageForUpload(original)
+
+    expect(result.file).not.toBe(original)
+    expect(result.file.type).toBe('image/jpeg')
+    expect(result.size).toEqual({ width: 2000, height: 1500 })
+  })
+
+  test('EXIF の向きで縦横が入れ替わる写真は、向きを反映した縦長の寸法を返す', async () => {
+    // createImageBitmap(file, { imageOrientation: 'from-image' }) は向きを反映した大きさになる
+    const { createImageBitmapMock } = stubBrowser({
+      bitmap: { width: 3024, height: 4032 },
+      encodedSize: 5000,
+    })
+
+    const result = await compressImageForUpload(
+      fileOf(20000, 'photo.jpg', 'image/jpeg'),
+    )
+
+    expect(createImageBitmapMock).toHaveBeenCalledWith(expect.anything(), {
+      imageOrientation: 'from-image',
+    })
+    expect(result.size).toEqual({ width: 1500, height: 2000 })
+  })
+
+  test('軽くならず元のファイルを送るときは、元の画像の寸法を返す', async () => {
+    stubBrowser({ bitmap: { width: 1200, height: 900 }, encodedSize: 30000 })
+    const original = fileOf(20000, 'photo.jpg', 'image/jpeg')
+
+    const result = await compressImageForUpload(original)
+
+    expect(result.file).toBe(original)
+    expect(result.size).toEqual({ width: 1200, height: 900 })
+  })
+
+  test('圧縮後が上限を超えて元を送るときも、元の画像の寸法を返す', async () => {
+    stubBrowser({
+      bitmap: { width: 4032, height: 3024 },
+      encodedSize: MAX_IMAGE_SIZE + 1,
+    })
+    const original = fileOf(20000, 'photo.jpg', 'image/jpeg')
+
+    const result = await compressImageForUpload(original)
+
+    expect(result.file).toBe(original)
+    expect(result.size).toEqual({ width: 4032, height: 3024 })
+  })
+
+  test('書き出しに失敗して元を送るときは、デコードできた元の寸法を返す', async () => {
+    stubBrowser({ bitmap: { width: 1200, height: 900 }, encodedSize: null })
+    const original = fileOf(20000, 'photo.jpg', 'image/jpeg')
+
+    const result = await compressImageForUpload(original)
+
+    expect(result.file).toBe(original)
+    expect(result.size).toEqual({ width: 1200, height: 900 })
+  })
+
+  test('2D の描画ができないときも、元を送り元の寸法を返す', async () => {
+    stubBrowser({ bitmap: { width: 1200, height: 900 }, noContext: true })
+    const original = fileOf(20000, 'photo.jpg', 'image/jpeg')
+
+    const result = await compressImageForUpload(original)
+
+    expect(result.file).toBe(original)
+    expect(result.size).toEqual({ width: 1200, height: 900 })
+  })
+
+  test('デコードに失敗したときは、元を送り寸法は null', async () => {
+    stubBrowser({ bitmap: new Error('decode failed') })
+    const original = fileOf(20000, 'photo.jpg', 'image/jpeg')
+
+    const result = await compressImageForUpload(original)
+
+    expect(result.file).toBe(original)
+    expect(result.size).toBeNull()
+  })
+
+  test('createImageBitmap の無いブラウザでは、元を送り寸法は null', async () => {
+    const original = fileOf(20000, 'photo.jpg', 'image/jpeg')
+
+    const result = await compressImageForUpload(original)
+
+    expect(result.file).toBe(original)
+    expect(result.size).toBeNull()
+  })
+
+  test('GIF は圧縮せずに元を送り、寸法を知るためだけにデコードする', async () => {
+    stubBrowser({ bitmap: { width: 320, height: 240 } })
+    const original = fileOf(20000, 'anim.gif', 'image/gif')
+
+    const result = await compressImageForUpload(original)
+
+    expect(result.file).toBe(original)
+    expect(result.size).toEqual({ width: 320, height: 240 })
+  })
+
+  test('GIF のデコードに失敗しても元を送り、寸法は null', async () => {
+    stubBrowser({ bitmap: new Error('decode failed') })
+    const original = fileOf(20000, 'anim.gif', 'image/gif')
+
+    const result = await compressImageForUpload(original)
+
+    expect(result.file).toBe(original)
+    expect(result.size).toBeNull()
+  })
+
+  test('APNG は圧縮せずに元を送り、デコードした寸法を返す', async () => {
+    stubBrowser({ bitmap: { width: 640, height: 480 }, encodedSize: 1 })
+    const original = fileOf(png(IHDR, acTL, IDAT, IEND), 'a.png', 'image/png')
+
+    const result = await compressImageForUpload(original)
+
+    expect(result.file).toBe(original)
+    expect(result.size).toEqual({ width: 640, height: 480 })
+  })
+
+  test('アニメーション WebP は圧縮せずに元を送り、デコードした寸法を返す', async () => {
+    stubBrowser({ bitmap: { width: 500, height: 500 }, encodedSize: 1 })
+    const original = fileOf(
+      webp('VP8X', vp8xData(0x02)),
+      'a.webp',
+      'image/webp',
+    )
+
+    const result = await compressImageForUpload(original)
+
+    expect(result.file).toBe(original)
+    expect(result.size).toEqual({ width: 500, height: 500 })
+  })
+
+  test('アニメーションか判定できない PNG も圧縮せず、デコードした寸法を返す', async () => {
+    stubBrowser({ bitmap: { width: 64, height: 32 }, encodedSize: 1 })
+    const original = fileOf(png(IHDR), 'cut.png', 'image/png')
+
+    const result = await compressImageForUpload(original)
+
+    expect(result.file).toBe(original)
+    expect(result.size).toEqual({ width: 64, height: 32 })
+  })
+
+  test('静止画の PNG を WebP にして軽くなれば、圧縮後とその寸法を返す', async () => {
+    stubBrowser({ bitmap: { width: 800, height: 600 }, encodedSize: 10 })
+    const original = fileOf(png(IHDR, IDAT, IEND), 'shot.png', 'image/png')
+
+    const result = await compressImageForUpload(original)
+
+    expect(result.file.type).toBe('image/webp')
+    expect(result.file.name).toBe('shot.webp')
+    expect(result.size).toEqual({ width: 800, height: 600 })
   })
 })

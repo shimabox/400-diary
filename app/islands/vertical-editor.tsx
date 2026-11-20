@@ -9,6 +9,12 @@ import {
 } from '../lib/constants'
 import { formatDiaryDate } from '../lib/format'
 import { COLS, ROWS } from '../lib/grid'
+import {
+  type ImagePreview,
+  resolveEditorImage,
+  type SavedImage,
+  toImageSize,
+} from '../lib/image-dimensions'
 import { MOODS, type MoodKey } from '../lib/mood'
 import { useDiaryDraft } from '../lib/use-diary-draft'
 import { useSpeech } from '../lib/use-speech'
@@ -32,6 +38,9 @@ type Props = {
   initialImageY?: number | null
   initialImageScale?: number | null
   initialImageRotation?: number | null
+  /** 保存済みの画像の表示寸法（px）。両方そろっているときだけ使う */
+  initialImageWidth?: number | null
+  initialImageHeight?: number | null
   diaryId?: string
   publishedAt?: string | null
   /** 読み上げ音声の操作。既存の日記の編集画面だけが渡す */
@@ -61,6 +70,8 @@ export default function VerticalEditor({
   initialImageY = null,
   initialImageScale = null,
   initialImageRotation = null,
+  initialImageWidth = null,
+  initialImageHeight = null,
   diaryId,
   publishedAt: initialPublishedAt = null,
   speech,
@@ -94,9 +105,17 @@ export default function VerticalEditor({
     stop: stopSpeech,
   } = useSpeech()
 
-  // 画像関連
-  const [imageKey, setImageKey] = useState(initialImageKey)
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  // 画像関連。保存済みの画像とプレビューは、それぞれ画像と寸法を組で持つ。
+  // 表示する画像と寸法は render 中に両者から導出し、食い違わないようにする
+  const [savedImage, setSavedImage] = useState<SavedImage | null>(
+    initialImageKey
+      ? {
+          key: initialImageKey,
+          size: toImageSize(initialImageWidth, initialImageHeight),
+        }
+      : null,
+  )
+  const [imagePreview, setImagePreview] = useState<ImagePreview | null>(null)
   const [imageX, setImageX] = useState<number | null>(initialImageX)
   const [imageY, setImageY] = useState<number | null>(initialImageY)
   const [imageScale, setImageScale] = useState<number | null>(initialImageScale)
@@ -133,7 +152,11 @@ export default function VerticalEditor({
     speechPublic: speech ? speechPublic : undefined,
     publishedSpeechKey: speech?.publishedKey,
   })
-  const imageSrc = imagePreview ?? (imageKey ? `/api/images/${imageKey}` : null)
+  // プレビュー中はプレビューの画像と寸法、それ以外は保存済みの画像と寸法
+  const { src: imageSrc, size: imageDimensions } = resolveEditorImage(
+    imagePreview,
+    savedImage,
+  )
 
   return (
     <div style={{ padding: '1rem 0', maxWidth: '100%' }}>
@@ -242,6 +265,7 @@ export default function VerticalEditor({
             text={body}
             imageLayout={imageLayout}
             imageSrc={imageSrc}
+            imageDimensions={imageDimensions}
             dateLabel={date ? formatDiaryDate(date) : '----/--/--'}
             imagePosition={
               imageX != null && imageY != null ? { x: imageX, y: imageY } : null
@@ -527,8 +551,8 @@ export default function VerticalEditor({
 
         <ImageAttachmentEditor
           diaryId={currentDiaryId || null}
-          imageKey={imageKey}
-          onImageKeyChange={setImageKey}
+          imageKey={savedImage?.key ?? null}
+          onSavedImageChange={setSavedImage}
           onImagePreviewChange={setImagePreview}
         />
 

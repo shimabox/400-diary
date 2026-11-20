@@ -1,6 +1,14 @@
 import { useCallback, useRef, useState } from 'hono/jsx'
 import { MAX_IMAGE_SIZE } from '../lib/constants'
-import { compressImageForUpload } from '../lib/image-compress'
+import {
+  buildImageUploadForm,
+  compressImageForUpload,
+} from '../lib/image-compress'
+import {
+  type ImagePreview,
+  type SavedImage,
+  toImageSize,
+} from '../lib/image-dimensions'
 import ConfirmDialog from './confirm-dialog'
 
 const IMAGE_ALLOWED_TYPES = [
@@ -13,14 +21,16 @@ const IMAGE_ALLOWED_TYPES = [
 type Props = {
   diaryId: string | null
   imageKey: string | null
-  onImageKeyChange: (imageKey: string | null) => void
-  onImagePreviewChange: (preview: string | null) => void
+  /** 保存済みの画像（キーと、サーバーが保存した寸法）が変わったとき。削除では null */
+  onSavedImageChange: (image: SavedImage | null) => void
+  /** アップロード中のプレビュー（送る画像と、その寸法）。終わったら null */
+  onImagePreviewChange: (preview: ImagePreview | null) => void
 }
 
 export default function ImageAttachmentEditor({
   diaryId,
   imageKey,
-  onImageKeyChange,
+  onSavedImageChange,
   onImagePreviewChange,
 }: Props) {
   const [imageError, setImageError] = useState('')
@@ -56,18 +66,19 @@ export default function ImageAttachmentEditor({
       try {
         // 形式と大きさは選んだ時点のファイルで確かめ済み。通ったものだけを圧縮する。
         // 圧縮できないときや圧縮しないほうがよいときは、元のファイルが返る
-        const uploadFile = await compressImageForUpload(file)
+        // 寸法は送るファイルの表示寸法。測れなければ null で、そのときも送るファイルは変わらない
+        const { file: uploadFile, size } = await compressImageForUpload(file)
 
-        // プレビューは実際に送るファイルから作る
+        // プレビューは実際に送るファイルから作り、寸法もそのファイルのものを添える
+        // （前の画像の寸法でプレビューを組まないため）
         const reader = new FileReader()
-        reader.onload = () => onImagePreviewChange(reader.result as string)
+        reader.onload = () =>
+          onImagePreviewChange({ src: reader.result as string, size })
         reader.readAsDataURL(uploadFile)
 
-        const formData = new FormData()
-        formData.append('file', uploadFile)
         const res = await fetch(`/api/diaries/${diaryId}/image`, {
           method: 'POST',
-          body: formData,
+          body: buildImageUploadForm(uploadFile, size),
         })
         if (!res.ok) {
           const data = (await res.json()) as { error?: string }
@@ -75,8 +86,16 @@ export default function ImageAttachmentEditor({
           onImagePreviewChange(null)
           return
         }
-        const data = (await res.json()) as { image_key: string }
-        onImageKeyChange(data.image_key)
+        const data = (await res.json()) as {
+          image_key: string
+          image_width?: number | null
+          image_height?: number | null
+        }
+        // 寸法はサーバーが保存した値を使う（形式が合わず NULL で保存されたなら寸法なし）
+        onSavedImageChange({
+          key: data.image_key,
+          size: toImageSize(data.image_width, data.image_height),
+        })
         onImagePreviewChange(null)
       } catch {
         setImageError('アップロードに失敗しました')
@@ -86,7 +105,7 @@ export default function ImageAttachmentEditor({
         setProcessing(false)
       }
     },
-    [diaryId, onImageKeyChange, onImagePreviewChange],
+    [diaryId, onSavedImageChange, onImagePreviewChange],
   )
 
   const handleImageDelete = useCallback(async () => {
@@ -102,12 +121,12 @@ export default function ImageAttachmentEditor({
         setImageError('削除に失敗しました')
         return
       }
-      onImageKeyChange(null)
+      onSavedImageChange(null)
       onImagePreviewChange(null)
     } catch {
       setImageError('削除に失敗しました')
     }
-  }, [diaryId, onImageKeyChange, onImagePreviewChange])
+  }, [diaryId, onSavedImageChange, onImagePreviewChange])
 
   return (
     <div>
