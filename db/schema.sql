@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS diaries (
   image_y REAL,                        -- 画像Y座標
   image_scale REAL,                    -- 画像表示倍率 (0.5〜1.5, nullable: 未設定時は1.0)
   image_rotation REAL,                 -- 画像回転角/度 (-15〜15, nullable: 未設定時は0)
+  image_width INTEGER,                 -- 画像の表示幅/px (EXIF の向きを反映。height と両方 NULL か両方あり)
+  image_height INTEGER,                -- 画像の表示高さ/px (nullable: 寸法が分からない画像は読み込み後に組む)
   background_color TEXT NOT NULL,      -- HEX (#FFE4E1等)
   mood TEXT,                           -- 感情カテゴリ (happy/calm/sad/angry/anxious/fun)
   speech_key TEXT,                     -- 下書き側の読み上げ音声の R2 キー (nullable)
@@ -35,6 +37,8 @@ CREATE TABLE IF NOT EXISTS diary_snapshots (
   image_y REAL,
   image_scale REAL,
   image_rotation REAL,
+  image_width INTEGER,
+  image_height INTEGER,
   background_color TEXT NOT NULL,
   mood TEXT,
   speech_key TEXT,                     -- 公開中の読み上げ音声の R2 キー (本文・気分に合わなければ NULL)

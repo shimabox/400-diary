@@ -65,6 +65,8 @@ function makeDiary(overrides: Partial<Diary> = {}): Diary {
     image_y: null,
     image_scale: null,
     image_rotation: null,
+    image_width: null,
+    image_height: null,
     background_color: '#FFFFFF',
     mood: 'happy',
     speech_key: null,
@@ -88,6 +90,8 @@ function makeSnapshot(overrides: Partial<DiarySnapshot> = {}): DiarySnapshot {
     image_y: null,
     image_scale: null,
     image_rotation: null,
+    image_width: null,
+    image_height: null,
     background_color: '#EEEEEE',
     mood: 'calm',
     speech_key: null,
@@ -153,6 +157,37 @@ describe('GET /api/diaries/:id 公開チェック', () => {
     expect(json.id).toBe('abc')
     expect(json.diary_date).toBe('2026-04-15')
     expect(json.published_at).toBe('2026-04-15 12:00:00')
+  })
+
+  test('未認証ではスナップショットの画像の寸法を返す', async () => {
+    const { getDiaryWithSnapshot } = await import('../../../lib/db')
+    vi.mocked(getDiaryWithSnapshot).mockResolvedValue({
+      ...makeDiary({
+        image_width: 111,
+        image_height: 222,
+        published_snapshot_id: 'snap1',
+      }),
+      snapshot: makeSnapshot({ image_width: 1200, image_height: 900 }),
+    })
+
+    const res = await (await createApp(false)).request('/api/diaries/abc')
+    const json = (await res.json()) as Record<string, unknown>
+
+    expect(json.image_width).toBe(1200)
+    expect(json.image_height).toBe(900)
+  })
+
+  test('認証済みでは下書きの画像の寸法を返す', async () => {
+    const { getDiary } = await import('../../../lib/db')
+    vi.mocked(getDiary).mockResolvedValue(
+      makeDiary({ image_width: 640, image_height: 480 }),
+    )
+
+    const res = await (await createApp(true)).request('/api/diaries/abc')
+    const json = (await res.json()) as Record<string, unknown>
+
+    expect(json.image_width).toBe(640)
+    expect(json.image_height).toBe(480)
   })
 
   test('未認証レスポンスに下書き側メタデータを含まない(回帰)', async () => {
@@ -254,6 +289,24 @@ describe('PUT /api/diaries/:id バリデーション', () => {
     const res = await putJSON(app, { body: 'あ'.repeat(400) })
 
     expect(res.status).toBe(200)
+  })
+
+  test('画像の寸法を送っても保存 API からは書き換えない', async () => {
+    const { updateDiary } = await import('../../../lib/db')
+    vi.mocked(updateDiary).mockResolvedValue(makeDiary())
+
+    const res = await putJSON(await createApp(true), {
+      body: '本文',
+      image_width: 1,
+      image_height: 1,
+      image_size: { width: 1, height: 1 },
+    })
+
+    expect(res.status).toBe(200)
+    const params = vi.mocked(updateDiary).mock.calls[0][2]
+    expect(params).not.toHaveProperty('image_width')
+    expect(params).not.toHaveProperty('image_height')
+    expect(params).not.toHaveProperty('image_size')
   })
 
   test('401文字は400エラーを返す', async () => {
