@@ -14,7 +14,8 @@
     "lint:fix": "biome check --fix .",
     "format": "biome format --write .",
     "db:migrate:local": "node scripts/check-wrangler-config.mjs && wrangler d1 migrations apply 400-diary-db --local",
-    "db:migrate:remote": "node scripts/check-wrangler-config.mjs --deploy && wrangler d1 migrations apply 400-diary-db --remote"
+    "db:migrate:remote": "node scripts/check-wrangler-config.mjs --deploy && wrangler d1 migrations apply 400-diary-db --remote",
+    "images:backfill": "node scripts/backfill-images.mjs"
   },
   "dependencies": {
     "@chenglou/pretext": "^0.0.4",
@@ -30,6 +31,7 @@
     "@cloudflare/workers-types": "^4.20260214.0",
     "@hono/vite-build": "^1.11.1",
     "@hono/vite-dev-server": "^0.25.0",
+    "sharp": "^0.35.5",
     "typescript": "5.9.3",
     "vite": "^6.2.0",
     "vite-plugin-full-reload": "^1.2.0",
