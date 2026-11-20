@@ -32,17 +32,101 @@ async function createApp(isAuthenticated: boolean) {
   return app
 }
 
-function postImage(app: Hono<AppEnv>) {
+function postImage(app: Hono<AppEnv>, fields: Record<string, string> = {}) {
   const form = new FormData()
   form.append(
     'file',
     new File([new Uint8Array([1, 2, 3])], 'test.jpg', { type: 'image/jpeg' }),
   )
+  for (const [name, value] of Object.entries(fields)) {
+    form.append(name, value)
+  }
   return app.request('/api/diaries/abc/image', {
     method: 'POST',
     body: form,
   })
 }
+
+describe('POST /api/diaries/:id/image 画像の寸法', () => {
+  beforeEach(async () => {
+    vi.clearAllMocks()
+    const { getDiary, updateDiary } = await import('../../../../lib/db')
+    vi.mocked(getDiary).mockResolvedValue({
+      id: 'abc',
+      image_key: null,
+    } as never)
+    vi.mocked(updateDiary).mockResolvedValue({ id: 'abc' } as never)
+  })
+
+  test('幅と高さを画像キーと同じ 1 回の更新で保存し、応答にも返す', async () => {
+    const { updateDiary } = await import('../../../../lib/db')
+
+    const res = await postImage(await createApp(true), {
+      width: '1500',
+      height: '2000',
+    })
+
+    expect(res.status).toBe(201)
+    expect(await res.json()).toEqual({
+      image_key: 'diaries/abc/new-key.jpg',
+      image_width: 1500,
+      image_height: 2000,
+    })
+    expect(vi.mocked(updateDiary)).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(updateDiary)).toHaveBeenCalledWith(
+      expect.anything(),
+      'abc',
+      {
+        image_key: 'diaries/abc/new-key.jpg',
+        image_size: { width: 1500, height: 2000 },
+      },
+    )
+  })
+
+  test.each([
+    ['寸法を送らない', {}],
+    ['高さだけ無い', { width: '100' }],
+    ['幅だけ無い', { height: '100' }],
+    ['0', { width: '0', height: '100' }],
+    ['上限を超える', { width: '100001', height: '100' }],
+    ['小数', { width: '100.5', height: '100' }],
+    ['負の数', { width: '-100', height: '100' }],
+    ['数字以外', { width: 'abc', height: '100' }],
+    ['空文字', { width: '', height: '100' }],
+    ['指数表記', { width: '1e3', height: '100' }],
+    ['前後の空白', { width: ' 100', height: '100' }],
+  ])('%s ときはアップロードを成功させ、寸法は両方 NULL にする', async (_label, fields) => {
+    const { updateDiary } = await import('../../../../lib/db')
+    const { uploadImage } = await import('../../../../lib/storage')
+
+    const res = await postImage(await createApp(true), fields)
+
+    expect(res.status).toBe(201)
+    expect(await res.json()).toEqual({
+      image_key: 'diaries/abc/new-key.jpg',
+      image_width: null,
+      image_height: null,
+    })
+    expect(vi.mocked(uploadImage)).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(updateDiary)).toHaveBeenCalledWith(
+      expect.anything(),
+      'abc',
+      { image_key: 'diaries/abc/new-key.jpg', image_size: null },
+    )
+  })
+
+  test('上限ちょうどと 1 は受け付ける', async () => {
+    const res = await postImage(await createApp(true), {
+      width: '100000',
+      height: '1',
+    })
+
+    expect(await res.json()).toMatchObject({
+      image_width: 100000,
+      image_height: 1,
+    })
+  })
+})
 
 describe('POST /api/diaries/:id/image 旧画像の孤児削除', () => {
   beforeEach(() => {
@@ -197,10 +281,11 @@ describe('DELETE /api/diaries/:id/image snapshot 参照尊重', () => {
 
     expect(res.status).toBe(204)
     expect(vi.mocked(deleteImage)).not.toHaveBeenCalled()
+    // 寸法は画像と組なので、画像キーと同じ更新で消す
     expect(vi.mocked(updateDiary)).toHaveBeenCalledWith(
       expect.anything(),
       'abc',
-      { image_key: null },
+      { image_key: null, image_size: null },
     )
   })
 

@@ -14,6 +14,12 @@ export const IMAGE_COMPRESS_MAX_EDGE = 2000
 /** アップロード前にブラウザで再エンコードするときの品質 (JPEG / WebP, 0〜1) */
 export const IMAGE_COMPRESS_QUALITY = 0.85
 
+/**
+ * 保存する画像の表示寸法（幅・高さ, px）の上限。これを超える値は測り間違いとして
+ * 扱い、寸法なしで保存する（下限は 1）
+ */
+export const IMAGE_DIMENSION_MAX = 100000
+
 /** 画像表示倍率の下限。これ未満はタップ・視認が困難になる */
 export const IMAGE_SCALE_MIN = 0.5
 

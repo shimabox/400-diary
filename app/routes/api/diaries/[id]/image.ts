@@ -13,6 +13,7 @@ import {
   validateImage,
   validateImageBytes,
 } from '../../../../lib/storage'
+import { parseImageDimensions } from '../../../../lib/validation'
 
 async function deleteImageIfOrphan(
   bucket: R2Bucket,
@@ -59,16 +60,33 @@ export const POST = createRoute(requireAuth, async (c) => {
     return c.json({ error: bytesValidation.error }, 400)
   }
 
+  // 寸法はブラウザが送るファイルを表示するときの幅と高さ（向きを反映した値）。
+  // サーバーは画像の中身から測らず、ログイン済みの本人のブラウザが測った値として
+  // 受け取る。寸法が無くても表示はできる（読み込み後に組む）ので、無い・形式が
+  // 合わないときは両方 NULL で保存し、寸法の不備で画像を断らない
+  const size = parseImageDimensions(
+    formData.get('width'),
+    formData.get('height'),
+  )
+
   const oldKey = diary.image_key
   const key = generateImageKey(id, file.type)
   await uploadImage(bucket, key, data, file.type)
-  await updateDiary(db, id, { image_key: key })
+  // 画像キーと寸法は同じ 1 回の更新で書き、別の画像の寸法が残る瞬間を作らない
+  await updateDiary(db, id, { image_key: key, image_size: size })
 
   if (oldKey && oldKey !== key) {
     await deleteImageIfOrphan(bucket, db, oldKey)
   }
 
-  return c.json({ image_key: key }, 201)
+  return c.json(
+    {
+      image_key: key,
+      image_width: size?.width ?? null,
+      image_height: size?.height ?? null,
+    },
+    201,
+  )
 })
 
 export const DELETE = createRoute(requireAuth, async (c) => {
@@ -85,7 +103,8 @@ export const DELETE = createRoute(requireAuth, async (c) => {
     // R2 delete 側は best-effort なので、失敗しても orphan が残るだけで
     // 参照整合性は保たれる。
     const oldKey = diary.image_key
-    await updateDiary(db, id, { image_key: null })
+    // 寸法は画像と組なので、画像キーと一緒に消す
+    await updateDiary(db, id, { image_key: null, image_size: null })
     await deleteImageIfOrphan(c.env.BUCKET, db, oldKey)
   }
 
