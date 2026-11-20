@@ -58,6 +58,55 @@ R2 Bucket: 400-diary-images
 | 圧縮後が 10MB（`MAX_IMAGE_SIZE`）を超える | 縮小したかに関係なく元。元は選んだ時点の確認で 10MB 以下なので、圧縮したせいで断られない |
 | 読み込めない・書き出せないなど、圧縮の途中で失敗した（`createImageBitmap` や `imageOrientation: 'from-image'` に対応していないブラウザを含む） | 元。今までどおりアップロードできることを優先する |
 
+## 画像の寸法
+
+画像を表示するとき、寸法が分からないと文章は画像なしで組まれ、読み込みが終わった時点で画像を避けて組み直される。読んでいる最中に文章が動くので、画像の幅と高さを DB（`diaries` と `diary_snapshots` の `image_width` / `image_height`）に持ち、表示の最初から画像の場所を空けて組む。
+
+### 定義
+
+- ブラウザが画像を表示するときの幅と高さ（px）。EXIF の向きを反映した値で、`<img>` の `naturalWidth` / `naturalHeight` と一致する
+- 幅と高さは両方そろっているか、両方 NULL のどちらか。片方だけの行は作らない
+- 値は 1 以上 100000（`IMAGE_DIMENSION_MAX`）以下の整数
+
+### どこから来るか
+
+寸法はブラウザが測って、アップロードと一緒に送る。圧縮のために画像をデコードした時点で分かっているので、サーバーに画像を解析する処理を足さずに済む。サーバーは画像の中身から寸法を読まず、ログイン済みの本人のブラウザが測った値として扱う。
+
+`compressImageForUpload` は送るファイルと一緒に、そのファイルの寸法を返す。
+
+| 送るファイル | 寸法 |
+|-------------|------|
+| 圧縮後 | 縮めた後の幅と高さ |
+| 元のまま（軽くならなかった、10MB を超えた、書き出しに失敗したなど。デコードはできた） | 元の画像の、向きを反映した幅と高さ |
+| 圧縮しない画像（GIF、アニメーション WebP、APNG、判定できなかったもの） | 寸法を知るためだけにデコードを試み、取れたらその値、取れなければ null |
+| デコードに失敗した | null |
+
+寸法の取得のために、どのファイルを送るかの判断は変えない。寸法が取れたときだけ、FormData に `width` と `height` を組で足す。
+
+`POST /api/diaries/:id/image` は、`width` と `height` が両方とも「1 以上 100000 以下の整数を表す 10 進の文字列」のときだけ採用する。どちらかが無い、または形式が合わないときは両方 NULL で保存し、アップロード自体は成功させる。寸法が無くても画像は表示できる（読み込み後に組む）ので、寸法の不備で画像を断らない。画像キーと寸法は同じ 1 回の UPDATE で保存し、応答の JSON にも `image_width` / `image_height` を返す。
+
+- 画像を削除すると（`DELETE /api/diaries/:id/image`）、画像キーと一緒に寸法も NULL になる
+- 公開すると（`publishDiary`）、ほかの画像の項目と同じように寸法もスナップショットへ写す
+- 日記を保存する API（`PUT /api/diaries/:id`）からは寸法を変えられない
+- 寸法の列を足す前に保存された画像には寸法が無い。一括パッチ（`scripts/backfill-images.mjs`。手順は `docs/deploy/README.md` の「作者の更新を取り込む」）で記録できる
+
+### 表示での使い方
+
+`FlowText` は、配置の計算に使う寸法を次の順で決める（`app/lib/image-dimensions.ts` の `chooseLayoutImageSize`）。
+
+1. いま表示している画像の読み込みが終わっていれば、その実寸
+2. まだなら、props（`imageDimensions`）で渡された寸法
+3. どちらも無ければ、今までどおり画像なしで組み、読み込み後に組み直す
+
+読み込み後の実寸が渡された寸法と違えば、実寸で組み直す。保存された寸法が間違っていても、最終的な表示は今までと同じになる。実寸はどの画像（src）を測ったかと一緒に持ち、画像を差し替えたあとに前の画像の実寸を使わない。
+
+渡す寸法は「いま表示している画像」のものにする。
+
+- 公開ページは、スナップショットの寸法を渡す
+- 編集画面は、日記の寸法を初期値にする。画像を選び直した直後はプレビュー（送るファイル）を表示するので、その間はプレビューの寸法を渡す。アップロードが終わればサーバーが保存した寸法、失敗してプレビューを取り消せば保存済みの画像の寸法に戻る（`resolveEditorImage`）。寸法が測れなかったプレビューでは、前の画像の寸法で代用せず寸法なしにする
+
+値の選び方は props と state から render 中に導出し、Effect で state を同期しない。
+
 ## 前提条件
 
 画像アップロードは `POST /api/diaries/:id/image` で日記IDを必要とするため、**日記を一度保存してからでないと画像を追加できない**。新規作成時はまず本文を保存し、その後に画像をアップロードする流れになる。
@@ -74,16 +123,16 @@ sequenceDiagram
 
     User->>ImageEditor: 画像ファイルを選択
     ImageEditor->>ImageEditor: クライアント側バリデーション (形式・サイズ、選んだ時点のファイル)
-    ImageEditor->>ImageEditor: compressImageForUpload (長辺 2000px に縮小・再エンコード。アニメーション画像・失敗時は元のまま)
-    ImageEditor->>ImageEditor: FileReader で送るファイルからプレビュー生成
-    ImageEditor->>API: POST FormData { file: 送るファイル }
-    API->>API: サーバー側バリデーション
+    ImageEditor->>ImageEditor: compressImageForUpload (長辺 2000px に縮小・再エンコード。アニメーション画像・失敗時は元のまま。送るファイルの寸法も返す)
+    ImageEditor->>ImageEditor: FileReader で送るファイルからプレビュー生成（寸法はプレビューの画像のもの）
+    ImageEditor->>API: POST FormData { file: 送るファイル, width, height（測れたときだけ） }
+    API->>API: サーバー側バリデーション（寸法は不備なら両方 NULL にして続ける）
     API->>R2: bucket.put(key, data, contentType)
-    API->>DB: UPDATE diaries SET image_key = key
+    API->>DB: UPDATE diaries SET image_key = key, image_width = w, image_height = h
     API->>API: 旧画像が snapshot 参照中か確認
     API->>R2: 参照されていなければ旧画像を削除
-    API-->>ImageEditor: { image_key: key } (201)
-    ImageEditor->>ImageEditor: プレビュー更新
+    API-->>ImageEditor: { image_key, image_width, image_height } (201)
+    ImageEditor->>ImageEditor: 保存済みの画像と寸法に切り替え、プレビューを消す
 ```
 
 DB 更新は R2 アップロード後に行う。旧画像の R2 削除は `deleteMediaIfOrphan` 経由の best-effort で、削除に失敗してもレスポンスは成功のまま返す。
@@ -129,7 +178,7 @@ Cache-Control: public, max-age=31536000, immutable
 flowchart TD
     A[ImageAttachmentEditor で新画像を選択] --> B["POST /api/diaries/:id/image"]
     B --> C[新キーで R2 に保存]
-    C --> D["UPDATE diaries SET image_key = newKey"]
+    C --> D["UPDATE diaries SET image_key = newKey, image_width, image_height"]
     D --> E["deleteMediaIfOrphan(oldKey)"]
     E --> F{"snapshot が参照中?"}
     F -->|Yes| G["旧 R2 object は残す"]
@@ -143,7 +192,7 @@ flowchart TD
     A["DELETE /api/diaries/:id/image"] --> B["diary.image_key を取得"]
     B --> C{"image_key がある?"}
     C -->|No| D["204 を返す"]
-    C -->|Yes| E["UPDATE diaries SET image_key = NULL"]
+    C -->|Yes| E["UPDATE diaries SET image_key = NULL, image_width = NULL, image_height = NULL"]
     E --> F["deleteMediaIfOrphan(image_key)"]
     F --> G{"snapshot が参照中?"}
     G -->|Yes| H["R2 は残す"]
@@ -236,8 +285,10 @@ FlowText コンポーネントが `computeSlots` で画像を障害物として�
 | `app/routes/api/diaries/[id]/image.ts` | アップロード・削除 API |
 | `app/routes/api/images/[...key].ts` | 画像配信エンドポイント |
 | `app/routes/api/diaries/[id].ts` | 日記削除時の画像 R2 クリーンアップ |
-| `app/lib/image-compress.ts` | アップロード前のブラウザでの圧縮（縮小・再エンコード、アニメーション判定、送るファイルの選択） |
+| `app/lib/image-compress.ts` | アップロード前のブラウザでの圧縮（縮小・再エンコード、アニメーション判定、送るファイルの選択、送るファイルの寸法、アップロードの FormData） |
+| `app/lib/image-dimensions.ts` | 表示に使う寸法の選び方（読み込み後の実寸と渡された寸法、編集画面のプレビューと保存済みの画像） |
 | `app/islands/image-attachment-editor.tsx` | アップロード・削除 UI、圧縮の呼び出し、送るファイルからのローカル preview 生成 |
-| `app/islands/vertical-editor.tsx` | 編集画面での画像 state / 座標 state の保持と子コンポーネントへの受け渡し |
-| `app/islands/flow-text.tsx` | 画像回り込みレイアウト |
+| `app/islands/vertical-editor.tsx` | 編集画面での画像 state（保存済みの画像・プレビューと、それぞれの寸法）/ 座標 state の保持と子コンポーネントへの受け渡し |
+| `app/islands/flow-text.tsx` | 画像回り込みレイアウト（保存済みの寸法で読み込み前から組む） |
+| `scripts/backfill-images.mjs` | 寸法の無い既存の画像に寸法を記録し、同じ基準で再圧縮する一括パッチ（判断は `scripts/lib/image-backfill.mjs`） |
 | `app/lib/db.ts` | `listSnapshotImageKeys` (削除時の R2 クリーンアップ) |

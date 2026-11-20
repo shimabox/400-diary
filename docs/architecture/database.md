@@ -47,6 +47,8 @@ erDiagram
         REAL image_y "画像Y座標 (nullable)"
         REAL image_scale "画像表示倍率 0.5-1.5 (nullable)"
         REAL image_rotation "画像回転角/度 -15〜15 (nullable)"
+        INTEGER image_width "画像の表示幅/px (nullable, height と組)"
+        INTEGER image_height "画像の表示高さ/px (nullable, width と組)"
         TEXT background_color "HEX (#FFE4E1等)"
         TEXT mood "happy/calm/sad/angry/anxious/fun"
         TEXT speech_key "下書きの読み上げ音声の R2 キー (nullable)"
@@ -66,6 +68,8 @@ erDiagram
         REAL image_y
         REAL image_scale
         REAL image_rotation
+        INTEGER image_width "公開時点の画像の表示幅/px"
+        INTEGER image_height "公開時点の画像の表示高さ/px"
         TEXT background_color
         TEXT mood
         TEXT speech_key "公開中の読み上げ音声 (公開した本文を読む音声が無ければ NULL)"
@@ -73,6 +77,17 @@ erDiagram
         TEXT published_at
     }
 ```
+
+### 画像の寸法
+
+`image_width` / `image_height` は、ブラウザが画像を表示するときの幅と高さ（px。EXIF の向きを反映した `naturalWidth` / `naturalHeight`）。表示の最初から画像の場所を空けて文章を組むのに使う。既存の画像の項目（`image_scale`、`image_rotation`）と同じく列として持ち、公開スナップショットは公開時点の画像を指すので、スナップショットにも同じ列を持つ。
+
+- 幅と高さは両方そろっているか、両方 NULL のどちらか。値は 1〜100000 の整数
+- 書き換えるのは画像のアップロード（画像キーと同じ UPDATE）と削除（画像キーと一緒に NULL）だけ。日記の保存 API（PUT）からは変えられない
+- 公開時は、ほかの画像の項目と同じようにスナップショットへ写す
+- NULL は寸法が分からない画像で、表示は今までどおり読み込み後に組む。列を足す前に保存された画像は、一括パッチ（`pnpm run images:backfill`）で寸法を記録できる
+
+寸法がどこから来るか、表示でどう使うかは [Image Upload & Storage](./image-upload.md#画像の寸法) を参照。
 
 ## 公開フロー
 
