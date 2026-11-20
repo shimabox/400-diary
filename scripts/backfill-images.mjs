@@ -469,7 +469,8 @@ export function reportSummary(summary, { apply, bucketName, target, log }) {
 }
 
 export function parseArgs(argv) {
-  const known = new Set(['--local', '--apply'])
+  // `pnpm run images:backfill -- --apply` のように区切りの -- が渡されても受け付ける
+  const known = new Set(['--local', '--apply', '--'])
   const unknown = argv.filter((arg) => !known.has(arg))
   if (unknown.length > 0) {
     return { error: `知らない引数です: ${unknown.join(' ')}\n使い方: ${USAGE}` }

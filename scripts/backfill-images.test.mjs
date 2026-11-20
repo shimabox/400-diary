@@ -742,4 +742,8 @@ describe('parseArgs', () => {
   test('知らない引数では始めない', () => {
     expect(parseArgs(['--aply']).error).toContain('--aply')
   })
+
+  test('pnpm run が渡す区切りの -- は無視する', () => {
+    expect(parseArgs(['--', '--apply'])).toEqual({ local: false, apply: true })
+  })
 })
