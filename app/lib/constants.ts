@@ -4,6 +4,16 @@ export const MAX_BODY_LENGTH = 400
 /** 画像の最大サイズ (bytes) */
 export const MAX_IMAGE_SIZE = 10 * 1024 * 1024
 
+/**
+ * アップロード前にブラウザで縮める画像の長辺の上限 (px)。
+ * 日記の中の表示幅は最大 400px ほど、タップ時の拡大表示も画面の大きさまでなので、
+ * 高密度の画面でも足りる大きさに留めて保存・配信される画像を軽くする
+ */
+export const IMAGE_COMPRESS_MAX_EDGE = 2000
+
+/** アップロード前にブラウザで再エンコードするときの品質 (JPEG / WebP, 0〜1) */
+export const IMAGE_COMPRESS_QUALITY = 0.85
+
 /** 画像表示倍率の下限。これ未満はタップ・視認が困難になる */
 export const IMAGE_SCALE_MIN = 0.5
 

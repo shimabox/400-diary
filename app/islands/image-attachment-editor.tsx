@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'hono/jsx'
 import { MAX_IMAGE_SIZE } from '../lib/constants'
+import { compressImageForUpload } from '../lib/image-compress'
 import ConfirmDialog from './confirm-dialog'
 
 const IMAGE_ALLOWED_TYPES = [
@@ -24,6 +25,8 @@ export default function ImageAttachmentEditor({
 }: Props) {
   const [imageError, setImageError] = useState('')
   const [showImageDeleteConfirm, setShowImageDeleteConfirm] = useState(false)
+  // 確認を通った画像の圧縮とアップロードが終わるまで true。その間は選び直しと削除を止める
+  const [processing, setProcessing] = useState(false)
   const imageInputRef = useRef<HTMLInputElement>(null)
 
   const handleImageChange = useCallback(
@@ -49,13 +52,19 @@ export default function ImageAttachmentEditor({
         return
       }
 
-      const reader = new FileReader()
-      reader.onload = () => onImagePreviewChange(reader.result as string)
-      reader.readAsDataURL(file)
-
+      setProcessing(true)
       try {
+        // 形式と大きさは選んだ時点のファイルで確かめ済み。通ったものだけを圧縮する。
+        // 圧縮できないときや圧縮しないほうがよいときは、元のファイルが返る
+        const uploadFile = await compressImageForUpload(file)
+
+        // プレビューは実際に送るファイルから作る
+        const reader = new FileReader()
+        reader.onload = () => onImagePreviewChange(reader.result as string)
+        reader.readAsDataURL(uploadFile)
+
         const formData = new FormData()
-        formData.append('file', file)
+        formData.append('file', uploadFile)
         const res = await fetch(`/api/diaries/${diaryId}/image`, {
           method: 'POST',
           body: formData,
@@ -74,6 +83,7 @@ export default function ImageAttachmentEditor({
         onImagePreviewChange(null)
       } finally {
         if (imageInputRef.current) imageInputRef.current.value = ''
+        setProcessing(false)
       }
     },
     [diaryId, onImageKeyChange, onImagePreviewChange],
@@ -103,20 +113,24 @@ export default function ImageAttachmentEditor({
     <div>
       <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
         <label
+          // hono/jsx は true を空文字の属性にする（ARIA では false 扱い）ため、文字列で渡す
+          aria-busy={processing ? 'true' : undefined}
           style={{
             padding: '0.2rem 0.5rem',
             border: '1px solid var(--border-strong)',
             borderRadius: '4px',
             fontSize: '0.85rem',
-            cursor: 'pointer',
+            cursor: processing ? 'default' : 'pointer',
+            opacity: processing ? 0.6 : 1,
           }}
         >
-          {imageKey ? '画像を変更' : '画像を追加'}
+          {processing ? '処理中…' : imageKey ? '画像を変更' : '画像を追加'}
           <input
             ref={imageInputRef}
             type="file"
             accept="image/jpeg,image/png,image/webp,image/gif"
             onChange={handleImageChange}
+            disabled={processing}
             style={{ display: 'none' }}
           />
         </label>
@@ -124,6 +138,7 @@ export default function ImageAttachmentEditor({
           <button
             type="button"
             onClick={() => setShowImageDeleteConfirm(true)}
+            disabled={processing}
             style={{
               padding: '0.2rem 0.5rem',
               background: 'transparent',
@@ -131,7 +146,8 @@ export default function ImageAttachmentEditor({
               border: '1px solid var(--danger)',
               borderRadius: '4px',
               fontSize: '0.85rem',
-              cursor: 'pointer',
+              cursor: processing ? 'default' : 'pointer',
+              opacity: processing ? 0.6 : 1,
             }}
           >
             画像を削除

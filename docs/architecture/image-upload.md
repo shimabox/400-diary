@@ -25,6 +25,39 @@ R2 Bucket: 400-diary-images
 
 クライアント側とサーバー側の両方でバリデーション（多層防御）。
 
+クライアント側の確認は、選んだ時点のファイル（圧縮の前）に対して行う。通らなければ上の文言で断り、圧縮もアップロードもしない。サーバー側は圧縮の有無に関係なく、送られてきたファイルの申告 MIME と先頭バイト（シグネチャ）の一致を確かめる。
+
+## ブラウザでの圧縮
+
+スマートフォンの写真は数 MB あり、そのまま保存すると日記ページの表示が遅くなる。日記の中の表示幅は最大 400px ほど、タップ時の拡大表示も画面の大きさまでなので、アップロードの前にブラウザで縮小・再エンコードして軽くする。サーバー（Workers）には画像を加工する標準の仕組みがないため、ブラウザで行う。処理は `app/lib/image-compress.ts` の `compressImageForUpload`。
+
+| 項目 | 内容 |
+|------|------|
+| 大きさ | 長辺が 2000px（`IMAGE_COMPRESS_MAX_EDGE`）を超えるときだけ、縦横比を保って長辺 2000px に縮める。拡大はしない |
+| 形式 | JPEG は JPEG のまま。PNG と WebP は透過を残せる WebP にする（ブラウザが WebP で書き出せなければ PNG） |
+| 品質 | 0.85（`IMAGE_COMPRESS_QUALITY`） |
+| 向き | EXIF の Orientation を反映して描く（`createImageBitmap` の `imageOrientation: 'from-image'`）。書き出した画像には EXIF が付かない（位置情報なども消える） |
+| 送るファイル | 書き出した形式に合った MIME と拡張子の File にする（サーバーが申告 MIME と中身の一致を確かめるため） |
+| プレビュー | 実際に送るファイル（圧縮後、または元のまま）から data URL で作る |
+
+### 圧縮しないもの
+
+次のものは再エンコードせず、元のファイルをそのまま送る。再エンコードすると最初の 1 コマだけになり、動かなくなるため。
+
+- GIF（判定せず、常に圧縮しない）
+- アニメーション WebP（RIFF の最初のチャンクが `VP8X` で、アニメーションのフラグ（0x02）が立っているもの）
+- APNG（PNG のチャンクを先頭からたどり、最初の `IDAT` より前に `acTL` があるもの）
+- アニメーションかどうかを判定できない PNG / WebP（チャンクの長さが壊れている、途中で切れている、`IDAT` にも `acTL` にも着かずに終わる、など）。アニメーション画像はブラウザで静止画として問題なく読み込めてしまい、圧縮の失敗では守れないため、判定できないものも元のまま送る
+
+### 元のまま送る場合
+
+| 状況 | 送るファイル |
+|------|-------------|
+| 縮小した（長辺が 2000px を超えていた） | 圧縮後が 10MB 以下なら、元より大きくても圧縮後 |
+| 縮小していない（長辺が 2000px 以下） | 圧縮後のほうが小さいときだけ圧縮後。元以上なら元 |
+| 圧縮後が 10MB（`MAX_IMAGE_SIZE`）を超える | 縮小したかに関係なく元。元は選んだ時点の確認で 10MB 以下なので、圧縮したせいで断られない |
+| 読み込めない・書き出せないなど、圧縮の途中で失敗した（`createImageBitmap` や `imageOrientation: 'from-image'` に対応していないブラウザを含む） | 元。今までどおりアップロードできることを優先する |
+
 ## 前提条件
 
 画像アップロードは `POST /api/diaries/:id/image` で日記IDを必要とするため、**日記を一度保存してからでないと画像を追加できない**。新規作成時はまず本文を保存し、その後に画像をアップロードする流れになる。
@@ -40,9 +73,10 @@ sequenceDiagram
     participant DB as D1
 
     User->>ImageEditor: 画像ファイルを選択
-    ImageEditor->>ImageEditor: クライアント側バリデーション (形式・サイズ)
-    ImageEditor->>ImageEditor: FileReader でプレビュー生成
-    ImageEditor->>API: POST FormData { file }
+    ImageEditor->>ImageEditor: クライアント側バリデーション (形式・サイズ、選んだ時点のファイル)
+    ImageEditor->>ImageEditor: compressImageForUpload (長辺 2000px に縮小・再エンコード。アニメーション画像・失敗時は元のまま)
+    ImageEditor->>ImageEditor: FileReader で送るファイルからプレビュー生成
+    ImageEditor->>API: POST FormData { file: 送るファイル }
     API->>API: サーバー側バリデーション
     API->>R2: bucket.put(key, data, contentType)
     API->>DB: UPDATE diaries SET image_key = key
@@ -53,6 +87,15 @@ sequenceDiagram
 ```
 
 DB 更新は R2 アップロード後に行う。旧画像の R2 削除は `deleteMediaIfOrphan` 経由の best-effort で、削除に失敗してもレスポンスは成功のまま返す。
+
+### 処理中の表示
+
+大きな画像では圧縮とアップロードに時間がかかるため、その間は処理中であることを示す。
+
+- いつから: クライアント側の確認（未保存の日記、形式、10MB）を通った時点。確認で断った場合は処理中にしない
+- いつまで: 圧縮とアップロードが終わるまで。成功・失敗・例外のどれでも解除する（`finally`）
+- 表示: 画像を選ぶボタンの文言を「処理中…」にし、`aria-busy="true"` を付ける
+- 押せなくなるもの: 画像の選び直し（file input を `disabled`）と「画像を削除」ボタン。どちらも不透明度を下げ、カーソルを通常に戻して押せないことを見た目でも示す
 
 ## 画像配信フロー
 
@@ -193,7 +236,8 @@ FlowText コンポーネントが `computeSlots` で画像を障害物として�
 | `app/routes/api/diaries/[id]/image.ts` | アップロード・削除 API |
 | `app/routes/api/images/[...key].ts` | 画像配信エンドポイント |
 | `app/routes/api/diaries/[id].ts` | 日記削除時の画像 R2 クリーンアップ |
-| `app/islands/image-attachment-editor.tsx` | アップロード・削除 UI、ローカル preview 生成 |
+| `app/lib/image-compress.ts` | アップロード前のブラウザでの圧縮（縮小・再エンコード、アニメーション判定、送るファイルの選択） |
+| `app/islands/image-attachment-editor.tsx` | アップロード・削除 UI、圧縮の呼び出し、送るファイルからのローカル preview 生成 |
 | `app/islands/vertical-editor.tsx` | 編集画面での画像 state / 座標 state の保持と子コンポーネントへの受け渡し |
 | `app/islands/flow-text.tsx` | 画像回り込みレイアウト |
 | `app/lib/db.ts` | `listSnapshotImageKeys` (削除時の R2 クリーンアップ) |
