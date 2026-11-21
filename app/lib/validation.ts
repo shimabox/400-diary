@@ -1,10 +1,12 @@
 import {
+  IMAGE_DIMENSION_MAX,
   IMAGE_ROTATION_MAX,
   IMAGE_ROTATION_MIN,
   IMAGE_SCALE_MAX,
   IMAGE_SCALE_MIN,
   MAX_BODY_LENGTH,
 } from './constants'
+import type { ImageDimensions } from './db'
 import { MOODS, type MoodKey } from './mood'
 
 // TypeScript の型は c.req.json<T>() のキャストにすぎずランタイムでは何も守らない。
@@ -69,6 +71,29 @@ export function isImageRotation(v: unknown): v is number | null {
       v >= IMAGE_ROTATION_MIN &&
       v <= IMAGE_ROTATION_MAX)
   )
+}
+
+const IMAGE_DIMENSION_PATTERN = /^[0-9]{1,6}$/
+
+function parseImageDimension(v: unknown): number | null {
+  if (typeof v !== 'string' || !IMAGE_DIMENSION_PATTERN.test(v)) return null
+  const n = Number(v)
+  return n >= 1 && n <= IMAGE_DIMENSION_MAX ? n : null
+}
+
+/**
+ * 画像のアップロードで送られた幅・高さ（FormData の値）を読む。両方が
+ * 「1 以上 IMAGE_DIMENSION_MAX 以下の整数を表す 10 進の文字列」のときだけ寸法を返し、
+ * どちらかが無い・形式が合わないときは null を返す（片方だけ使うことはしない）。
+ * 寸法が無くても画像は表示できるので、呼び出し側は null でもアップロードを断らない
+ */
+export function parseImageDimensions(
+  width: unknown,
+  height: unknown,
+): ImageDimensions | null {
+  const w = parseImageDimension(width)
+  const h = parseImageDimension(height)
+  return w !== null && h !== null ? { width: w, height: h } : null
 }
 
 export type DiaryInput = {

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'hono/jsx'
+import type { ImageSize } from '../lib/image-layout'
 import { computeContentExtent, hasContentBeyondLeft } from '../lib/scroll-frame'
 import FlowText from './flow-text'
 
@@ -22,6 +23,8 @@ type Props = {
   text: string
   imageLayout: 'left' | 'right'
   imageSrc: string | null
+  /** 画像の表示寸法（保存済みの値）。FlowText へそのまま渡す */
+  imageDimensions?: ImageSize | null
   dateLabel?: string
   imagePosition?: { x: number; y: number } | null
   imageScale?: number | null

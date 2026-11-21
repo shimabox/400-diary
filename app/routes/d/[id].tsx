@@ -5,6 +5,7 @@ import SpeechPlayer from '../../islands/speech-player'
 import { DEFAULT_APP_NAME } from '../../lib/constants'
 import { getDiaryWithSnapshot, hasOtherPublishedDiary } from '../../lib/db'
 import { formatDiaryDate } from '../../lib/format'
+import { toImageSize } from '../../lib/image-dimensions'
 
 export default createRoute(async (c) => {
   const appName = c.env.APP_NAME || DEFAULT_APP_NAME
@@ -50,6 +51,11 @@ export default createRoute(async (c) => {
   const pubImageY = snapshot.image_y
   const pubImageScale = snapshot.image_scale
   const pubImageRotation = snapshot.image_rotation
+  // 公開中の画像はスナップショットの画像なので、寸法もスナップショットの値を使う
+  const pubImageDimensions = toImageSize(
+    snapshot.image_width,
+    snapshot.image_height,
+  )
   const pubBgColor = snapshot.background_color
   const pubMood = snapshot.mood
   const description = pubBody.slice(0, 80)
@@ -134,6 +140,7 @@ export default createRoute(async (c) => {
           text={pubBody}
           imageLayout={pubImageLayout}
           imageSrc={pubImageKey ? `/api/images/${pubImageKey}` : null}
+          imageDimensions={pubImageDimensions}
           dateLabel={dateLabel}
           imagePosition={
             pubImageX != null && pubImageY != null

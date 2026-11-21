@@ -7,6 +7,10 @@ import {
   IMAGE_SCALE_MIN,
 } from '../lib/constants'
 import { type FlowSegment, flowTextWithExtension } from '../lib/flow-layout'
+import {
+  chooseLayoutImageSize,
+  type LoadedImageSize,
+} from '../lib/image-dimensions'
 import { computeImageFrame, type ImageSize } from '../lib/image-layout'
 import type { ObstacleRect } from '../lib/layout'
 
@@ -16,6 +20,11 @@ type Props = {
   lineHeight: number
   imageLayout: 'left' | 'right'
   imageSrc: string | null
+  /**
+   * いま表示している画像（imageSrc）の表示寸法（px）。読み込みを待たずに画像の
+   * 場所を空けて組むのに使う。読み込み後は実寸を優先する。分からなければ null
+   */
+  imageDimensions?: ImageSize | null
   containerHeight: number
   /** 画像の位置（指定時は imageLayout より優先） */
   imagePosition?: { x: number; y: number } | null
@@ -43,6 +52,7 @@ export default function FlowText({
   lineHeight,
   imageLayout,
   imageSrc,
+  imageDimensions,
   containerHeight,
   imagePosition,
   imageScale,
@@ -59,7 +69,9 @@ export default function FlowText({
   const containerRef = useRef<HTMLDivElement>(null)
   const dateRef = useRef<HTMLDivElement>(null)
   const imgRef = useRef<HTMLImageElement>(null)
-  const [naturalSize, setNaturalSize] = useState<ImageSize | null>(null)
+  // 読み込みが終わった画像の実寸。どの src を測ったかも持ち、画像を差し替えたら
+  // 前の画像の実寸を使わない（下の chooseLayoutImageSize で src を突き合わせる）
+  const [loadedSize, setLoadedSize] = useState<LoadedImageSize | null>(null)
   const [dateSize, setDateSize] = useState<{
     width: number
     height: number
@@ -67,18 +79,36 @@ export default function FlowText({
   const [containerWidth, setContainerWidth] = useState(0)
   const [showViewer, setShowViewer] = useState(false)
 
-  const handleImageLoad = useCallback((e: Event) => {
-    const img = e.target as HTMLImageElement
-    setNaturalSize({ width: img.naturalWidth, height: img.naturalHeight })
+  // 測った src は属性の値（imageSrc と同じ文字列）で持つ。img.src は絶対 URL になるため
+  const recordLoadedSize = useCallback((img: HTMLImageElement) => {
+    const src = img.getAttribute('src')
+    if (src === null) return
+    setLoadedSize({ src, width: img.naturalWidth, height: img.naturalHeight })
   }, [])
 
+  const handleImageLoad = useCallback(
+    (e: Event) => recordLoadedSize(e.target as HTMLImageElement),
+    [recordLoadedSize],
+  )
+
   // ref callback: ハイドレーション時に画像が読み込み済みならサイズを即取得
-  const imgCallbackRef = useCallback((img: HTMLImageElement | null) => {
-    imgRef.current = img
-    if (img?.complete && img.naturalWidth > 0) {
-      setNaturalSize({ width: img.naturalWidth, height: img.naturalHeight })
-    }
-  }, [])
+  const imgCallbackRef = useCallback(
+    (img: HTMLImageElement | null) => {
+      imgRef.current = img
+      if (img?.complete && img.naturalWidth > 0) recordLoadedSize(img)
+    },
+    [recordLoadedSize],
+  )
+
+  // 配置に使う寸法は、いまの画像の実寸 → 渡された寸法 → なし（読み込み後に組む）の順で
+  // render 中に決める。実寸が渡された寸法と違えば、実寸に変わった時点で組み直される
+  const naturalSize = chooseLayoutImageSize(
+    loadedSize,
+    imageSrc,
+    imageDimensions,
+  )
+  const naturalWidth = naturalSize?.width
+  const naturalHeight = naturalSize?.height
 
   // 表示サイズ(imageSize)と回転後の外接矩形(frameSize)を自然サイズから render 中に導出する。
   // 計算の詳細と補正の理由は computeImageFrame (app/lib/image-layout.ts) を参照
@@ -86,16 +116,28 @@ export default function FlowText({
     imageSize: ImageSize | null
     frameSize: ImageSize | null
   }>(() => {
-    if (!naturalSize || !containerWidth) {
+    if (
+      naturalWidth === undefined ||
+      naturalHeight === undefined ||
+      !containerWidth
+    ) {
       return { imageSize: null, frameSize: null }
     }
     return computeImageFrame(
-      naturalSize,
+      { width: naturalWidth, height: naturalHeight },
       { width: containerWidth, height: containerHeight },
       scale,
       rotation,
     )
-  }, [naturalSize, containerWidth, containerHeight, scale, rotation])
+    // 寸法は毎回新しいオブジェクトになるので、値（幅と高さ）で依存を取る
+  }, [
+    naturalWidth,
+    naturalHeight,
+    containerWidth,
+    containerHeight,
+    scale,
+    rotation,
+  ])
 
   // 日付サイズを計測
   useEffect(() => {

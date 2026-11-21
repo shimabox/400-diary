@@ -147,6 +147,15 @@ describe('getDiary', () => {
     expect(db.boundValues).toContain('abc')
   })
 
+  test('画像の寸法の列も取得する', async () => {
+    const db = createMockDB({ first: { id: 'abc' } })
+
+    await getDiary(db, 'abc')
+
+    const [sql] = vi.mocked(db.prepare).mock.calls[0]
+    expect(sql).toContain('image_width, image_height')
+  })
+
   test('存在しないIDはnullを返す', async () => {
     const db = createMockDB({ first: null })
 
@@ -230,6 +239,54 @@ describe('updateDiary', () => {
     expect(db2.prepare).toHaveBeenCalledTimes(3)
   })
 
+  test('image_size は画像キーと同じ 1 回の UPDATE で幅と高さを組で書く', async () => {
+    const db = createMockDB({ first: { id: 'abc' } })
+
+    await updateDiary(db, 'abc', {
+      image_key: 'diaries/abc/new.jpg',
+      image_size: { width: 1500, height: 2000 },
+    })
+
+    const updateSql = vi
+      .mocked(db.prepare)
+      .mock.calls.map(([sql]) => sql)
+      .filter((sql) => sql.startsWith('UPDATE'))
+    expect(updateSql).toHaveLength(1)
+    expect(updateSql[0]).toContain('image_key = ?')
+    expect(updateSql[0]).toContain('image_width = ?')
+    expect(updateSql[0]).toContain('image_height = ?')
+    expect(db.boundValues).toEqual(
+      expect.arrayContaining(['diaries/abc/new.jpg', 1500, 2000]),
+    )
+  })
+
+  test('image_size に null を渡すと幅と高さの両方を NULL にする', async () => {
+    const db = createMockDB({ first: { id: 'abc' } })
+
+    await updateDiary(db, 'abc', { image_key: null, image_size: null })
+
+    const updateSql = vi
+      .mocked(db.prepare)
+      .mock.calls.map(([sql]) => sql)
+      .find((sql) => sql.startsWith('UPDATE'))
+    expect(updateSql).toContain('image_width = ?, image_height = ?')
+    // getDiary の id、image_key、幅、高さ、UPDATE の id
+    expect(db.boundValues.slice(1, 4)).toEqual([null, null, null])
+  })
+
+  test('image_size を渡さなければ寸法を UPDATE に含めない', async () => {
+    const db = createMockDB({ first: { id: 'abc' } })
+
+    await updateDiary(db, 'abc', { body: '本文' })
+
+    const updateSql = vi
+      .mocked(db.prepare)
+      .mock.calls.map(([sql]) => sql)
+      .find((sql) => sql.startsWith('UPDATE'))
+    expect(updateSql).not.toContain('image_width')
+    expect(updateSql).not.toContain('image_height')
+  })
+
   test('speech_public を 1 / 0 で保存する', async () => {
     const db = createMockDB({ first: { id: 'abc', speech_public: 0 } })
 
@@ -277,7 +334,7 @@ describe('publishDiary の読み上げ音声の引き継ぎ', () => {
       sqls.some((sql) => sql.includes('INSERT INTO diary_snapshots')),
     ).toBe(true)
     const stmt = db.prepare('')
-    return vi.mocked(stmt.bind).mock.calls.find((args) => args.length === 13)!
+    return vi.mocked(stmt.bind).mock.calls.find((args) => args.length === 15)!
   }
 
   test('音声が保存済みの本文・気分に合えば、speech_key と speech_public を写す', async () => {
@@ -522,6 +579,64 @@ describe('publishDiary', () => {
     expect(db.boundValues).toContain('diaries/abc/image.jpg')
     expect(db.boundValues).toContain(1.2)
     expect(db.boundValues).toContain(-8)
+  })
+
+  test('画像の寸法をスナップショットへ写し、取得し直す SELECT にも寸法を含める', async () => {
+    const diary = {
+      id: 'abc',
+      body: '本文',
+      image_key: 'diaries/abc/image.jpg',
+      image_layout: 'left' as const,
+      image_x: null,
+      image_y: null,
+      image_scale: null,
+      image_rotation: null,
+      image_width: 1234,
+      image_height: 987,
+      background_color: '#FFE4E1',
+      mood: null,
+    }
+    const db = createMockDB({ first: diary })
+
+    await publishDiary(db, 'abc')
+
+    const sqls = vi.mocked(db.prepare).mock.calls.map(([sql]) => sql)
+    const insert = sqls.find((sql) =>
+      sql.includes('INSERT INTO diary_snapshots'),
+    )
+    expect(insert).toContain('image_width, image_height')
+    expect(db.boundValues).toContain(1234)
+    expect(db.boundValues).toContain(987)
+    const select = [...sqls]
+      .reverse()
+      .find((sql) => sql.includes('FROM diary_snapshots'))
+    expect(select).toContain('image_width, image_height')
+  })
+
+  test('寸法が無い日記を公開するとスナップショットの寸法は両方 NULL', async () => {
+    const diary = {
+      id: 'abc',
+      body: '本文',
+      image_key: 'diaries/abc/image.gif',
+      image_layout: 'left' as const,
+      image_x: null,
+      image_y: null,
+      image_scale: null,
+      image_rotation: null,
+      image_width: null,
+      image_height: null,
+      background_color: '#FFE4E1',
+      mood: null,
+    }
+    const db = createMockDB({ first: diary })
+
+    await publishDiary(db, 'abc')
+
+    // snapshotId, diary id, body, image_key, layout, x, y, scale, rotation, width, height
+    const insertValues = db.boundValues.slice(
+      db.boundValues.indexOf('test-id-1234'),
+    )
+    expect(insertValues.slice(9, 11)).toEqual([null, null])
   })
 
   test('snapshot の INSERT と published_snapshot_id の UPDATE を batch で原子的に実行する', async () => {

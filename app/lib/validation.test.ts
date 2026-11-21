@@ -1,11 +1,12 @@
 import { describe, expect, test } from 'vitest'
-import { MAX_BODY_LENGTH } from './constants'
+import { IMAGE_DIMENSION_MAX, MAX_BODY_LENGTH } from './constants'
 import {
   isDiaryDate,
   isHexColor,
   isImageCoord,
   isImageLayout,
   isMood,
+  parseImageDimensions,
   validateDiaryInput,
 } from './validation'
 
@@ -87,7 +88,53 @@ describe('isImageCoord', () => {
   })
 })
 
+describe('parseImageDimensions', () => {
+  test('両方が 1〜上限の整数の 10 進文字列なら数値の組を返す', () => {
+    expect(parseImageDimensions('1500', '2000')).toEqual({
+      width: 1500,
+      height: 2000,
+    })
+    expect(parseImageDimensions('1', String(IMAGE_DIMENSION_MAX))).toEqual({
+      width: 1,
+      height: IMAGE_DIMENSION_MAX,
+    })
+  })
+
+  test('片方でも欠けている・形式が合わなければ両方を捨てて null', () => {
+    expect(parseImageDimensions('100', null)).toBeNull()
+    expect(parseImageDimensions(null, '100')).toBeNull()
+    expect(parseImageDimensions('0', '100')).toBeNull()
+    expect(parseImageDimensions(String(IMAGE_DIMENSION_MAX + 1), '1')).toBe(
+      null,
+    )
+    expect(parseImageDimensions('1.5', '100')).toBeNull()
+    expect(parseImageDimensions('-1', '100')).toBeNull()
+    expect(parseImageDimensions('1e3', '100')).toBeNull()
+    expect(parseImageDimensions('0x10', '100')).toBeNull()
+    expect(parseImageDimensions(' 100', '100')).toBeNull()
+    expect(parseImageDimensions('', '100')).toBeNull()
+    expect(parseImageDimensions('9999999', '100')).toBeNull()
+  })
+
+  test('文字列以外（数値や File）は受け付けない', () => {
+    expect(parseImageDimensions(100, 100)).toBeNull()
+    expect(
+      parseImageDimensions(new File(['100'], 'w.txt'), new File(['1'], 'h')),
+    ).toBeNull()
+  })
+})
+
 describe('validateDiaryInput', () => {
+  test('画像の寸法は保存の入力として通さない', () => {
+    const result = validateDiaryInput({
+      body: '本文',
+      image_width: 100,
+      image_height: 100,
+      image_size: { width: 100, height: 100 },
+    })
+    expect(result).toEqual({ ok: true, value: { body: '本文' } })
+  })
+
   test('オブジェクト以外は不正なリクエストとして400相当を返す', () => {
     expect(validateDiaryInput(null).ok).toBe(false)
     expect(validateDiaryInput('文字列').ok).toBe(false)

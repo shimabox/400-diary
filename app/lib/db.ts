@@ -12,6 +12,10 @@ export type Diary = {
   image_y: number | null
   image_scale: number | null
   image_rotation: number | null
+  /** 画像の表示幅（px）。image_height と両方そろうか両方 null。null は寸法が分からない画像 */
+  image_width: number | null
+  /** 画像の表示高さ（px）。EXIF の向きを反映した naturalHeight と一致する */
+  image_height: number | null
   background_color: string
   mood: string | null
   /** 下書き側の読み上げ音声の R2 キー。最後に作った音声を指す */
@@ -34,6 +38,10 @@ export type DiarySnapshot = {
   image_y: number | null
   image_scale: number | null
   image_rotation: number | null
+  /** 公開時点の画像の表示幅（px）。image_height と両方そろうか両方 null */
+  image_width: number | null
+  /** 公開時点の画像の表示高さ（px） */
+  image_height: number | null
   background_color: string
   mood: string | null
   /** 公開中の読み上げ音声の R2 キー。本文・気分に合う音声が無ければ null */
@@ -62,6 +70,12 @@ export type DiaryWithPublished = Diary & {
 /** 公開ページ用: diary + snapshot */
 export type DiaryWithSnapshot = Diary & {
   snapshot: DiarySnapshot
+}
+
+/** 画像の表示寸法（px）。幅と高さは必ず組で持つ */
+export type ImageDimensions = {
+  width: number
+  height: number
 }
 
 export type PublishedFeedItem = {
@@ -188,8 +202,8 @@ export async function getDiary(
 ): Promise<Diary | null> {
   return await db
     .prepare(
-      `SELECT id, body, image_key, image_layout, image_x, image_y, image_scale, image_rotation, background_color, mood,
-              speech_key, speech_public, diary_date, published_snapshot_id, created_at, updated_at
+      `SELECT id, body, image_key, image_layout, image_x, image_y, image_scale, image_rotation, image_width, image_height,
+              background_color, mood, speech_key, speech_public, diary_date, published_snapshot_id, created_at, updated_at
        FROM diaries
        WHERE id = ?`,
     )
@@ -230,6 +244,7 @@ export async function listDiariesPage(
   const { results } = await db
     .prepare(
       `SELECT d.id, d.body, d.image_key, d.image_layout, d.image_x, d.image_y, d.image_scale, d.image_rotation,
+              d.image_width, d.image_height,
               d.background_color, d.mood, d.speech_key, d.speech_public, d.diary_date, d.published_snapshot_id,
               d.created_at, d.updated_at,
               s.published_at,
@@ -346,6 +361,12 @@ export async function updateDiary(
     image_y?: number | null
     image_scale?: number | null
     image_rotation?: number | null
+    /**
+     * 画像の表示寸法。null で両方を NULL にする。幅と高さを別々に受け取らないのは、
+     * 片方だけ入った行を作らないため。日記の保存 API（PUT）からは渡さず、
+     * 画像のアップロード・削除だけが画像キーと同じ更新で書き換える
+     */
+    image_size?: ImageDimensions | null
     speech_public?: boolean
   },
 ): Promise<Diary | null> {
@@ -395,6 +416,13 @@ export async function updateDiary(
     setClauses.push('image_rotation = ?')
     values.push(params.image_rotation ?? null)
   }
+  if ('image_size' in params) {
+    setClauses.push('image_width = ?', 'image_height = ?')
+    values.push(
+      params.image_size?.width ?? null,
+      params.image_size?.height ?? null,
+    )
+  }
   if (params.speech_public !== undefined) {
     setClauses.push('speech_public = ?')
     values.push(params.speech_public ? 1 : 0)
@@ -439,8 +467,8 @@ export async function publishDiary(
   await db.batch([
     db
       .prepare(
-        `INSERT INTO diary_snapshots (id, diary_id, body, image_key, image_layout, image_x, image_y, image_scale, image_rotation, background_color, mood, speech_key, speech_public)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO diary_snapshots (id, diary_id, body, image_key, image_layout, image_x, image_y, image_scale, image_rotation, image_width, image_height, background_color, mood, speech_key, speech_public)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .bind(
         snapshotId,
@@ -452,6 +480,9 @@ export async function publishDiary(
         diary.image_y,
         diary.image_scale,
         diary.image_rotation,
+        // 寸法は画像と組なので、画像キーと同じ時点の値をそのまま写す
+        diary.image_width ?? null,
+        diary.image_height ?? null,
         diary.background_color,
         diary.mood,
         speechKey,
@@ -467,7 +498,7 @@ export async function publishDiary(
   return await db
     .prepare(
       `SELECT id, diary_id, body, image_key, image_layout, image_x, image_y, image_scale, image_rotation,
-              background_color, mood, speech_key, speech_public, published_at
+              image_width, image_height, background_color, mood, speech_key, speech_public, published_at
        FROM diary_snapshots
        WHERE id = ?`,
     )
@@ -504,6 +535,7 @@ export async function getDiaryWithPublished(
   return await db
     .prepare(
       `SELECT d.id, d.body, d.image_key, d.image_layout, d.image_x, d.image_y, d.image_scale, d.image_rotation,
+              d.image_width, d.image_height,
               d.background_color, d.mood, d.speech_key, d.speech_public, d.diary_date, d.published_snapshot_id,
               d.created_at, d.updated_at,
               s.published_at,
@@ -537,7 +569,7 @@ export async function getDiaryWithSnapshot(
   const snapshot = await db
     .prepare(
       `SELECT id, diary_id, body, image_key, image_layout, image_x, image_y, image_scale, image_rotation,
-              background_color, mood, speech_key, speech_public, published_at
+              image_width, image_height, background_color, mood, speech_key, speech_public, published_at
        FROM diary_snapshots
        WHERE id = ?`,
     )
@@ -683,8 +715,8 @@ export async function listSpeechKeysInUse(
 export async function listAllDiaries(db: D1Database): Promise<Diary[]> {
   const { results } = await db
     .prepare(
-      `SELECT id, body, image_key, image_layout, image_x, image_y, image_scale, image_rotation, background_color, mood,
-              speech_key, speech_public, diary_date, published_snapshot_id, created_at, updated_at
+      `SELECT id, body, image_key, image_layout, image_x, image_y, image_scale, image_rotation, image_width, image_height,
+              background_color, mood, speech_key, speech_public, diary_date, published_snapshot_id, created_at, updated_at
        FROM diaries
        ORDER BY diary_date ASC, id ASC`,
     )

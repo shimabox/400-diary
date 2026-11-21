@@ -12,6 +12,8 @@ function makeDiary(overrides: Partial<Diary> = {}): Diary {
     image_y: null,
     image_scale: null,
     image_rotation: null,
+    image_width: null,
+    image_height: null,
     background_color: '#FFE4E1',
     mood: null,
     speech_key: null,

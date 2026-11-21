@@ -22,4 +22,20 @@ describe('FlowText の SSR', () => {
 
     expect(html).toContain('<div')
   })
+
+  test('画像の寸法を渡しても SSR では配置を計算せずにレンダリングできる', () => {
+    const html = (
+      <FlowText
+        text={'あ'.repeat(400)}
+        fontSize={16}
+        lineHeight={2.2}
+        imageLayout="left"
+        imageSrc="/api/images/diaries/abc/a.jpg"
+        imageDimensions={{ width: 1200, height: 900 }}
+        containerHeight={400}
+      />
+    ).toString()
+
+    expect(html).toContain('/api/images/diaries/abc/a.jpg')
+  })
 })
