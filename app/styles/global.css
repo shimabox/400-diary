@@ -121,6 +121,9 @@
   --paper-fg: #333;
   --paper-muted: #555;
   --paper-line: rgba(0, 0, 0, 0.08);
+  /* 画像が届くまでの台紙。用紙の色の上に重ねる半透明なので、利用者が選んだ
+     どの色でも、地より少しだけ色の違う面に見える */
+  --paper-mat: rgba(0, 0, 0, 0.08);
   --paper-blend: luminosity;
   --paper-scheme: light;
 }
@@ -135,6 +138,7 @@
       --paper-fg: #cfc9bd;
       --paper-muted: #b8b2a6;
       --paper-line: rgba(255, 255, 255, 0.1);
+      --paper-mat: rgba(255, 255, 255, 0.1);
       --paper-blend: multiply;
       --paper-scheme: dark;
     }
@@ -145,6 +149,7 @@
     --paper-fg: #cfc9bd;
     --paper-muted: #b8b2a6;
     --paper-line: rgba(255, 255, 255, 0.1);
+    --paper-mat: rgba(255, 255, 255, 0.1);
     --paper-blend: multiply;
     --paper-scheme: dark;
   }
@@ -168,6 +173,43 @@
 /* 用紙の枠。左端フェードは用紙と同じ色で消えていく */
 .paper-fade {
   background: linear-gradient(to right, var(--paper-bg), transparent);
+}
+
+/* 日記の画像（app/islands/flow-text.tsx）。見せ方は app/lib/image-display.ts で
+   決める。隠すときも img の矩形は保つ（横スクロールの幅を img の左端から測るため、
+   display: none にしない） */
+.flow-image.is-transparent {
+  opacity: 0;
+}
+/* 読み込めなかった img は、壊れた画像のアイコンや alt の文字が台紙に重ならない
+   よう描画を隠す。visibility: hidden で支援技術にも読ませず、印の名前だけを届ける */
+.flow-image.is-failed {
+  opacity: 0;
+  visibility: hidden;
+}
+/* 画像が届くまでの台紙。画像と同じ大きさ・角丸・回転で、場所だけを見せる */
+.flow-image-mat {
+  background-color: var(--paper-mat);
+  border-radius: 12px;
+}
+/* 画像のフェードと同時に消し、終わったあとは画像の後ろに残さない
+   （透過のある画像から台紙の色が透けて見えないようにする） */
+.flow-image-mat.is-leaving {
+  opacity: 0;
+}
+/* 台紙が見えていたときだけ付くクラス。画像と台紙を同じ時間で入れ替える */
+.flow-image.is-revealing,
+.flow-image-mat.is-leaving {
+  transition: opacity 280ms ease-out;
+}
+.flow-image-mark {
+  color: var(--paper-muted);
+}
+@media (prefers-reduced-motion: reduce) {
+  .flow-image.is-revealing,
+  .flow-image-mat.is-leaving {
+    transition: none;
+  }
 }
 
 html {
