@@ -38,4 +38,24 @@ describe('FlowText の SSR', () => {
 
     expect(html).toContain('/api/images/diaries/abc/a.jpg')
   })
+
+  test('SSR では枠の大きさが決まらないので、台紙も印も出さず img は透明で待つ', () => {
+    const html = (
+      <FlowText
+        text={'あ'.repeat(400)}
+        fontSize={16}
+        lineHeight={2.2}
+        imageLayout="left"
+        imageSrc="/api/images/diaries/abc/a.jpg"
+        imageDimensions={{ width: 1200, height: 900 }}
+        containerHeight={400}
+      />
+    ).toString()
+
+    expect(html).toContain('class="flow-image is-transparent"')
+    expect(html).not.toContain('flow-image-mat')
+    expect(html).not.toContain('写真を読み込めませんでした')
+    // 読み込みの結果はまだ分からないので、枠は押せるまま
+    expect(html).not.toContain('disabled')
+  })
 })

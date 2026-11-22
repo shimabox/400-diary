@@ -7,10 +7,19 @@ import {
   IMAGE_SCALE_MIN,
 } from '../lib/constants'
 import { type FlowSegment, flowTextWithExtension } from '../lib/flow-layout'
+import { chooseLayoutImageSize } from '../lib/image-dimensions'
 import {
-  chooseLayoutImageSize,
-  type LoadedImageSize,
-} from '../lib/image-dimensions'
+  deriveImageDisplay,
+  EMPTY_IMAGE_LOAD_RECORD,
+  failureMarkSize,
+  type ImageAppearance,
+  type ImageLoadRecord,
+  readImageElementResult,
+  recordImageFailed,
+  recordImageLoaded,
+  shouldRevealOnLoad,
+  trackImageSrc,
+} from '../lib/image-display'
 import { computeImageFrame, type ImageSize } from '../lib/image-layout'
 import type { ObstacleRect } from '../lib/layout'
 
@@ -46,6 +55,23 @@ type Props = {
   onExtraWidthChange?: (extraWidth: number) => void
 }
 
+/** img の見せ方（app/lib/image-display.ts）と global.css のクラスの対応 */
+const IMAGE_CLASS: Record<ImageAppearance, string> = {
+  transparent: 'flow-image is-transparent',
+  visible: 'flow-image',
+  revealing: 'flow-image is-revealing',
+  failed: 'flow-image is-failed',
+}
+
+/**
+ * 枠（button）の中で left / top を 50% にした要素の transform。要素の中心を枠の
+ * 中心に合わせ、その中心で回す（img は flex で枠の中央に置かれ、中心で回る）
+ */
+function centeredTransform(rotation: number): string {
+  const center = 'translate(-50%, -50%)'
+  return rotation !== 0 ? `${center} rotate(${rotation}deg)` : center
+}
+
 export default function FlowText({
   text,
   fontSize,
@@ -68,10 +94,19 @@ export default function FlowText({
   const rotation = imageRotation ?? 0
   const containerRef = useRef<HTMLDivElement>(null)
   const dateRef = useRef<HTMLDivElement>(null)
-  const imgRef = useRef<HTMLImageElement>(null)
-  // 読み込みが終わった画像の実寸。どの src を測ったかも持ち、画像を差し替えたら
-  // 前の画像の実寸を使わない（下の chooseLayoutImageSize で src を突き合わせる）
-  const [loadedSize, setLoadedSize] = useState<LoadedImageSize | null>(null)
+  // 画像の読み込みの記録。枠の表示履歴（その枠で写真を表示済みか）と、いまの src を
+  // 設定してからの読み込みの結果（読み込めた・失敗した・フェードで現す）を分けて持つ
+  const [storedImageRecord, setImageRecord] = useState<ImageLoadRecord>(() =>
+    trackImageSrc(EMPTY_IMAGE_LOAD_RECORD, imageSrc),
+  )
+  // src が切り替わったら、前の src の結果（とくに失敗）を捨てて履歴だけを残す。
+  // props の変化に合わせた記録の切り替えなので、Effect ではなく render 中に行う。
+  // この render は切り替えた記録で描き、state にも書き戻して次の render とイベント
+  // の記録（関数で前の値を受け取る）に使う。src が同じなら同じ記録が返るので繰り返さない
+  const imageRecord = trackImageSrc(storedImageRecord, imageSrc)
+  if (imageRecord !== storedImageRecord) setImageRecord(imageRecord)
+  // いま枠にある img 要素。外した img から遅れて届いた load / error を記録しないため
+  const imgRef = useRef<HTMLImageElement | null>(null)
   const [dateSize, setDateSize] = useState<{
     width: number
     height: number
@@ -79,31 +114,10 @@ export default function FlowText({
   const [containerWidth, setContainerWidth] = useState(0)
   const [showViewer, setShowViewer] = useState(false)
 
-  // 測った src は属性の値（imageSrc と同じ文字列）で持つ。img.src は絶対 URL になるため
-  const recordLoadedSize = useCallback((img: HTMLImageElement) => {
-    const src = img.getAttribute('src')
-    if (src === null) return
-    setLoadedSize({ src, width: img.naturalWidth, height: img.naturalHeight })
-  }, [])
-
-  const handleImageLoad = useCallback(
-    (e: Event) => recordLoadedSize(e.target as HTMLImageElement),
-    [recordLoadedSize],
-  )
-
-  // ref callback: ハイドレーション時に画像が読み込み済みならサイズを即取得
-  const imgCallbackRef = useCallback(
-    (img: HTMLImageElement | null) => {
-      imgRef.current = img
-      if (img?.complete && img.naturalWidth > 0) recordLoadedSize(img)
-    },
-    [recordLoadedSize],
-  )
-
   // 配置に使う寸法は、いまの画像の実寸 → 渡された寸法 → なし（読み込み後に組む）の順で
   // render 中に決める。実寸が渡された寸法と違えば、実寸に変わった時点で組み直される
   const naturalSize = chooseLayoutImageSize(
-    loadedSize,
+    imageRecord.measured,
     imageSrc,
     imageDimensions,
   )
@@ -138,6 +152,79 @@ export default function FlowText({
     scale,
     rotation,
   ])
+
+  // 画像の状態（待ち / 表示 / 失敗）と、画像・台紙の見せ方を render 中に導出する。
+  // 台紙は枠の大きさが決まっているときだけ出す（寸法が分からない画像は読み込みが
+  // 終わるまで枠が決まらないので、台紙は出ない）
+  const imageDisplay = deriveImageDisplay(
+    imageSrc,
+    imageRecord,
+    frameSize !== null,
+  )
+  // 届いたときにフェードで現すのは、台紙が見えていたときだけ
+  const revealOnLoad = shouldRevealOnLoad(imageDisplay)
+  // 公開ページで読み込めなかった画像の枠は押せなくする（開いても見せる画像が無い）。
+  // 編集画面では失敗していても枠をつかんで動かせるようにする
+  const pressDisabled = !draggable && imageDisplay?.status === 'failed'
+
+  // 結果は src 属性の値（imageSrc と同じ文字列）で持つ。img.src は絶対 URL になるため。
+  // 画像を削除すると img は DOM から外れるが、外れた img の load / error はあとから
+  // 届くことがある。いま枠にある img（imgRef）から届いたものだけを記録する
+  const handleImageLoad = useCallback(
+    (e: Event) => {
+      const img = e.currentTarget as HTMLImageElement
+      if (img !== imgRef.current) return
+      const src = img.getAttribute('src')
+      if (src === null) return
+      const loaded = { src, width: img.naturalWidth, height: img.naturalHeight }
+      setImageRecord((prev) => recordImageLoaded(prev, loaded, revealOnLoad))
+    },
+    [revealOnLoad],
+  )
+
+  // 失敗はこの img 要素で起きた error だけを記録する。SSR の HTML にあった img の
+  // 失敗は、ハイドレーションで作り直した img の結果に持ち込まない
+  const handleImageError = useCallback((e: Event) => {
+    const img = e.currentTarget as HTMLImageElement
+    if (img !== imgRef.current) return
+    const src = img.getAttribute('src')
+    if (src === null || src === '') return
+    setImageRecord((prev) => recordImageFailed(prev, src))
+    // 待ちの間に開いたビューワーは閉じる（読み込めなかった画像は拡大表示しない）
+    setShowViewer(false)
+  }, [])
+
+  // ref callback: ハイドレーションの時点で読み込みが終わっていれば、その結果を記録する
+  // （キャッシュ済みの画像は台紙もフェードも見せずに表示する）。img には ref より先に
+  // src を書いているので、ここでは src が設定済み。src の無い要素の値（complete が
+  // true で naturalWidth が 0）は readImageElementResult が失敗として扱わない。
+  // 画像が無くなって img が外れたら、その img のイベントは記録しない（返す関数は
+  // img が外れたときに呼ばれる。外れた img がまだ imgRef にあるときだけ手放す）。
+  // 記録は src が null になった render で空に戻り（trackImageSrc）、次に追加した
+  // 画像は新しい枠として「待ち」から始まる
+  const imgCallbackRef = useCallback((img: HTMLImageElement | null) => {
+    if (!img) return
+    imgRef.current = img
+    const release = () => {
+      if (imgRef.current === img) imgRef.current = null
+    }
+    const result = readImageElementResult({
+      src: img.getAttribute('src'),
+      complete: img.complete,
+      naturalWidth: img.naturalWidth,
+    })
+    if (result?.result === 'loaded') {
+      const loaded = {
+        src: result.src,
+        width: img.naturalWidth,
+        height: img.naturalHeight,
+      }
+      setImageRecord((prev) => recordImageLoaded(prev, loaded, false))
+    } else if (result?.result === 'failed') {
+      setImageRecord((prev) => recordImageFailed(prev, result.src))
+    }
+    return release
+  }, [])
 
   // 日付サイズを計測
   useEffect(() => {
@@ -430,10 +517,14 @@ export default function FlowText({
         )}
 
         {/* 画像 */}
-        {imageSrc && (
+        {imageSrc && imageDisplay && (
           <button
             type="button"
-            onClick={draggable ? undefined : () => setShowViewer(true)}
+            // disabled でクリックもキーボードのフォーカスも受けない
+            disabled={pressDisabled}
+            onClick={
+              draggable || pressDisabled ? undefined : () => setShowViewer(true)
+            }
             onPointerDown={draggable ? handlePointerDown : undefined}
             onPointerMove={draggable ? handlePointerMove : undefined}
             onPointerUp={draggable ? handlePointerEnd : undefined}
@@ -453,19 +544,31 @@ export default function FlowText({
               padding: 0,
               border: 'none',
               background: 'none',
-              cursor: draggable ? 'grab' : 'pointer',
+              cursor: draggable
+                ? 'grab'
+                : pressDisabled
+                  ? 'default'
+                  : 'pointer',
               WebkitTapHighlightColor: 'transparent',
               outline: 'none',
               touchAction: draggable ? 'none' : 'auto',
               visibility: frameSize ? 'visible' : 'hidden',
+              // 台紙・img・印の重なり順（z-index）を枠の中に閉じ込める
+              isolation: 'isolate',
             }}
           >
+            {/* 属性は書いた順に設定される。ref callback の時点で src が設定済みに
+                なるよう、src を ref より先に書く。見せ方は global.css の
+                .flow-image のクラスで切り替え、隠すときも矩形は保つ
+                （横スクロールの幅を img の左端から測るため） */}
             <img
-              ref={imgCallbackRef}
+              onLoad={handleImageLoad}
+              onError={handleImageError}
               src={imageSrc}
+              ref={imgCallbackRef}
               alt="日記の写真"
               fetchpriority="high"
-              onLoad={handleImageLoad}
+              class={IMAGE_CLASS[imageDisplay.image]}
               style={{
                 // 導出済みの表示サイズを明示指定する（サイズ確定前は非表示のため 'auto' で問題ない）
                 width: imageSize ? `${imageSize.width}px` : 'auto',
@@ -475,13 +578,82 @@ export default function FlowText({
                 borderRadius: '12px',
                 display: 'block',
                 pointerEvents: draggable ? 'none' : 'auto',
+                // 台紙より手前に描く
+                position: 'relative',
+                zIndex: 1,
               }}
             />
+            {/* 台紙。画像と同じ大きさ・角丸・回転で、枠の中央に重ねる。絶対配置なので
+                枠の大きさや回り込みには関わらない。面そのものは飾りなので読ませない。
+                横長の画像を傾けると、枠（回転後の外接矩形）の幅が回転前の台紙の幅より
+                狭くなることがあり、inset: 0 と margin: auto では中央に寄らない。枠の
+                中心に台紙の中心を合わせてから回すので、中心と回転の中心が img と揃う */}
+            {imageDisplay.mat !== 'none' && imageSize && (
+              <span
+                key="mat"
+                aria-hidden="true"
+                class={
+                  imageDisplay.mat === 'leaving'
+                    ? 'flow-image-mat is-leaving'
+                    : 'flow-image-mat'
+                }
+                style={{
+                  position: 'absolute',
+                  left: '50%',
+                  top: '50%',
+                  width: `${imageSize.width}px`,
+                  height: `${imageSize.height}px`,
+                  transform: centeredTransform(rotation),
+                  zIndex: 0,
+                  pointerEvents: 'none',
+                }}
+              />
+            )}
+            {/* 読み込めなかったことを表す印。目に見える文字は出さず（枠が小さいことが
+                あり、縦書きの紙面で文字が浮くため）、名前だけを支援技術に届ける。
+                台紙（aria-hidden）の外に置き、名前を隠さない */}
+            {imageDisplay.mat === 'failed' && imageSize && (
+              <span
+                key="mark"
+                role="img"
+                aria-label="写真を読み込めませんでした"
+                class="flow-image-mark"
+                style={{
+                  // 台紙と同じく、枠の中心に印の中心を合わせてから回す
+                  position: 'absolute',
+                  left: '50%',
+                  top: '50%',
+                  width: `${failureMarkSize(imageSize)}px`,
+                  height: `${failureMarkSize(imageSize)}px`,
+                  transform: centeredTransform(rotation),
+                  zIndex: 2,
+                  pointerEvents: 'none',
+                }}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  width="100%"
+                  height="100%"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                  style={{ display: 'block' }}
+                >
+                  <rect x="3" y="4" width="18" height="16" rx="2" />
+                  <circle cx="9" cy="9.5" r="1.5" />
+                  <path d="M20 15.5l-4.5-4.5L7 19.5" />
+                  <path d="M3.5 3.5l17 17" />
+                </svg>
+              </span>
+            )}
           </button>
         )}
 
-        {/* 画像ビューワー */}
-        {showViewer && imageSrc && (
+        {/* 画像ビューワー。読み込めなかった画像は拡大表示しない */}
+        {showViewer && imageSrc && imageDisplay?.status !== 'failed' && (
           <button
             type="button"
             onClick={() => setShowViewer(false)}
